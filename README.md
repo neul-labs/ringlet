@@ -74,7 +74,7 @@ The daemon is started transparently the first time it is needed (for example, wh
 
 - MVP CLI that can discover known agents on macOS, Linux, and Windows via declarative manifests.
 - Persisted profile registry stored under `~/.config/ccswitch/` (or platform equivalent) with optional synchronization.
-- Background `ccswitchd` service exposing a local API/WebSocket interface used by both the CLI and a future UI.
+- Background `ccswitchd` service exposing an `async-nng` bridge for the CLI plus optional HTTP/WebSocket endpoints for future UI integrations.
 - Plugin SDK so teams can publish third-party agent manifests without recompiling the core.
 
 ## Contributing

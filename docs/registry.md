@@ -37,12 +37,13 @@ Key files:
 
 ## Sync workflow
 
-1. The CLI ships with a baked-in commit hash for the registry.
-2. Running `ccswitch registry sync` (or any command that requires fresh data) fetches `registry.json` from GitHub, verifies its checksum, and downloads referenced manifests/templates not already cached.
-3. Files are cached under `~/.config/ccswitch/registry/<commit>/...` with metadata stored in `registry.lock`.
-4. Users can pin to a specific tag or commit: `ccswitch registry pin v0.3.0`.
-5. Offline machines rely on the cached copy until a sync succeeds; the CLI surfaces when the cache is stale.
-6. `ccswitch export` includes the pinned commit and optional cached manifests so `ccswitch import` can reconstruct the same registry state on another machine.
+1. The CLI bakes in a fallback commit hash that guarantees every install can bootstrap even before the first sync runs.
+2. `ccswitch registry sync` (or any command that needs fresh metadata) serializes a `RegistrySyncRequest` and sends it to `ccswitchd` over the `async-nng` request socket, including channel overrides, explicit refs, and flags such as `--offline` or `--force`.
+3. The daemon acquires a per-channel lock, reads `~/.config/ccswitch/registry/registry.lock`, honors overrides like `CCSWITCH_REGISTRY_URL`/`CCSWITCH_REGISTRY_CHANNEL`, and skips network work when the cache already satisfies the request (unless `--force` is present).
+4. When online, the daemon downloads `registry.json`, verifies checksums/signatures, fetches any referenced manifests/templates/models not yet cached, and stages the artifacts under `~/.config/ccswitch/registry/commits/<sha>/` before updating the `registry/current` symlink.
+5. Once the new commit is durable, `registry.lock` is rewritten with the resolved commit/channel/timestamp/etag plus a list of cached artifacts, and a `RegistryUpdated` pub/sub event notifies CLIs or UI watchers that data changed.
+6. `ccswitch registry pin <ref>` updates the lock to track a chosen commit/tag without running a sync, while offline requests simply return the currently pinned commit with an explicit `offline=true` indicator so callers know they are using cached data.
+7. `ccswitch export` optionally bundles `registry.lock`, the pinned commit, and the cached `registry/commits/<sha>` tree so `ccswitch import` can recreate the same registry state on another machine with zero network access.
 
 ## Profile templates
 
@@ -77,7 +78,7 @@ Manifests can reference catalog entries to ensure prompts stay up to date even i
 ## Security and verification
 
 - Every registry release is tagged and optionally signed (e.g., GitHub release + Sigstore attestations).
-- The CLI verifies checksums before accepting downloaded manifests/templates.
+- `ccswitchd` verifies checksums/signatures before caching manifests/templates so any CLI or UI client reading from the daemon only receives trusted artifacts.
 - Enterprises can mirror the repository internally and set `CCSWITCH_REGISTRY_URL` to their GitHub Enterprise or artifact server.
 
 ## Contribution workflow

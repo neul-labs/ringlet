@@ -77,8 +77,8 @@ Some teams need extra shell manipulation (remapping CLI tool paths, creating sym
 
 When `ccswitchd` is active (the CLI bootstraps it automatically and it shuts down after an idle timeout unless pinned), the daemon takes ownership of profile persistence and publishes change events:
 
-- CLI commands proxy through the daemon, avoiding concurrent writes.
-- UI clients subscribe to `/profiles/stream` (SSE/WebSocket) to update automatically when counts change.
+- CLI commands proxy through the daemon over the `async-nng` request/reply channel, avoiding concurrent writes.
+- UI clients subscribe to `/profiles/stream` (SSE/WebSocket) or tap into the `async-nng` pub/sub feed to update automatically when counts change.
 - Portable export/import endpoints (`GET /profiles/<alias>` / `POST /profiles`) allow cross-device sync workflows.
 
 ## Best practices
