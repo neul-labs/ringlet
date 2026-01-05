@@ -201,17 +201,6 @@ The following agents ship with curated manifests. Each section describes the und
   3. Alternatively, run `opencode auth login`, choose provider **Other**, supply `minimax` as the provider ID, and paste your MiniMax API key when prompted. ccswitch can capture the resulting token path inside the profile metadata.
 - **Using with ccswitch**: The manifest points OpenCode profiles at the JSON file above and ensures `/models` defaults to MiniMax-M2.1. Additional env vars listed in a profile override JSON options per alias.
 
-### Z.AI scenario runner (Gemini & other providers)
-
-- **Install**: Follow the scenario instructions at https://docs.z.ai/scenario-example/develop-tools/gemini to install the `z` CLI and import the Gemini scenario (the guide covers both npm and binary distributions). The same workflow can be adapted for other providers, including MiniMax, by swapping the scenario file or provider configuration inside the `.zai` manifest.
-- **Configure**:
-  ```bash
-  export GEMINI_API_KEY="your_ai_studio_key"
-  export GEMINI_PROJECT_ID="optional_google_cloud_project"
-  ```
-  Replace these with the provider-specific variables described in the scenario (for example MiniMax API keys and Anthropic-compatible endpoints).
-- **Using with ccswitch**: Point the manifest's `binary` to the scenario runner (for example `z scenario run gemini --` or `z scenario run minimax --`). Profiles store the required env vars and any scenario parameters (workspace path, tool permissions). Detection runs `z scenario run <scenario> --version` or a lightweight health command.
-
 ## Adding a new agent
 
 1. Copy `docs/templates/agent.example.toml` or start from the manifest snippet above.

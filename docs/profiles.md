@@ -4,7 +4,7 @@ Profiles are the heart of ccswitch. Each one binds an agent installation to a sp
 
 ## Lifecycle
 
-1. **Create** – `ccswitch profiles create <agent-id> <alias>` prompts for the model/provider you plan to use, required environment variables (API keys, base URLs, etc.), and any agent-specific options (e.g., HOME path for Claude). Prompts always fire per profile so secrets are never assumed or silently re-used.
+1. **Create** – `ccswitch profiles create <agent-id> <alias>` prompts for the model/provider you plan to use, required environment variables (API keys, base URLs, etc.), and any agent-specific options (e.g., HOME path for Claude). When multiple profiles already store credentials for the same provider, ccswitch offers to reuse one of those keys (you can pick from a list or enter a new value). Prompts still fire every time so secrets are never silently reused.
 2. **Inspect** – `ccswitch profiles inspect <alias>` prints the stored configuration and redacts secrets by default.
 3. **List** – `ccswitch profiles list --agent <agent-id>` summarizes aliases per agent and feeds the aggregate counts shown by `ccswitch agents list`.
 4. **Run** – `ccswitch profiles run <alias> -- <agent args>` launches the selected agent with the stored configuration, then streams stdout/stderr directly to the caller.

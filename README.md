@@ -43,6 +43,11 @@ Executed manual env setup task \"cli-remap\" for profile work-sonnet
 
 $ ccswitch registry sync
 Fetched registry commit f4a12c3 (stable channel)
+
+$ ccswitch profiles list --agent claude
+Alias              Model           Last Used
+claude-work-sonnet MiniMax-M2.1    2024-05-04T11:23:51Z
+claude-sre         MiniMax-M2.1    2024-05-03T09:18:12Z
 ```
 
 Commands such as `ccswitch agents inspect <id>` and `ccswitch profiles switch <alias>` will be detailed in `docs/profiles.md` as the implementation evolves.
