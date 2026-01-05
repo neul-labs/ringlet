@@ -1,0 +1,31 @@
+# Example agent manifest template for ccswitch
+# Copy this file and tailor it to your CLI coding agent.
+
+id = "example-agent"
+name = "Example Agent"
+binary = "example"
+version_flag = "--version"
+
+[detect]
+commands = ["example --version"]
+files = []
+
+[profile]
+strategy = "env-only" # or "home-wrapper"
+required_env = ["EXAMPLE_API_KEY", "EXAMPLE_BASE_URL"]
+optional_env = ["EXAMPLE_EXTRA_FLAG"]
+
+[models]
+default = "example-model"
+supported = ["example-model", "example-model-fast"]
+
+[hooks]
+create = ["example init --profile {{ alias }}"]
+delete = ["example clean --profile {{ alias }}"]
+pre_run = []
+
+[setup_tasks]
+cli_remap = {
+  description = "Optional task that remaps CLI tools for this agent.",
+  command = "./scripts/remap-cli.sh"
+}
