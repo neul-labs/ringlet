@@ -1,4 +1,4 @@
-# Example agent manifest template for ccswitch
+# Example agent manifest template for clown
 # Copy this file and tailor it to your CLI coding agent.
 
 id = "example-agent"
@@ -11,7 +11,9 @@ commands = ["example --version"]
 files = []
 
 [profile]
-strategy = "env-only" # or "home-wrapper"
+strategy = "home-wrapper"
+source_home = "~/.example-profiles/{alias}"
+script = "example-agent.rhai"  # Rhai script that generates config files
 required_env = ["EXAMPLE_API_KEY", "EXAMPLE_BASE_URL"]
 optional_env = ["EXAMPLE_EXTRA_FLAG"]
 
@@ -23,6 +25,7 @@ supported = ["example-model", "example-model-fast"]
 create = ["example init --profile {{ alias }}"]
 delete = ["example clean --profile {{ alias }}"]
 pre_run = []
+post_run = []
 
 [setup_tasks]
 cli_remap = {

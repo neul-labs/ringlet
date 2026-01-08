@@ -1,14 +1,15 @@
-# ccswitch
+# clown
 
-ccswitch is a cross-platform orchestrator for CLI-based coding agents. It lets developers define named aliases for every agent/model pairing they rely on, display which agents are available on a workstation, and inspect how many profiles each agent owns. The core is written in Rust so that the same binaries can power lightweight command-line use today and a persistent background service with a UI later. The background daemon autostarts when the CLI needs it, then shuts down on idle unless `ccswitch daemon --stay-alive` keeps it resident.
+clown is a cross-platform orchestrator for CLI-based coding agents, built around a central daemon (`clownd`) that manages profiles, tracks usage, and coordinates agent execution. The CLI is a thin client that **automatically starts the daemon** on first use—developers never need to manage the service manually. The daemon collects telemetry (profile invocations, session durations, resource consumption) and exposes it via `clown stats` commands. After an idle timeout the daemon exits unless pinned with `clown daemon --stay-alive`. This daemon-first architecture ensures consistent state, enables future UI integrations, and centralizes observability.
 
-## Why ccswitch exists
+## Why clown exists
 
 - **One switchboard for every agent** – track installations of tools such as Claude Code, Grok CLI, Codex CLI, Droid, OpenCode, and any future Anthropic-compatible agents without memorizing bespoke flags per tool.
-- **Profiles per model** – quickly create aliases such as `claude-enterprise` or `grok-m2` that pin a CLI agent to a specific MiniMax, Anthropic, OpenAI, or future vendor model/credential set.
-- **Executable aliases** – `ccswitch aliases install <profile>` creates real commands like `claude-minimax` or `grok-glm` so every profile launches its agent with isolated homes and env vars.
-- **Prompted secrets** – `ccswitch profiles create` always asks for the model name, API keys, and any other manifest-required values per profile, storing them securely so nothing is assumed or silently re-used.
-- **Immediate observability** – `ccswitch agents list` shows each installed agent, detected version, last-used timestamp, and how many profiles exist, highlighting gaps before hopping between projects.
+- **Provider abstraction** – configure API backends (Anthropic, MiniMax, OpenRouter, etc.) once, then bind any agent to any provider. Run Claude Code against MiniMax today and Anthropic tomorrow without editing config files.
+- **Profiles per agent+provider** – quickly create aliases such as `claude-work-minimax` or `grok-home-anthropic` that pin a CLI agent to a specific provider/model/credential set.
+- **Executable aliases** – `clown aliases install <profile>` creates real commands like `claude-minimax` or `grok-glm` so every profile launches its agent with isolated homes and env vars.
+- **Prompted secrets** – `clown profiles create` always asks for the model name, API keys, and any other manifest-required values per profile, storing them securely so nothing is assumed or silently re-used.
+- **Immediate observability** – `clown agents list` shows each installed agent, detected version, last-used timestamp, and how many profiles exist, highlighting gaps before hopping between projects.
 - **Composable architecture** – extension manifests describe how to detect, configure, and run an agent, making it straightforward to add entirely new CLI coding agents.
 - **Future-ready service** – the library-first Rust design will grow into a daemon that exposes APIs and drives a UI without rebuilding the orchestration logic.
 - **GitHub-backed registry** – manifests, profile templates, and model catalogs live in a public repository so new agents/models can ship without rebuilding the CLI while remaining reviewable.
@@ -20,45 +21,49 @@ The repository currently focuses on design docs and interface conventions so tha
 ## CLI preview
 
 ```text
-$ ccswitch agents list
+$ clown agents list
 ┌────────────┬──────────────┬────────────┬──────────────┐
 │ Agent      │ Version      │ Profiles   │ Default Model│
 ├────────────┼──────────────┼────────────┼──────────────┤
 │ claude     │ 0.5.4        │ 3          │ MiniMax-M2.1 │
+│ grok       │ 0.3.2        │ 1          │ grok-3       │
 │ codex      │ 0.11.0       │ 1          │ MiniMax-M2.1 │
+│ droid      │ 1.2.0        │ 0          │ gemini-2.5   │
 │ opencode   │ 1.8.0        │ 2          │ MiniMax-M2.1 │
 └────────────┴──────────────┴────────────┴──────────────┘
 
-$ ccswitch profiles create claude work-sonnet \
-    --model MiniMax-M2.1 \
-    --env ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
+$ clown profiles create claude work-sonnet \
+    --provider minimax \
+    --model MiniMax-M2.1
 
-$ ccswitch aliases install work-sonnet
+$ clown aliases install work-sonnet
 Installed shim ~/bin/claude-work-sonnet -> claude --settings ~/.claude-profiles/work-sonnet/.claude/settings.json
 
 $ claude-work-sonnet /settings strict.json
 
-$ ccswitch env setup work-sonnet cli-remap
+$ clown env setup work-sonnet cli-remap
 Executed manual env setup task \"cli-remap\" for profile work-sonnet
 
-$ ccswitch registry sync
+$ clown registry sync
 Fetched registry commit f4a12c3 (stable channel)
 
-$ ccswitch profiles list --agent claude
-Alias              Model           Last Used
-claude-work-sonnet MiniMax-M2.1    2024-05-04T11:23:51Z
-claude-sre         MiniMax-M2.1    2024-05-03T09:18:12Z
+$ clown profiles list --agent claude
+Alias              Provider    Endpoint       Model           Last Used
+work-sonnet        minimax     international  MiniMax-M2.1    2024-05-04T11:23:51Z
+work-sre           minimax     international  MiniMax-M2.1    2024-05-03T09:18:12Z
 ```
 
-Commands such as `ccswitch agents inspect <id>` and `ccswitch profiles switch <alias>` will be detailed in `docs/profiles.md` as the implementation evolves.
+Commands such as `clown agents inspect <id>` and `clown profiles env <alias>` (for shell integration) will be detailed in `docs/profiles.md` as the implementation evolves. See `docs/providers.md` for how providers (MiniMax, Anthropic, OpenRouter, etc.) are configured separately from agents.
 
-The daemon is started transparently the first time it is needed (for example, when listing agents). When no requests arrive for a configurable idle period the daemon exits, keeping the footprint small. Passing `ccswitch daemon --stay-alive` will pin it in memory for UI integrations. While the preview above references MiniMax, the CLI remains model-provider agnostic; swap in any model fields the agent supports.
+The daemon is started transparently the first time it is needed (for example, when listing agents). When no requests arrive for a configurable idle period the daemon exits, keeping the footprint small. Passing `clown daemon --stay-alive` will pin it in memory for UI integrations. While the preview above references MiniMax, the CLI remains model-provider agnostic; swap in any model fields the agent supports.
 
 ## Documentation map
 
 - `docs/architecture.md` – component overview, data flow, and service plans.
 - `docs/agents.md` – manifests for each supported CLI coding agent plus steps for onboarding new agents.
+- `docs/providers.md` – API backend definitions (Anthropic, MiniMax, OpenRouter) and how to add custom providers.
 - `docs/profiles.md` – lifecycle of agent profiles and CLI workflows that manage them.
+- `docs/scripting.md` – Rhai scripting guide for configuration generation, hooks, and MCP servers.
 - `docs/registry.md` – GitHub registry layout, sync workflow, templates, and model catalog.
 
 ## Getting started
@@ -66,15 +71,17 @@ The daemon is started transparently the first time it is needed (for example, wh
 1. Install the latest stable Rust toolchain (`rustup install stable`).
 2. Clone this repository and fetch dependencies once Cargo files are introduced.
 3. During early development, run `cargo run -- agents list` to validate discovery logic as it lands.
-4. Keep whichever model/API credentials you rely on (MiniMax, Anthropic, OpenAI-compatible, internal gateways, etc.) in environment variables per the guidance inside `docs/agents.md` for every CLI coding agent—`ccswitch profiles create` will prompt for them explicitly each time.
-5. Run any optional environment setup hooks (e.g., CLI remappers) manually via `ccswitch env setup <alias> <task>` whenever the manifest offers such tasks.
-6. Pull the latest official manifests/templates/models with `ccswitch registry sync` or point `CCSWITCH_REGISTRY_URL` at your own GitHub fork.
+4. Keep whichever model/API credentials you rely on (MiniMax, Anthropic, OpenAI-compatible, internal gateways, etc.) in environment variables per the guidance inside `docs/agents.md` for every CLI coding agent—`clown profiles create` will prompt for them explicitly each time.
+5. Run any optional environment setup hooks (e.g., CLI remappers) manually via `clown env setup <alias> <task>` whenever the manifest offers such tasks.
+6. Pull the latest official manifests/templates/models with `clown registry sync` or point `CLOWN_REGISTRY_URL` at your own GitHub fork.
 
 ## Roadmap highlights
 
-- MVP CLI that can discover known agents on macOS, Linux, and Windows via declarative manifests.
-- Persisted profile registry stored under `~/.config/ccswitch/` (or platform equivalent) with optional synchronization.
-- Background `ccswitchd` service exposing an `async-nng` bridge for the CLI plus optional HTTP/WebSocket endpoints for future UI integrations.
+- Core `clownd` daemon that owns profile state, usage telemetry, and agent coordination—auto-started by the CLI via `async-nng`.
+- Thin CLI that discovers agents on macOS, Linux, and Windows via declarative manifests and forwards all commands to the daemon.
+- Telemetry collection: profile invocations, session durations, and resource consumption surfaced via `clown stats`.
+- Persisted profile registry stored under `~/.config/clown/` (or platform equivalent) with optional synchronization.
+- Optional HTTP/WebSocket endpoints for future UI integrations connecting to the daemon.
 - Plugin SDK so teams can publish third-party agent manifests without recompiling the core.
 
 ## Contributing
