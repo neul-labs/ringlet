@@ -1,0 +1,26 @@
+id = "claude"
+name = "Claude Code"
+binary = "claude"
+version_flag = "--version"
+
+[detect]
+commands = ["claude --version"]
+files = ["~/.claude/settings.json"]
+
+[profile]
+strategy = "home-wrapper"
+source_home = "~/.claude-profiles/{alias}"
+script = "claude.rhai"
+required_env = []
+optional_env = []
+default_provider = "self"
+
+[models]
+default = "claude-sonnet-4"
+supported = ["claude-sonnet-4", "claude-opus-4", "MiniMax-M2.1"]
+
+[hooks]
+create = []
+delete = []
+pre_run = []
+post_run = []

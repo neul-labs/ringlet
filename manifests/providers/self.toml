@@ -1,0 +1,18 @@
+# Self-authenticated provider
+# Used for agents that handle their own authentication (e.g., Claude Code, Codex)
+
+id = "self"
+name = "Self-Authenticated"
+type = "self"
+
+[endpoints]
+default = ""
+
+[auth]
+env_key = ""
+prompt = ""
+required = false
+
+[models]
+available = []
+default = ""

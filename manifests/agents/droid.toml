@@ -1,0 +1,25 @@
+id = "droid"
+name = "Droid CLI"
+binary = "droid"
+version_flag = "--version"
+
+[detect]
+commands = ["droid --version"]
+files = ["~/.factory/config.json"]
+
+[profile]
+strategy = "home-wrapper"
+source_home = "~/.droid-profiles/{alias}"
+script = "droid.rhai"
+required_env = []
+optional_env = []
+
+[models]
+default = "claude-sonnet-4"
+supported = ["claude-sonnet-4", "claude-opus-4", "gemini-2.5", "MiniMax-M2.1"]
+
+[hooks]
+create = []
+delete = []
+pre_run = []
+post_run = []

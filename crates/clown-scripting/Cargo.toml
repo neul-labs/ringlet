@@ -1,0 +1,15 @@
+[package]
+name = "clown-scripting"
+version = "0.1.0"
+edition = "2021"
+description = "Rhai scripting engine for clown configuration generation"
+license = "MIT"
+
+[dependencies]
+clown-core = { path = "../clown-core" }
+rhai = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
