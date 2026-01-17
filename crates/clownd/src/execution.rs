@@ -55,7 +55,7 @@ impl ExecutionAdapter {
         let env = self.build_environment(profile, provider, api_key, &script_output)?;
 
         // 5. Spawn the agent process
-        self.spawn_agent(agent, profile, &env, args)
+        self.spawn_agent(agent, profile, &env, &script_output.args, args)
     }
 
     /// Run the configuration script.
@@ -124,8 +124,10 @@ impl ExecutionAdapter {
             profile.metadata.home.to_string_lossy().to_string(),
         );
 
-        // Add provider auth env var with actual API key
-        env.insert(provider.auth.env_key.clone(), api_key.to_string());
+        // Add provider auth env var with actual API key (skip for self-auth)
+        if !provider.auth.env_key.is_empty() {
+            env.insert(provider.auth.env_key.clone(), api_key.to_string());
+        }
 
         // Add script-generated env vars (replacing ${API_KEY} placeholder)
         for (key, value) in &script_output.env {
@@ -142,7 +144,8 @@ impl ExecutionAdapter {
         agent: &AgentManifest,
         profile: &Profile,
         env: &HashMap<String, String>,
-        args: &[String],
+        script_args: &[String],
+        user_args: &[String],
     ) -> Result<RunResult> {
         let working_dir = profile
             .working_dir
@@ -175,9 +178,10 @@ impl ExecutionAdapter {
             cmd.env(key, value);
         }
 
-        // Add profile args and passed args
+        // Add args: profile args, script-generated args, then user args
         cmd.args(&profile.args);
-        cmd.args(args);
+        cmd.args(script_args);
+        cmd.args(user_args);
 
         debug!("Command: {:?}", cmd);
 

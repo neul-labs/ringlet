@@ -64,6 +64,8 @@ pub struct ScriptOutput {
     pub files: HashMap<String, String>,
     /// Environment variables to set.
     pub env: HashMap<String, String>,
+    /// Additional command-line arguments to pass to the agent.
+    pub args: Vec<String>,
     /// Optional hooks configuration.
     pub hooks: Option<serde_json::Value>,
     /// Optional MCP servers configuration.
@@ -221,6 +223,17 @@ fn dynamic_to_output(result: Dynamic) -> Result<ScriptOutput> {
             for (key, value) in env_map {
                 if let Some(val) = value.clone().try_cast::<String>() {
                     output.env.insert(key.to_string(), val);
+                }
+            }
+        }
+    }
+
+    // Extract args
+    if let Some(args_dynamic) = map.get("args") {
+        if let Some(args_arr) = args_dynamic.clone().try_cast::<rhai::Array>() {
+            for arg in args_arr {
+                if let Some(arg_str) = arg.clone().try_cast::<String>() {
+                    output.args.push(arg_str);
                 }
             }
         }

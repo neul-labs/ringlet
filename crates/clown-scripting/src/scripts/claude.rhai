@@ -2,14 +2,23 @@
 // Generates .claude/settings.json and other required files
 
 // Build settings.json content
+// For self-auth or native anthropic, use "anthropic" type so Claude Code handles auth
 let settings = #{
     model: ctx.profile.model,
     customApiKeyResponsibleParty: "user",
     hasCompletedOnboarding: true,
     hasAcknowledgedCostThreshold: true,
     primaryProvider: #{
-        type: if ctx.provider.type == "anthropic" { "anthropic" } else { "anthropic-compatible" },
-        baseUrl: if ctx.provider.type == "anthropic" { () } else { ctx.profile.endpoint }
+        type: if ctx.provider.type == "anthropic" || ctx.provider.type == "self" {
+            "anthropic"
+        } else {
+            "anthropic-compatible"
+        },
+        baseUrl: if ctx.provider.type == "anthropic" || ctx.provider.type == "self" {
+            ()
+        } else {
+            ctx.profile.endpoint
+        }
     }
 };
 
@@ -39,8 +48,16 @@ let env = #{};
 
 // Only set API key env var if not self-authenticating
 if ctx.provider.type != "self" {
-    env[ctx.provider.auth_env_key] = "${API_KEY}";  // Placeholder, replaced at runtime
-    if ctx.provider.type != "anthropic" {
+    // Set the provider's auth key for API key retrieval
+    env[ctx.provider.auth_env_key] = "${API_KEY}";
+
+    if ctx.provider.type == "anthropic" {
+        // For native Anthropic, use ANTHROPIC_API_KEY
+        env["ANTHROPIC_API_KEY"] = "${API_KEY}";
+    } else {
+        // For anthropic-compatible providers (like MiniMax),
+        // Claude Code expects ANTHROPIC_AUTH_TOKEN and ANTHROPIC_BASE_URL
+        env["ANTHROPIC_AUTH_TOKEN"] = "${API_KEY}";
         env["ANTHROPIC_BASE_URL"] = ctx.profile.endpoint;
     }
 }

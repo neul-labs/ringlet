@@ -1,0 +1,15 @@
+id = "zai"
+name = "Z.AI (GLM Coding Plan)"
+type = "anthropic-compatible"
+
+[endpoints]
+international = "https://api.z.ai/api/anthropic"
+default = "international"
+
+[auth]
+env_key = "ZAI_API_KEY"
+prompt = "Enter your Z.AI API key"
+
+[models]
+available = ["GLM-4.7", "GLM-4.5-Air"]
+default = "GLM-4.7"

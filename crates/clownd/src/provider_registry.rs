@@ -9,8 +9,12 @@ use tracing::{debug, warn};
 const BUILTIN_PROVIDERS: &[(&str, &str)] = &[
     ("anthropic", include_str!("../../../manifests/providers/anthropic.toml")),
     ("minimax", include_str!("../../../manifests/providers/minimax.toml")),
+    ("minimax-openai", include_str!("../../../manifests/providers/minimax-openai.toml")),
     ("openai", include_str!("../../../manifests/providers/openai.toml")),
     ("openrouter", include_str!("../../../manifests/providers/openrouter.toml")),
+    ("self", include_str!("../../../manifests/providers/self.toml")),
+    ("zai", include_str!("../../../manifests/providers/zai.toml")),
+    ("zai-openai", include_str!("../../../manifests/providers/zai-openai.toml")),
 ];
 
 /// Provider registry.

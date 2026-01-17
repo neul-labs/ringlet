@@ -6,7 +6,9 @@ name = "Self-Authenticated"
 type = "self"
 
 [endpoints]
-default = ""
+# Placeholder endpoint - not used by self-auth agents
+native = ""
+default = "native"
 
 [auth]
 env_key = ""

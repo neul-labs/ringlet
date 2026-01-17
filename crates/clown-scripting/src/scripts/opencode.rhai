@@ -2,21 +2,28 @@
 // Generates config files for OpenCode CLI agent
 
 // OpenCode uses Anthropic-compatible API
+// For self-auth, use native anthropic provider (OpenCode handles auth)
 let config = #{
     model: ctx.profile.model,
-    provider: if ctx.provider.type == "anthropic" { "anthropic" } else { "anthropic-compatible" }
+    provider: if ctx.provider.type == "anthropic" || ctx.provider.type == "self" {
+        "anthropic"
+    } else {
+        "anthropic-compatible"
+    }
 };
-
-// If using a custom endpoint, set it
-if ctx.provider.type != "anthropic" {
-    config.api_base = ctx.profile.endpoint;
-}
 
 // Build environment variables
 let env = #{};
-env[ctx.provider.auth_env_key] = "${API_KEY}";  // Placeholder, replaced at runtime
-if ctx.provider.type != "anthropic" {
-    env["ANTHROPIC_BASE_URL"] = ctx.profile.endpoint;
+
+// Only set API key env vars if not self-authenticating
+if ctx.provider.type != "self" {
+    env[ctx.provider.auth_env_key] = "${API_KEY}";
+
+    // If using a custom endpoint, set it
+    if ctx.provider.type != "anthropic" {
+        config.api_base = ctx.profile.endpoint;
+        env["ANTHROPIC_BASE_URL"] = ctx.profile.endpoint;
+    }
 }
 
 // Return the output

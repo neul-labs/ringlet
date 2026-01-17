@@ -16,7 +16,7 @@ optional_env = []
 
 [models]
 default = "grok-3"
-supported = ["grok-3", "grok-2", "MiniMax-M2.1"]
+supported = ["grok-3", "grok-2", "MiniMax-M2.1", "glm-4.7", "glm-4.5-air"]
 
 [hooks]
 create = []

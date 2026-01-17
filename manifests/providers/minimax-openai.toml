@@ -1,0 +1,16 @@
+id = "minimax-openai"
+name = "MiniMax (OpenAI Compatible)"
+type = "openai-compatible"
+
+[endpoints]
+international = "https://api.minimax.io/v1"
+china = "https://api.minimaxi.com/v1"
+default = "international"
+
+[auth]
+env_key = "MINIMAX_API_KEY"
+prompt = "Enter your MiniMax API key"
+
+[models]
+available = ["codex-MiniMax-M2.1", "MiniMax-M2.1"]
+default = "codex-MiniMax-M2.1"
