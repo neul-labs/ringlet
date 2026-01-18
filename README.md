@@ -11,12 +11,23 @@ clown is a cross-platform orchestrator for CLI-based coding agents, built around
 - **Prompted secrets** – `clown profiles create` always asks for the model name, API keys, and any other manifest-required values per profile, storing them securely so nothing is assumed or silently re-used.
 - **Immediate observability** – `clown agents list` shows each installed agent, detected version, last-used timestamp, and how many profiles exist, highlighting gaps before hopping between projects.
 - **Composable architecture** – extension manifests describe how to detect, configure, and run an agent, making it straightforward to add entirely new CLI coding agents.
-- **Future-ready service** – the library-first Rust design will grow into a daemon that exposes APIs and drives a UI without rebuilding the orchestration logic.
+- **Event-driven hooks** – configure PreToolUse, PostToolUse, Notification, and Stop hooks to log activity, send notifications, or integrate with external systems.
+- **Intelligent routing** – enable per-profile proxy with ultrallm to route requests to different providers based on token count, tool usage, or custom rules.
+- **Daemon-backed service** – the `clownd` daemon owns all state and can drive future UI integrations without rebuilding orchestration logic.
 - **GitHub-backed registry** – manifests, profile templates, and model catalogs live in a public repository so new agents/models can ship without rebuilding the CLI while remaining reviewable.
 
 ## Project status
 
-The repository currently focuses on design docs and interface conventions so that implementation work can start from a shared understanding. Contributions should follow the documents in `docs/` until the first executable prototype lands.
+The core functionality is implemented and working:
+- Daemon (`clownd`) with auto-start and IPC communication
+- CLI with full profile lifecycle (create, list, inspect, run, delete)
+- Agent detection for Claude Code, Grok, Codex, Droid, and OpenCode
+- Provider support for Anthropic, MiniMax, OpenRouter, and custom backends
+- Profile hooks for event-driven actions (PreToolUse, PostToolUse, etc.)
+- Proxy integration with ultrallm for intelligent request routing
+- Rhai scripting engine for configuration generation
+
+Build with `cargo build --release` and run `clown --help` to get started.
 
 ## CLI preview
 
@@ -50,6 +61,13 @@ Fetched registry commit f4a12c3 (stable channel)
 # Create profile with proxy for intelligent routing
 $ clown profiles create claude work-proxy --provider anthropic --proxy
 
+# Manage proxy routing rules
+$ clown proxy enable work-proxy
+$ clown proxy route add work-proxy "long-context" "tokens > 100000" "minimax/claude-3-sonnet" --priority 10
+$ clown proxy route add work-proxy "default" "always" "anthropic/claude-sonnet-4"
+$ clown proxy route list work-proxy
+$ clown proxy status
+
 # Add event hooks to a profile
 $ clown hooks add work-sonnet PreToolUse "Bash" "echo 'Running: $EVENT' >> /tmp/clown.log"
 $ clown hooks list work-sonnet
@@ -78,20 +96,48 @@ The daemon is started transparently the first time it is needed (for example, wh
 ## Getting started
 
 1. Install the latest stable Rust toolchain (`rustup install stable`).
-2. Clone this repository and fetch dependencies once Cargo files are introduced.
-3. During early development, run `cargo run -- agents list` to validate discovery logic as it lands.
-4. Keep whichever model/API credentials you rely on (MiniMax, Anthropic, OpenAI-compatible, internal gateways, etc.) in environment variables per the guidance inside `docs/agents.md` for every CLI coding agent—`clown profiles create` will prompt for them explicitly each time.
-5. Run any optional environment setup hooks (e.g., CLI remappers) manually via `clown env setup <alias> <task>` whenever the manifest offers such tasks.
-6. Pull the latest official manifests/templates/models with `clown registry sync` or point `CLOWN_REGISTRY_URL` at your own GitHub fork.
+2. Clone this repository and build:
+   ```bash
+   git clone https://github.com/user/clown.git
+   cd clown
+   cargo build --release
+   ```
+3. Add the binaries to your PATH:
+   ```bash
+   export PATH="$PATH:$(pwd)/target/release"
+   ```
+4. List detected agents:
+   ```bash
+   clown agents list
+   ```
+5. Create a profile for an agent:
+   ```bash
+   clown profiles create claude my-profile --provider anthropic
+   ```
+6. Run the profile:
+   ```bash
+   clown profiles run my-profile
+   ```
 
-## Roadmap highlights
+See `docs/agents.md` for agent-specific setup and `docs/providers.md` for provider configuration.
 
-- Core `clownd` daemon that owns profile state, usage telemetry, and agent coordination—auto-started by the CLI via `async-nng`.
-- Thin CLI that discovers agents on macOS, Linux, and Windows via declarative manifests and forwards all commands to the daemon.
-- Telemetry collection: profile invocations, session durations, and resource consumption surfaced via `clown stats`.
-- Persisted profile registry stored under `~/.config/clown/` (or platform equivalent) with optional synchronization.
-- Optional HTTP/WebSocket endpoints for future UI integrations connecting to the daemon.
-- Plugin SDK so teams can publish third-party agent manifests without recompiling the core.
+## Roadmap
+
+### Implemented
+- Core `clownd` daemon with auto-start, IPC via `async-nng`, and idle timeout
+- CLI with agent discovery, profile management, and execution
+- Profile hooks (PreToolUse, PostToolUse, Notification, Stop)
+- Proxy integration with ultrallm for intelligent request routing
+- Proxy CLI commands for managing routes and model aliases
+- Rhai scripting engine for configuration generation
+- Telemetry collection for profile usage and session tracking
+- Support for 5 agents: Claude Code, Grok, Codex, Droid, OpenCode
+
+### Planned
+- HTTP/WebSocket endpoints for UI integrations
+- Desktop/web UI for profile management
+- Plugin SDK for third-party agent manifests
+- Cross-device profile sync
 
 ## Contributing
 

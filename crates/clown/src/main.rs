@@ -91,6 +91,12 @@ enum Commands {
         #[command(subcommand)]
         command: HooksCommands,
     },
+
+    /// Manage proxy routing
+    Proxy {
+        #[command(subcommand)]
+        command: ProxyCommands,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -280,6 +286,120 @@ pub enum HooksCommands {
     Export {
         /// Profile alias
         alias: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ProxyCommands {
+    /// Enable proxy for a profile
+    Enable {
+        /// Profile alias
+        alias: String,
+    },
+    /// Disable proxy for a profile
+    Disable {
+        /// Profile alias
+        alias: String,
+    },
+    /// Start proxy instance
+    Start {
+        /// Profile alias
+        alias: String,
+    },
+    /// Stop proxy instance
+    Stop {
+        /// Profile alias
+        alias: String,
+    },
+    /// Stop all proxy instances
+    StopAll,
+    /// Restart proxy instance
+    Restart {
+        /// Profile alias
+        alias: String,
+    },
+    /// Show proxy status
+    Status {
+        /// Profile alias (shows all if not specified)
+        alias: Option<String>,
+    },
+    /// Show proxy configuration
+    Config {
+        /// Profile alias
+        alias: String,
+    },
+    /// View proxy logs
+    Logs {
+        /// Profile alias
+        alias: String,
+        /// Number of lines to show
+        #[arg(long, short, default_value = "50")]
+        lines: usize,
+    },
+    /// Manage routing rules
+    Route {
+        #[command(subcommand)]
+        command: ProxyRouteCommands,
+    },
+    /// Manage model aliases
+    Alias {
+        #[command(subcommand)]
+        command: ProxyAliasCommands,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ProxyRouteCommands {
+    /// Add a routing rule
+    Add {
+        /// Profile alias
+        alias: String,
+        /// Rule name
+        name: String,
+        /// Condition (always, tokens>N, thinking, tools>=N)
+        condition: String,
+        /// Target model (provider/model)
+        target: String,
+        /// Priority (higher = evaluated first)
+        #[arg(long, default_value = "0")]
+        priority: i32,
+    },
+    /// List routing rules
+    List {
+        /// Profile alias
+        alias: String,
+    },
+    /// Remove a routing rule
+    Remove {
+        /// Profile alias
+        alias: String,
+        /// Rule name
+        name: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ProxyAliasCommands {
+    /// Set a model alias
+    Set {
+        /// Profile alias
+        alias: String,
+        /// Source model name
+        from: String,
+        /// Target (provider/model)
+        to: String,
+    },
+    /// List model aliases
+    List {
+        /// Profile alias
+        alias: String,
+    },
+    /// Remove a model alias
+    Remove {
+        /// Profile alias
+        alias: String,
+        /// Source model name to remove
+        from: String,
     },
 }
 

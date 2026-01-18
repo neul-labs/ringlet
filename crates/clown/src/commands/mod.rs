@@ -4,10 +4,11 @@ use crate::client::DaemonClient;
 use crate::output;
 use crate::{
     AgentsCommands, AliasesCommands, Commands, DaemonCommands, EnvCommands, HooksCommands,
-    ProfilesCommands, ProvidersCommands, RegistryCommands,
+    ProfilesCommands, ProvidersCommands, ProxyAliasCommands, ProxyCommands, ProxyRouteCommands,
+    RegistryCommands,
 };
 use anyhow::{anyhow, Result};
-use clown_core::{HooksConfig, ProfileCreateRequest, Request, Response};
+use clown_core::{HooksConfig, ModelTarget, ProfileCreateRequest, Request, Response, RoutingCondition, RoutingRule};
 
 /// Execute a command.
 pub async fn execute(command: &Commands, json: bool) -> Result<()> {
@@ -21,6 +22,7 @@ pub async fn execute(command: &Commands, json: bool) -> Result<()> {
         Commands::Daemon { command } => execute_daemon(command, json).await,
         Commands::Env { command } => execute_env(command, json).await,
         Commands::Hooks { command } => execute_hooks(command, json).await,
+        Commands::Proxy { command } => execute_proxy(command, json).await,
     }
 }
 
@@ -670,5 +672,208 @@ fn print_hooks(hooks: &HooksConfig) {
 
     if !has_hooks {
         println!("No hooks configured");
+    }
+}
+
+async fn execute_proxy(command: &ProxyCommands, json: bool) -> Result<()> {
+    let client = DaemonClient::connect()?;
+
+    match command {
+        ProxyCommands::Enable { alias } => {
+            let response = client.request(&Request::ProxyEnable {
+                alias: alias.clone(),
+            })?;
+            handle_success_response(response, json)?;
+        }
+        ProxyCommands::Disable { alias } => {
+            let response = client.request(&Request::ProxyDisable {
+                alias: alias.clone(),
+            })?;
+            handle_success_response(response, json)?;
+        }
+        ProxyCommands::Start { alias } => {
+            let response = client.request(&Request::ProxyStart {
+                alias: alias.clone(),
+            })?;
+            handle_success_response(response, json)?;
+        }
+        ProxyCommands::Stop { alias } => {
+            let response = client.request(&Request::ProxyStop {
+                alias: alias.clone(),
+            })?;
+            handle_success_response(response, json)?;
+        }
+        ProxyCommands::StopAll => {
+            let response = client.request(&Request::ProxyStopAll)?;
+            handle_success_response(response, json)?;
+        }
+        ProxyCommands::Restart { alias } => {
+            // Stop then start
+            let _ = client.request(&Request::ProxyStop {
+                alias: alias.clone(),
+            });
+            let response = client.request(&Request::ProxyStart {
+                alias: alias.clone(),
+            })?;
+            handle_success_response(response, json)?;
+        }
+        ProxyCommands::Status { alias } => {
+            let response = client.request(&Request::ProxyStatus {
+                alias: alias.clone(),
+            })?;
+            match response {
+                Response::ProxyStatus(instances) => {
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&instances)?);
+                    } else {
+                        output::proxy_status(&instances);
+                    }
+                }
+                Response::Error { message, .. } => return Err(anyhow!(message)),
+                _ => return Err(anyhow!("Unexpected response")),
+            }
+        }
+        ProxyCommands::Config { alias } => {
+            let response = client.request(&Request::ProxyConfig {
+                alias: alias.clone(),
+            })?;
+            match response {
+                Response::ProxyConfig(config) => {
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&config)?);
+                    } else {
+                        output::proxy_config(&config);
+                    }
+                }
+                Response::Error { message, .. } => return Err(anyhow!(message)),
+                _ => return Err(anyhow!("Unexpected response")),
+            }
+        }
+        ProxyCommands::Logs { alias, lines } => {
+            let response = client.request(&Request::ProxyLogs {
+                alias: alias.clone(),
+                lines: Some(*lines),
+            })?;
+            match response {
+                Response::ProxyLogs(logs) => println!("{}", logs),
+                Response::Error { message, .. } => return Err(anyhow!(message)),
+                _ => return Err(anyhow!("Unexpected response")),
+            }
+        }
+        ProxyCommands::Route { command } => execute_proxy_route(command, &client, json)?,
+        ProxyCommands::Alias { command } => execute_proxy_alias(command, &client, json)?,
+    }
+
+    Ok(())
+}
+
+fn execute_proxy_route(
+    command: &ProxyRouteCommands,
+    client: &DaemonClient,
+    json: bool,
+) -> Result<()> {
+    match command {
+        ProxyRouteCommands::Add {
+            alias,
+            name,
+            condition,
+            target,
+            priority,
+        } => {
+            // Parse condition string
+            let parsed_condition = RoutingCondition::parse(condition)
+                .ok_or_else(|| anyhow!("Invalid condition: {}. Valid formats: always, thinking, tokens > N, tokens < N, tools >= N", condition))?;
+
+            let rule = RoutingRule::new(name.clone(), parsed_condition, target.clone())
+                .with_priority(*priority);
+
+            let response = client.request(&Request::ProxyRouteAdd {
+                alias: alias.clone(),
+                rule,
+            })?;
+            handle_success_response(response, json)?;
+        }
+        ProxyRouteCommands::List { alias } => {
+            let response = client.request(&Request::ProxyRouteList {
+                alias: alias.clone(),
+            })?;
+            match response {
+                Response::ProxyRoutes(rules) => {
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&rules)?);
+                    } else {
+                        output::proxy_routes(&rules);
+                    }
+                }
+                Response::Error { message, .. } => return Err(anyhow!(message)),
+                _ => return Err(anyhow!("Unexpected response")),
+            }
+        }
+        ProxyRouteCommands::Remove { alias, name } => {
+            let response = client.request(&Request::ProxyRouteRemove {
+                alias: alias.clone(),
+                rule_name: name.clone(),
+            })?;
+            handle_success_response(response, json)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn execute_proxy_alias(
+    command: &ProxyAliasCommands,
+    client: &DaemonClient,
+    json: bool,
+) -> Result<()> {
+    match command {
+        ProxyAliasCommands::Set { alias, from, to } => {
+            let response = client.request(&Request::ProxyAliasSet {
+                alias: alias.clone(),
+                from_model: from.clone(),
+                to_target: to.clone(),
+            })?;
+            handle_success_response(response, json)?;
+        }
+        ProxyAliasCommands::List { alias } => {
+            let response = client.request(&Request::ProxyAliasList {
+                alias: alias.clone(),
+            })?;
+            match response {
+                Response::ProxyAliases(aliases) => {
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&aliases)?);
+                    } else {
+                        output::proxy_aliases(&aliases);
+                    }
+                }
+                Response::Error { message, .. } => return Err(anyhow!(message)),
+                _ => return Err(anyhow!("Unexpected response")),
+            }
+        }
+        ProxyAliasCommands::Remove { alias, from } => {
+            let response = client.request(&Request::ProxyAliasRemove {
+                alias: alias.clone(),
+                from_model: from.clone(),
+            })?;
+            handle_success_response(response, json)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn handle_success_response(response: Response, json: bool) -> Result<()> {
+    match response {
+        Response::Success { message } => {
+            if json {
+                println!("{}", serde_json::json!({"success": message}));
+            } else {
+                output::success(&message);
+            }
+            Ok(())
+        }
+        Response::Error { message, .. } => Err(anyhow!(message)),
+        _ => Err(anyhow!("Unexpected response")),
     }
 }

@@ -57,6 +57,95 @@ clown profiles create claude work --proxy -p anthropic
 
 This creates a profile with proxy enabled. The proxy configuration is stored in the profile metadata.
 
+## CLI Commands
+
+### Proxy Lifecycle
+
+```bash
+# Enable proxy for an existing profile
+clown proxy enable <alias>
+
+# Disable proxy for a profile
+clown proxy disable <alias>
+
+# Start proxy instance manually
+clown proxy start <alias>
+
+# Stop proxy instance
+clown proxy stop <alias>
+
+# Stop all proxy instances
+clown proxy stop-all
+
+# Restart proxy instance
+clown proxy restart <alias>
+```
+
+### Status and Monitoring
+
+```bash
+# Show status of all proxy instances
+clown proxy status
+
+# Show status for a specific profile
+clown proxy status <alias>
+
+# Show proxy configuration for a profile
+clown proxy config <alias>
+
+# View proxy logs (last 50 lines by default)
+clown proxy logs <alias>
+
+# View more log lines
+clown proxy logs <alias> --lines 200
+```
+
+### Routing Rules
+
+Routing rules determine how requests are distributed to providers based on conditions.
+
+```bash
+# Add a routing rule
+clown proxy route add <alias> <name> <condition> <target> [--priority N]
+
+# Examples:
+clown proxy route add work "long-context" "tokens > 100000" "minimax/claude-3-sonnet" --priority 10
+clown proxy route add work "thinking" "thinking" "anthropic/claude-opus-4" --priority 5
+clown proxy route add work "default" "always" "anthropic/claude-sonnet-4"
+
+# List routing rules
+clown proxy route list <alias>
+
+# Remove a routing rule
+clown proxy route remove <alias> <name>
+```
+
+**Condition Syntax:**
+- `always` - Always match (use for default/fallback rules)
+- `thinking` - Match requests with thinking/extended mode enabled
+- `tokens > N` - Match when token count exceeds N
+- `tokens < N` - Match when token count is below N
+- `tools >= N` - Match when tool count is at least N
+
+### Model Aliases
+
+Model aliases map requested model names to provider-specific targets.
+
+```bash
+# Set a model alias
+clown proxy alias set <alias> <from-model> <to-target>
+
+# Examples:
+clown proxy alias set work "claude-sonnet-4" "minimax/claude-3-sonnet"
+clown proxy alias set work "fast-model" "anthropic/claude-haiku-3"
+
+# List model aliases
+clown proxy alias list <alias>
+
+# Remove a model alias
+clown proxy alias remove <alias> <from-model>
+```
+
 ## How It Works
 
 ### Port Allocation
@@ -216,32 +305,100 @@ Route long-context requests to cheaper providers:
 # Create profile with proxy
 clown profiles create claude work --proxy -p anthropic
 
-# Configure to use MiniMax for long context
-# (Future: clown profiles proxy route add ...)
+# Add rule to route long context to cheaper provider
+clown proxy route add work "long-context" "tokens > 100000" "minimax/claude-3-sonnet" --priority 10
+
+# Add default rule for normal requests
+clown proxy route add work "default" "always" "anthropic/claude-sonnet-4"
+
+# Start using the profile
+clown profiles run work
 ```
 
 ### Multi-Provider Fallback
 
-Configure fallback to alternative providers when primary is unavailable.
+Configure fallback to alternative providers when primary is unavailable:
+
+```bash
+# Create profile with proxy
+clown profiles create claude reliable --proxy -p anthropic
+
+# Primary provider (highest priority)
+clown proxy route add reliable "primary" "always" "anthropic/claude-sonnet-4" --priority 10
+
+# Fallback provider (lower priority, used when primary fails)
+clown proxy route add reliable "fallback" "always" "minimax/claude-3-sonnet" --priority 0
+```
 
 ### Development vs Production
 
-- **Development profile**: Route to cheaper/faster providers
-- **Production profile**: Route to premium providers with best quality
+```bash
+# Development profile: Route to cheaper/faster providers
+clown profiles create claude dev --proxy -p minimax
+clown proxy route add dev "default" "always" "minimax/claude-3-sonnet"
+
+# Production profile: Route to premium providers
+clown profiles create claude prod --proxy -p anthropic
+clown proxy route add prod "thinking" "thinking" "anthropic/claude-opus-4" --priority 10
+clown proxy route add prod "default" "always" "anthropic/claude-sonnet-4"
+```
+
+### Tool-Heavy Workloads
+
+Route requests with many tools to more capable models:
+
+```bash
+clown proxy route add work "heavy-tools" "tools >= 10" "anthropic/claude-opus-4" --priority 5
+clown proxy route add work "default" "always" "anthropic/claude-sonnet-4"
+```
 
 ## Monitoring
+
+### View Proxy Status
+
+```bash
+# Show all running proxies
+clown proxy status
+
+# Output:
+# Profile   Port   PID      Status    Restarts   Started
+# work      8081   12345    running   0          2026-01-18 10:30
+# dev       8082   12346    running   0          2026-01-18 09:15
+```
+
+### View Proxy Configuration
+
+```bash
+# Show proxy configuration for a profile
+clown proxy config work
+
+# Output:
+# Enabled: true
+# Port: auto
+# Strategy: Conditional
+# Rules:
+#   [long-context] tokens > 100000 -> minimax/claude-3-sonnet (priority: 10)
+#   [default] always -> anthropic/claude-sonnet-4 (priority: 0)
+# Aliases: (none)
+```
 
 ### View Proxy Logs
 
 ```bash
-# View logs
+# View last 50 lines of proxy logs
+clown proxy logs work
+
+# View more lines
+clown proxy logs work --lines 200
+
+# Or access log files directly
 cat ~/.claude-profiles/work/.ultrallm/logs/proxy.log
 
 # Follow logs in real-time
 tail -f ~/.claude-profiles/work/.ultrallm/logs/proxy.log
 ```
 
-### Check Proxy Status
+### Health Check
 
 The proxy health endpoint is available at:
 

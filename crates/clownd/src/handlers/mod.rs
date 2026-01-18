@@ -9,6 +9,7 @@ pub mod aliases;
 pub mod hooks;
 pub mod profiles;
 pub mod providers;
+pub mod proxy;
 pub mod registry;
 pub mod stats;
 
@@ -62,6 +63,35 @@ pub async fn handle_request(request: &Request, state: &ServerState) -> Response 
         } => hooks::remove(alias, event, *index, state).await,
         Request::HooksImport { alias, config } => hooks::import(alias, config, state).await,
         Request::HooksExport { alias } => hooks::export(alias, state).await,
+
+        // Proxy commands
+        Request::ProxyEnable { alias } => proxy::enable(alias, state).await,
+        Request::ProxyDisable { alias } => proxy::disable(alias, state).await,
+        Request::ProxyStart { alias } => proxy::start(alias, state).await,
+        Request::ProxyStop { alias } => proxy::stop(alias, state).await,
+        Request::ProxyStopAll => proxy::stop_all(state).await,
+        Request::ProxyRestart { alias } => {
+            // Stop then start
+            let _ = proxy::stop(alias, state).await;
+            proxy::start(alias, state).await
+        }
+        Request::ProxyStatus { alias } => proxy::status(alias.as_deref(), state).await,
+        Request::ProxyConfig { alias } => proxy::config(alias, state).await,
+        Request::ProxyLogs { alias, lines } => proxy::logs(alias, *lines, state).await,
+        Request::ProxyRouteAdd { alias, rule } => proxy::route_add(alias, rule, state).await,
+        Request::ProxyRouteRemove { alias, rule_name } => {
+            proxy::route_remove(alias, rule_name, state).await
+        }
+        Request::ProxyRouteList { alias } => proxy::route_list(alias, state).await,
+        Request::ProxyAliasSet {
+            alias,
+            from_model,
+            to_target,
+        } => proxy::alias_set(alias, from_model, to_target, state).await,
+        Request::ProxyAliasRemove { alias, from_model } => {
+            proxy::alias_remove(alias, from_model, state).await
+        }
+        Request::ProxyAliasList { alias } => proxy::alias_list(alias, state).await,
 
         // Ping
         Request::Ping => Response::Pong,
