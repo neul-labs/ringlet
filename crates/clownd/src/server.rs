@@ -5,6 +5,7 @@ use crate::execution::ExecutionAdapter;
 use crate::handlers;
 use crate::profile_manager::ProfileManager;
 use crate::provider_registry::ProviderRegistry;
+use crate::proxy_manager::ProxyManager;
 use crate::registry_client::RegistryClient;
 use crate::telemetry::TelemetryCollector;
 use anyhow::{Context, Result};
@@ -27,6 +28,7 @@ pub struct ServerState {
     pub execution_adapter: ExecutionAdapter,
     pub registry_client: RegistryClient,
     pub telemetry: TelemetryCollector,
+    pub proxy_manager: ProxyManager,
 }
 
 impl ServerState {
@@ -37,6 +39,7 @@ impl ServerState {
         let execution_adapter = ExecutionAdapter::new(paths.clone());
         let registry_client = RegistryClient::new(paths.clone());
         let telemetry = TelemetryCollector::new(paths.clone());
+        let proxy_manager = ProxyManager::new(paths.clone());
 
         Ok(Self {
             paths,
@@ -47,6 +50,7 @@ impl ServerState {
             execution_adapter,
             registry_client,
             telemetry,
+            proxy_manager,
         })
     }
 
@@ -152,6 +156,12 @@ pub async fn run(
         debug!("Sending response: {:?}", response);
 
         send_response(&socket, &response)?;
+    }
+
+    // Stop all proxy instances gracefully
+    info!("Stopping proxy instances...");
+    if let Err(e) = state.proxy_manager.stop_all().await {
+        warn!("Error stopping proxies: {}", e);
     }
 
     Ok(())

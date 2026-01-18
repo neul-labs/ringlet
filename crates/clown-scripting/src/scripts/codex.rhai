@@ -1,52 +1,39 @@
 // Codex CLI configuration script
-// Configures OpenAI Codex CLI for custom providers via -c flags
-// (Codex doesn't respect $HOME or XDG_CONFIG_HOME for config paths)
+// Generates ~/.codex/config.toml for OpenAI Codex CLI
 
-// Build environment variables
 let env = #{};
-
-// Build args for codex
-let args = [];
+let config = "";
 
 if ctx.provider.type == "self" || ctx.provider.type == "openai" {
-    // For native OpenAI or self-auth, no configuration needed
+    // For native OpenAI or self-auth, minimal config
     // Codex will use its built-in OpenAI provider
+    config = `# Codex CLI configuration (managed by clown)
+`;
 } else {
-    // For openai-compatible providers (like MiniMax), configure via -c flags
-    // since codex doesn't respect $HOME for config path
+    // For openai-compatible providers (MiniMax, Z.AI, etc.)
+    // Generate full config.toml with custom provider
+    config = `# Codex CLI configuration (managed by clown)
+model = "` + ctx.profile.model + `"
+model_provider = "clown"
 
-    // Configure the custom model provider
-    args.push("-c");
-    args.push("model_providers.clown.name=\"" + ctx.provider.name + "\"");
-
-    args.push("-c");
-    args.push("model_providers.clown.base_url=\"" + ctx.profile.endpoint + "\"");
-
-    args.push("-c");
-    args.push("model_providers.clown.env_key=\"" + ctx.provider.auth_env_key + "\"");
-
-    args.push("-c");
-    args.push("model_providers.clown.wire_api=\"chat\"");
-
-    args.push("-c");
-    args.push("model_providers.clown.requires_openai_auth=false");
-
-    // Set the model and provider to use
-    args.push("-c");
-    args.push("model=\"" + ctx.profile.model + "\"");
-
-    args.push("-c");
-    args.push("model_provider=\"clown\"");
+[model_providers.clown]
+name = "` + ctx.provider.name + `"
+base_url = "` + ctx.profile.endpoint + `"
+env_key = "` + ctx.provider.auth_env_key + `"
+wire_api = "chat"
+`;
 
     // Set API key env var
     env[ctx.provider.auth_env_key] = "${API_KEY}";
 }
 
-// Return the output - no files needed, using -c args instead
+// Return the output
 #{
-    files: #{},
+    files: #{
+        ".codex/config.toml": config
+    },
     env: env,
-    args: args,
+    args: [],
     hooks: (),
     mcp_servers: ()
 }

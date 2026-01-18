@@ -30,6 +30,10 @@ pub struct ProfileContext {
     pub endpoint: String,
     pub hooks: Vec<String>,
     pub mcp_servers: Vec<String>,
+    /// Full hooks configuration as JSON (for Claude Code hooks).
+    pub hooks_config: Option<serde_json::Value>,
+    /// Proxy URL if proxy is enabled for this profile.
+    pub proxy_url: Option<String>,
 }
 
 /// Provider context for scripts.
@@ -168,6 +172,19 @@ fn context_to_dynamic(context: &ScriptContext) -> Result<Dynamic> {
             .collect::<Vec<_>>()
             .into(),
     );
+    // Add hooks_config as a dynamic value (JSON -> Rhai map)
+    if let Some(ref hooks_json) = context.profile.hooks_config {
+        let hooks_dynamic = json_to_dynamic(hooks_json.clone())?;
+        profile.insert("hooks_config".into(), hooks_dynamic);
+    } else {
+        profile.insert("hooks_config".into(), Dynamic::UNIT);
+    }
+    // Add proxy_url if present
+    if let Some(ref proxy_url) = context.profile.proxy_url {
+        profile.insert("proxy_url".into(), proxy_url.clone().into());
+    } else {
+        profile.insert("proxy_url".into(), Dynamic::UNIT);
+    }
     map.insert("profile".into(), profile.into());
 
     // Provider
@@ -287,6 +304,38 @@ fn dynamic_to_json(value: Dynamic) -> Result<serde_json::Value> {
     }
 }
 
+/// Convert serde_json::Value to Rhai Dynamic.
+fn json_to_dynamic(value: serde_json::Value) -> Result<Dynamic> {
+    match value {
+        serde_json::Value::Null => Ok(Dynamic::UNIT),
+        serde_json::Value::Bool(b) => Ok(Dynamic::from(b)),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Ok(Dynamic::from(i))
+            } else if let Some(f) = n.as_f64() {
+                Ok(Dynamic::from(f))
+            } else {
+                Ok(Dynamic::UNIT)
+            }
+        }
+        serde_json::Value::String(s) => Ok(Dynamic::from(s)),
+        serde_json::Value::Array(arr) => {
+            let mut rhai_arr = rhai::Array::new();
+            for item in arr {
+                rhai_arr.push(json_to_dynamic(item)?);
+            }
+            Ok(Dynamic::from(rhai_arr))
+        }
+        serde_json::Value::Object(obj) => {
+            let mut map = Map::new();
+            for (k, v) in obj {
+                map.insert(k.into(), json_to_dynamic(v)?);
+            }
+            Ok(Dynamic::from(map))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -314,6 +363,8 @@ mod tests {
                 endpoint: "https://api.test.com".to_string(),
                 hooks: vec![],
                 mcp_servers: vec![],
+                hooks_config: None,
+                proxy_url: None,
             },
             provider: ProviderContext {
                 id: "test".to_string(),
@@ -357,6 +408,8 @@ mod tests {
                 endpoint: "https://test.com".to_string(),
                 hooks: vec![],
                 mcp_servers: vec![],
+                hooks_config: None,
+                proxy_url: None,
             },
             provider: ProviderContext {
                 id: "test".to_string(),

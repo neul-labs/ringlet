@@ -12,19 +12,28 @@
 //! - Error types
 
 pub mod agent;
+pub mod binary;
 pub mod config;
 pub mod error;
+pub mod hooks;
 pub mod paths;
 pub mod profile;
 pub mod provider;
+pub mod proxy;
 pub mod rpc;
 
 pub use agent::{AgentInfo, AgentManifest, ProviderCompatibility};
+pub use binary::{BinaryConfig, BinaryPaths};
 pub use config::UserConfig;
 pub use error::{ClownError, Result};
+pub use hooks::{HookAction, HookRule, HooksConfig};
 pub use paths::{expand_template, expand_tilde, home_dir, ClownPaths};
 pub use profile::{Profile, ProfileCreateRequest, ProfileInfo, ProfileMetadata};
 pub use provider::{ProviderInfo, ProviderManifest, ProviderType};
+pub use proxy::{
+    ModelTarget, ProfileProxyConfig, ProxyInstanceInfo, ProxyStatus, RoutingCondition,
+    RoutingConfig, RoutingRule, RoutingStrategy,
+};
 pub use rpc::{Request, Response};
 
 /// Clown version.

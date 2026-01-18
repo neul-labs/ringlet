@@ -14,6 +14,7 @@ mod execution;
 mod handlers;
 mod profile_manager;
 mod provider_registry;
+mod proxy_manager;
 mod registry_client;
 mod server;
 mod telemetry;

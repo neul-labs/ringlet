@@ -49,3 +49,7 @@ notify = { workspace = true }
 
 # Memory allocator
 mimalloc = { workspace = true }
+
+# Unix process management
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

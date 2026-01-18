@@ -25,6 +25,8 @@ Profiles are the heart of clown. Each one binds an agent installation to a speci
 | `args` | Default CLI arguments appended when running the agent. |
 | `working_dir` | Optional override for the process working directory. |
 | `metadata` | Arbitrary manifest-specific fields (e.g., JSON path, profile home, last-used timestamps, `created_at`, `last_used`). |
+| `metadata.hooks_config` | Optional hooks configuration for event-driven actions. See [Hooks](hooks.md). |
+| `metadata.proxy_config` | Optional proxy configuration for request routing. See [Proxy](proxy.md). |
 
 Profiles are serialized as JSON for readability, but the manager exposes a typed API so other persistence backends (SQLite, remote sync) can be added later.
 
@@ -58,8 +60,11 @@ Profiles can be customized with additional flags during creation:
 - `--hooks <hook1,hook2>` – Enable agent hooks like `auto_format` or `auto_lint`
 - `--mcp <server1,server2>` – Enable MCP servers like `filesystem` or `github`
 - `--bare` – Create a minimal profile without default hooks or MCP servers
+- `--proxy` – Enable proxy routing for this profile (requires ultrallm binary)
 
-See `docs/scripting.md` for full documentation on hooks, MCP servers, and the Rhai scripts that generate agent-specific configuration.
+See [Scripting](scripting.md) for hooks, MCP servers, and Rhai configuration scripts.
+See [Hooks](hooks.md) for event-driven hook configuration.
+See [Proxy](proxy.md) for intelligent request routing.
 
 ## Example
 
@@ -114,7 +119,7 @@ $ eval "$(clown profiles env work-anthropic)"
 $ claude  # Now uses Anthropic API
 ```
 
-## Hooks
+## Manifest Hooks
 
 Agent manifests may define hooks that run during profile events. Common cases include:
 
@@ -124,6 +129,18 @@ Agent manifests may define hooks that run during profile events. Common cases in
 - `post_run`: clean up temporary files or log session metrics.
 
 Hooks are executed with a short timeout and receive environment variables describing the alias, agent path, and model.
+
+## Profile Hooks
+
+Profiles can also have event-driven hooks that trigger during agent execution. These are different from manifest hooks and provide fine-grained control over tool usage events.
+
+**Profile hooks support:**
+- `PreToolUse` – Before a tool is executed
+- `PostToolUse` – After a tool completes
+- `Notification` – On agent notifications
+- `Stop` – When agent stops
+
+Manage profile hooks with `clown hooks add|list|remove|import|export`. See [Hooks](hooks.md) for full documentation.
 
 ## CLI aliases
 

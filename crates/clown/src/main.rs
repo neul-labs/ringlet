@@ -85,6 +85,12 @@ enum Commands {
         #[command(subcommand)]
         command: EnvCommands,
     },
+
+    /// Manage profile hooks
+    Hooks {
+        #[command(subcommand)]
+        command: HooksCommands,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -138,6 +144,9 @@ enum ProfilesCommands {
         /// Create minimal profile without hooks/MCP
         #[arg(long)]
         bare: bool,
+        /// Enable proxy routing for this profile
+        #[arg(long)]
+        proxy: bool,
     },
     /// List profiles
     List {
@@ -230,6 +239,47 @@ enum EnvCommands {
         alias: String,
         /// Task name
         task: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum HooksCommands {
+    /// Add a hook rule to a profile
+    Add {
+        /// Profile alias
+        alias: String,
+        /// Event type (PreToolUse, PostToolUse, Notification, Stop)
+        event: String,
+        /// Matcher pattern (e.g., "Bash|Write" or "*" for all)
+        matcher: String,
+        /// Command to execute (use $EVENT for JSON event data)
+        command: String,
+    },
+    /// List hooks for a profile
+    List {
+        /// Profile alias
+        alias: String,
+    },
+    /// Remove a hook rule from a profile
+    Remove {
+        /// Profile alias
+        alias: String,
+        /// Event type (PreToolUse, PostToolUse, Notification, Stop)
+        event: String,
+        /// Rule index (0-based, as shown in list)
+        index: usize,
+    },
+    /// Import hooks from a JSON file
+    Import {
+        /// Profile alias
+        alias: String,
+        /// Path to JSON file with hooks configuration
+        file: std::path::PathBuf,
+    },
+    /// Export hooks to JSON
+    Export {
+        /// Profile alias
+        alias: String,
     },
 }
 

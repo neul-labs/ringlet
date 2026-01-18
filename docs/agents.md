@@ -24,6 +24,7 @@ clown treats every CLI coding agent as a declarative manifest. The manifest stat
 | `hooks.pre_run` | Commands run before launching the agent. |
 | `hooks.post_run` | Commands run after the agent exits. |
 | `setup_tasks` | Optional manual environment tasks users can run via `clown env setup <alias> <task>` (e.g., remapping CLI shims). |
+| `supports_hooks` | Whether the agent supports profile-level event hooks. See [Hooks](hooks.md). |
 
 Note: Agent manifests define **what tool** to run and **how to detect/isolate it**. They do not define API endpoints or credentials—those come from **providers** (see `docs/providers.md`).
 
@@ -128,6 +129,7 @@ The following agents ship with curated manifests. Each section describes the und
      ```
 - **Using with clown**: Profiles capture the environment block above plus any optional flags (e.g., `--settings`). When `clown profiles run claude-work`, the HOME rewriting ensures each alias keeps independent auth sessions.
 - **Hooks**: Claude Code exposes lifecycle hooks (see https://code.claude.com/docs/en/hooks-guide). Declare them in the manifest so clown can run project-specific `pre_run`, `post_run`, or tool-approval hooks per profile.
+- **Profile Hooks**: Claude Code supports profile-level event hooks (`supports_hooks: true`). Use `clown hooks add|list|remove` to configure PreToolUse, PostToolUse, Notification, and Stop hooks. See [Hooks](hooks.md).
 
 ### Grok CLI
 

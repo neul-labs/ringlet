@@ -1,8 +1,10 @@
 //! RPC message types for CLI ↔ daemon communication.
 
 use crate::agent::AgentInfo;
+use crate::hooks::HooksConfig;
 use crate::profile::{ProfileCreateRequest, ProfileInfo};
 use crate::provider::ProviderInfo;
+use crate::proxy::{ProfileProxyConfig, ProxyInstanceInfo, RoutingRule};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -42,6 +44,39 @@ pub enum Request {
     // Env setup commands
     EnvSetup { alias: String, task: String },
 
+    // Hooks commands
+    HooksAdd {
+        alias: String,
+        event: String,
+        matcher: String,
+        command: String,
+    },
+    HooksList { alias: String },
+    HooksRemove {
+        alias: String,
+        event: String,
+        index: usize,
+    },
+    HooksImport { alias: String, config: HooksConfig },
+    HooksExport { alias: String },
+
+    // Proxy commands
+    ProxyEnable { alias: String },
+    ProxyDisable { alias: String },
+    ProxyStart { alias: String },
+    ProxyStop { alias: String },
+    ProxyStopAll,
+    ProxyRestart { alias: String },
+    ProxyStatus { alias: Option<String> },
+    ProxyRouteAdd { alias: String, rule: RoutingRule },
+    ProxyRouteRemove { alias: String, rule_name: String },
+    ProxyRouteList { alias: String },
+    ProxyAliasSet { alias: String, from_model: String, to_target: String },
+    ProxyAliasRemove { alias: String, from_model: String },
+    ProxyAliasList { alias: String },
+    ProxyConfig { alias: String },
+    ProxyLogs { alias: String, lines: Option<usize> },
+
     // Daemon commands
     Ping,
     Shutdown,
@@ -68,6 +103,24 @@ pub enum Response {
 
     /// Single profile details.
     Profile(ProfileInfo),
+
+    /// Hooks configuration.
+    Hooks(HooksConfig),
+
+    /// Proxy status information.
+    ProxyStatus(Vec<ProxyInstanceInfo>),
+
+    /// Proxy configuration.
+    ProxyConfig(ProfileProxyConfig),
+
+    /// Routing rules list.
+    ProxyRoutes(Vec<RoutingRule>),
+
+    /// Model aliases.
+    ProxyAliases(HashMap<String, String>),
+
+    /// Proxy logs.
+    ProxyLogs(String),
 
     /// Environment variables for shell export.
     Env(HashMap<String, String>),
@@ -183,6 +236,15 @@ pub mod error_codes {
     pub const AGENT_NOT_INSTALLED: i32 = 1005;
     pub const INCOMPATIBLE_PROVIDER: i32 = 1006;
     pub const INVALID_ENDPOINT: i32 = 1007;
+    pub const HOOKS_NOT_SUPPORTED: i32 = 1008;
+    pub const INVALID_HOOK_EVENT: i32 = 1009;
+    pub const PROXY_NOT_ENABLED: i32 = 1010;
+    pub const PROXY_NOT_RUNNING: i32 = 1011;
+    pub const PROXY_ALREADY_RUNNING: i32 = 1012;
+    pub const PROXY_START_FAILED: i32 = 1013;
+    pub const PROXY_NOT_SUPPORTED: i32 = 1014;
+    pub const ROUTE_NOT_FOUND: i32 = 1015;
+    pub const ALIAS_NOT_FOUND: i32 = 1016;
     pub const SCRIPT_ERROR: i32 = 2001;
     pub const EXECUTION_ERROR: i32 = 2002;
     pub const REGISTRY_ERROR: i32 = 3001;

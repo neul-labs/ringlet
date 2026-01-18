@@ -2,6 +2,7 @@ id = "claude"
 name = "Claude Code"
 binary = "claude"
 version_flag = "--version"
+supports_hooks = true
 
 [detect]
 commands = ["claude --version"]

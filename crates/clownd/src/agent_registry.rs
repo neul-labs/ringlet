@@ -127,6 +127,7 @@ impl AgentRegistry {
                     profile_count: *profile_counts.get(&manifest.id).unwrap_or(&0),
                     default_model: manifest.models.default.clone(),
                     default_provider: manifest.profile.default_provider.clone(),
+                    supports_hooks: manifest.supports_hooks,
                     last_used: None, // TODO: track from telemetry
                 }
             })
@@ -159,6 +160,7 @@ impl AgentRegistry {
             profile_count,
             default_model: manifest.models.default.clone(),
             default_provider: manifest.profile.default_provider.clone(),
+            supports_hooks: manifest.supports_hooks,
             last_used: None,
         })
     }

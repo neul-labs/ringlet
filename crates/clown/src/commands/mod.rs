@@ -3,11 +3,11 @@
 use crate::client::DaemonClient;
 use crate::output;
 use crate::{
-    AgentsCommands, AliasesCommands, Commands, DaemonCommands, EnvCommands, ProfilesCommands,
-    ProvidersCommands, RegistryCommands,
+    AgentsCommands, AliasesCommands, Commands, DaemonCommands, EnvCommands, HooksCommands,
+    ProfilesCommands, ProvidersCommands, RegistryCommands,
 };
 use anyhow::{anyhow, Result};
-use clown_core::{ProfileCreateRequest, Request, Response};
+use clown_core::{HooksConfig, ProfileCreateRequest, Request, Response};
 
 /// Execute a command.
 pub async fn execute(command: &Commands, json: bool) -> Result<()> {
@@ -20,6 +20,7 @@ pub async fn execute(command: &Commands, json: bool) -> Result<()> {
         Commands::Stats { agent, provider } => execute_stats(agent, provider, json).await,
         Commands::Daemon { command } => execute_daemon(command, json).await,
         Commands::Env { command } => execute_env(command, json).await,
+        Commands::Hooks { command } => execute_hooks(command, json).await,
     }
 }
 
@@ -111,6 +112,7 @@ async fn execute_profiles(command: &ProfilesCommands, json: bool) -> Result<()> 
             hooks,
             mcp,
             bare,
+            proxy,
         } => {
             // Get provider info to check if auth is required
             let provider_response = client.request(&Request::ProvidersInspect { id: provider.clone() })?;
@@ -162,6 +164,7 @@ async fn execute_profiles(command: &ProfilesCommands, json: bool) -> Result<()> 
                 args: vec![],
                 working_dir: None,
                 bare: *bare,
+                proxy: *proxy,
             };
 
             let response = client.request(&Request::ProfilesCreate(request))?;
@@ -523,4 +526,149 @@ async fn execute_env(command: &EnvCommands, json: bool) -> Result<()> {
     }
 
     Ok(())
+}
+
+async fn execute_hooks(command: &HooksCommands, json: bool) -> Result<()> {
+    let client = DaemonClient::connect()?;
+
+    match command {
+        HooksCommands::Add {
+            alias,
+            event,
+            matcher,
+            command,
+        } => {
+            let response = client.request(&Request::HooksAdd {
+                alias: alias.clone(),
+                event: event.clone(),
+                matcher: matcher.clone(),
+                command: command.clone(),
+            })?;
+            match response {
+                Response::Success { message } => {
+                    if json {
+                        println!("{}", serde_json::json!({"success": message}));
+                    } else {
+                        output::success(&message);
+                    }
+                }
+                Response::Error { message, .. } => return Err(anyhow!(message)),
+                _ => return Err(anyhow!("Unexpected response")),
+            }
+        }
+        HooksCommands::List { alias } => {
+            let response = client.request(&Request::HooksList {
+                alias: alias.clone(),
+            })?;
+            match response {
+                Response::Hooks(hooks) => {
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&hooks)?);
+                    } else {
+                        print_hooks(&hooks);
+                    }
+                }
+                Response::Error { message, .. } => return Err(anyhow!(message)),
+                _ => return Err(anyhow!("Unexpected response")),
+            }
+        }
+        HooksCommands::Remove {
+            alias,
+            event,
+            index,
+        } => {
+            let response = client.request(&Request::HooksRemove {
+                alias: alias.clone(),
+                event: event.clone(),
+                index: *index,
+            })?;
+            match response {
+                Response::Success { message } => {
+                    if json {
+                        println!("{}", serde_json::json!({"success": message}));
+                    } else {
+                        output::success(&message);
+                    }
+                }
+                Response::Error { message, .. } => return Err(anyhow!(message)),
+                _ => return Err(anyhow!("Unexpected response")),
+            }
+        }
+        HooksCommands::Import { alias, file } => {
+            let content = std::fs::read_to_string(file)
+                .map_err(|e| anyhow!("Failed to read file: {}", e))?;
+            let config: HooksConfig = serde_json::from_str(&content)
+                .map_err(|e| anyhow!("Invalid hooks JSON: {}", e))?;
+
+            let response = client.request(&Request::HooksImport {
+                alias: alias.clone(),
+                config,
+            })?;
+            match response {
+                Response::Success { message } => {
+                    if json {
+                        println!("{}", serde_json::json!({"success": message}));
+                    } else {
+                        output::success(&message);
+                    }
+                }
+                Response::Error { message, .. } => return Err(anyhow!(message)),
+                _ => return Err(anyhow!("Unexpected response")),
+            }
+        }
+        HooksCommands::Export { alias } => {
+            let response = client.request(&Request::HooksExport {
+                alias: alias.clone(),
+            })?;
+            match response {
+                Response::Hooks(hooks) => {
+                    // Always output JSON for export (pipe-friendly)
+                    println!("{}", serde_json::to_string_pretty(&hooks)?);
+                }
+                Response::Error { message, .. } => return Err(anyhow!(message)),
+                _ => return Err(anyhow!("Unexpected response")),
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn print_hooks(hooks: &HooksConfig) {
+    let events = [
+        ("PreToolUse", &hooks.pre_tool_use),
+        ("PostToolUse", &hooks.post_tool_use),
+        ("Notification", &hooks.notification),
+        ("Stop", &hooks.stop),
+    ];
+
+    let mut has_hooks = false;
+    for (event_name, rules) in &events {
+        if !rules.is_empty() {
+            has_hooks = true;
+            println!("{}:", event_name);
+            for (i, rule) in rules.iter().enumerate() {
+                println!("  [{}] matcher: {}", i, rule.matcher);
+                for (j, action) in rule.hooks.iter().enumerate() {
+                    match action {
+                        clown_core::HookAction::Command { command, timeout } => {
+                            let timeout_str = timeout
+                                .map(|t| format!(" (timeout: {}ms)", t))
+                                .unwrap_or_default();
+                            println!("      hook[{}]: command{}", j, timeout_str);
+                            println!("        {}", command);
+                        }
+                        clown_core::HookAction::Url { url } => {
+                            println!("      hook[{}]: url", j);
+                            println!("        {}", url);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if !has_hooks {
+        println!("No hooks configured");
+    }
 }

@@ -163,11 +163,33 @@ pub async fn run(alias: &str, args: &[String], state: &ServerState) -> Response 
         String::new()
     };
 
+    // Start proxy if enabled for this profile
+    let proxy_url = if let Some(ref proxy_config) = profile.metadata.proxy_config {
+        if proxy_config.enabled {
+            match state.proxy_manager.start(alias, &profile.metadata.home, proxy_config).await {
+                Ok(port) => {
+                    info!("Proxy started for '{}' on port {}", alias, port);
+                    Some(format!("http://127.0.0.1:{}", port))
+                }
+                Err(e) => {
+                    return Response::error(
+                        error_codes::EXECUTION_ERROR,
+                        format!("Failed to start proxy: {}", e),
+                    );
+                }
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     // Record session start
     let started_at = chrono::Utc::now();
 
     // Run the profile using execution adapter
-    match state.execution_adapter.run(&profile, &agent, &provider, &api_key, args) {
+    match state.execution_adapter.run(&profile, &agent, &provider, &api_key, args, proxy_url.as_deref()) {
         Ok(result) => {
             // Mark profile as used
             if let Err(e) = state.profile_manager.mark_used(alias) {

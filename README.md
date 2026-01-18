@@ -47,6 +47,13 @@ Executed manual env setup task \"cli-remap\" for profile work-sonnet
 $ clown registry sync
 Fetched registry commit f4a12c3 (stable channel)
 
+# Create profile with proxy for intelligent routing
+$ clown profiles create claude work-proxy --provider anthropic --proxy
+
+# Add event hooks to a profile
+$ clown hooks add work-sonnet PreToolUse "Bash" "echo 'Running: $EVENT' >> /tmp/clown.log"
+$ clown hooks list work-sonnet
+
 $ clown profiles list --agent claude
 Alias              Provider    Endpoint       Model           Last Used
 work-sonnet        minimax     international  MiniMax-M2.1    2024-05-04T11:23:51Z
@@ -63,7 +70,9 @@ The daemon is started transparently the first time it is needed (for example, wh
 - `docs/agents.md` – manifests for each supported CLI coding agent plus steps for onboarding new agents.
 - `docs/providers.md` – API backend definitions (Anthropic, MiniMax, OpenRouter) and how to add custom providers.
 - `docs/profiles.md` – lifecycle of agent profiles and CLI workflows that manage them.
-- `docs/scripting.md` – Rhai scripting guide for configuration generation, hooks, and MCP servers.
+- `docs/hooks.md` – event-driven hooks for logging, auditing, and integration.
+- `docs/proxy.md` – intelligent request routing via ultrallm proxy.
+- `docs/scripting.md` – Rhai scripting guide for configuration generation.
 - `docs/registry.md` – GitHub registry layout, sync workflow, templates, and model catalog.
 
 ## Getting started

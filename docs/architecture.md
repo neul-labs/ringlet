@@ -42,6 +42,26 @@ Stores aliases and environment overrides for each agent+model pairing. When prof
 ### Execution adapter
 Transforms a profile definition into a runnable command by injecting env vars, rewriting home directories when required (e.g., Claude Code isolation), passing through CLI arguments, and generating shim executables (e.g., `claude-minimax`) that call into the adapter so users get direct aliases per profile. It also exposes a supervised runner for optional environment setup tasks invoked via `clown env setup <alias> <task>` so remapping scripts do not run implicitly.
 
+### Proxy manager
+Manages ultrallm proxy instances for profiles that have proxy enabled. Each profile can have its own proxy instance running on a dedicated port (8080-8180 range). The proxy manager handles:
+
+- **Process lifecycle** – spawns ultrallm processes, monitors health, graceful shutdown
+- **Port allocation** – automatically assigns unique ports to each profile
+- **Config generation** – creates ultrallm config.yaml from profile routing rules
+- **Auto-start** – starts proxy automatically when running a profile with proxy enabled
+- **Cleanup** – stops all managed proxies when the daemon shuts down
+
+See [Proxy](proxy.md) for user-facing documentation.
+
+### Hooks processor
+Handles event-driven hooks configured at the profile level. When agents that support hooks (e.g., Claude Code) execute tools, the hooks processor:
+
+- **Event matching** – matches tool names against configured matchers
+- **Action execution** – runs command or URL actions with event data
+- **Timeout handling** – respects configured timeouts for command actions
+
+See [Hooks](hooks.md) for user-facing documentation.
+
 ### Background service (`clownd`) – the core
 The daemon is the heart of clown. It runs as a long-lived process (auto-started by the CLI) and owns all stateful operations:
 

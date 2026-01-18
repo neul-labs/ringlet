@@ -28,9 +28,13 @@ pub struct AgentManifest {
     /// Model configuration.
     pub models: ModelsConfig,
 
-    /// Lifecycle hooks.
+    /// Whether this agent supports Claude Code-style hooks.
     #[serde(default)]
-    pub hooks: HooksConfig,
+    pub supports_hooks: bool,
+
+    /// Lifecycle hooks (clown-managed, not agent hooks).
+    #[serde(default, rename = "hooks")]
+    pub lifecycle_hooks: LifecycleHooks,
 
     /// Optional manual setup tasks.
     #[serde(default)]
@@ -100,9 +104,9 @@ pub struct ModelsConfig {
     pub supported: Vec<String>,
 }
 
-/// Lifecycle hooks configuration.
+/// Lifecycle hooks configuration (clown-managed hooks, not agent hooks).
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct HooksConfig {
+pub struct LifecycleHooks {
     /// Commands run when a profile is created.
     #[serde(default)]
     pub create: Vec<String>,
@@ -156,6 +160,9 @@ pub struct AgentInfo {
 
     /// Default provider (e.g., "self" for self-authenticating agents).
     pub default_provider: Option<String>,
+
+    /// Whether this agent supports Claude Code-style hooks.
+    pub supports_hooks: bool,
 
     /// Last used timestamp.
     pub last_used: Option<chrono::DateTime<chrono::Utc>>,

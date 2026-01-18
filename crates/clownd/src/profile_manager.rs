@@ -4,7 +4,7 @@ use anyhow::{anyhow, Context, Result};
 use chrono::Utc;
 use clown_core::{
     expand_template, home_dir, Profile, ProfileCreateRequest, ProfileInfo, ProfileMetadata,
-    ClownPaths,
+    ProfileProxyConfig, ClownPaths,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -75,6 +75,12 @@ impl ProfileManager {
                 total_runs: 0,
                 enabled_hooks: request.hooks.clone(),
                 enabled_mcp_servers: request.mcp_servers.clone(),
+                hooks_config: None,
+                proxy_config: if request.proxy {
+                    Some(ProfileProxyConfig::default())
+                } else {
+                    None
+                },
             },
         };
 
@@ -128,6 +134,24 @@ impl ProfileManager {
         let content = std::fs::read_to_string(&profile_file)?;
         let profile: Profile = serde_json::from_str(&content)?;
         Ok(Some(profile))
+    }
+
+    /// Update a profile.
+    pub fn update(&self, profile: &Profile) -> Result<()> {
+        let profile_file = self
+            .paths
+            .profiles_dir()
+            .join(format!("{}.json", profile.alias));
+
+        if !profile_file.exists() {
+            return Err(anyhow!("Profile not found: {}", profile.alias));
+        }
+
+        let content = serde_json::to_string_pretty(profile)?;
+        std::fs::write(&profile_file, content)?;
+
+        debug!("Updated profile: {}", profile.alias);
+        Ok(())
     }
 
     /// Delete a profile.

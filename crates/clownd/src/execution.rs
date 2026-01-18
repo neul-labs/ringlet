@@ -41,15 +41,16 @@ impl ExecutionAdapter {
         provider: &ProviderManifest,
         api_key: &str,
         args: &[String],
+        proxy_url: Option<&str>,
     ) -> Result<RunResult> {
         // 1. Build script context
-        let context = build_script_context(profile, agent, provider)?;
+        let context = build_script_context(profile, agent, provider, proxy_url)?;
 
         // 2. Find and run the Rhai script
         let script_output = self.run_script(&agent.profile.script, &context)?;
 
-        // 3. Write generated config files
-        self.write_config_files(profile, &script_output)?;
+        // 3. Write generated config files (with API key placeholder replacement)
+        self.write_config_files(profile, &script_output, api_key)?;
 
         // 4. Build environment variables
         let env = self.build_environment(profile, provider, api_key, &script_output)?;
@@ -79,7 +80,7 @@ impl ExecutionAdapter {
     }
 
     /// Write generated config files to profile home.
-    fn write_config_files(&self, profile: &Profile, output: &ScriptOutput) -> Result<()> {
+    fn write_config_files(&self, profile: &Profile, output: &ScriptOutput, api_key: &str) -> Result<()> {
         let home = &profile.metadata.home;
 
         for (relative_path, content) in &output.files {
@@ -91,8 +92,11 @@ impl ExecutionAdapter {
                     .context(format!("Failed to create directory: {:?}", parent))?;
             }
 
+            // Replace ${API_KEY} placeholder in file content
+            let resolved_content = content.replace("${API_KEY}", api_key);
+
             // Write file
-            std::fs::write(&full_path, content)
+            std::fs::write(&full_path, &resolved_content)
                 .context(format!("Failed to write file: {:?}", full_path))?;
 
             debug!("Wrote config file: {:?}", full_path);
@@ -199,6 +203,7 @@ fn build_script_context(
     profile: &Profile,
     agent: &AgentManifest,
     provider: &ProviderManifest,
+    proxy_url: Option<&str>,
 ) -> Result<ScriptContext> {
     // Resolve endpoint URL - handle indirection (e.g., "default" -> "international" -> URL)
     let endpoint_id = &profile.endpoint_id;
@@ -214,6 +219,13 @@ fn build_script_context(
         endpoint = provider.endpoints.get(&endpoint).unwrap().clone();
     }
 
+    // Convert hooks_config to JSON value for script context
+    let hooks_config = profile
+        .metadata
+        .hooks_config
+        .as_ref()
+        .and_then(|h| serde_json::to_value(h).ok());
+
     Ok(ScriptContext {
         profile: ProfileContext {
             alias: profile.alias.clone(),
@@ -222,6 +234,8 @@ fn build_script_context(
             endpoint,
             hooks: profile.metadata.enabled_hooks.clone(),
             mcp_servers: profile.metadata.enabled_mcp_servers.clone(),
+            hooks_config,
+            proxy_url: proxy_url.map(String::from),
         },
         provider: ProviderContext {
             id: provider.id.clone(),

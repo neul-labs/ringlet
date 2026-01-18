@@ -17,7 +17,7 @@ default_provider = "self"
 
 [models]
 default = "gpt-4o"
-supported = ["gpt-4o", "gpt-4-turbo", "codex-MiniMax-M2.1", "MiniMax-M2.1"]
+supported = ["gpt-4o", "gpt-4-turbo", "codex-MiniMax-M2.1", "MiniMax-M2.1", "glm-4.7", "glm-4.5-air"]
 
 [hooks]
 create = []

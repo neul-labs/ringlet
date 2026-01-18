@@ -1,0 +1,288 @@
+# Proxy
+
+The proxy feature enables intelligent request routing from agents to multiple LLM providers. Each profile can have its own proxy instance with dedicated routing configuration, allowing cost optimization, load balancing, and provider fallback strategies.
+
+## Overview
+
+Clown integrates with [ultrallm](https://github.com/starbaser/ultrallm), a high-performance Rust-based LLM proxy that supports 25+ providers and multiple routing strategies. The proxy runs as a separate process managed by the clown daemon.
+
+### Key Benefits
+
+- **Cost Optimization**: Route long-context requests to cheaper providers
+- **Provider Flexibility**: Use different providers for different use cases
+- **Profile Isolation**: Each profile has independent routing configuration
+- **Automatic Management**: Proxy starts/stops automatically with profiles
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                          clown daemon                            │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
+│  │ Profile: work   │  │ Profile: test   │  │ Profile: cheap  │  │
+│  │ Port: 8081      │  │ Port: 8082      │  │ Port: 8083      │  │
+│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘  │
+└───────────┼────────────────────┼────────────────────┼───────────┘
+            │                    │                    │
+            ▼                    ▼                    ▼
+┌───────────────────┐ ┌───────────────────┐ ┌───────────────────┐
+│ ultrallm :8081    │ │ ultrallm :8082    │ │ ultrallm :8083    │
+└─────────┬─────────┘ └─────────┬─────────┘ └─────────┬─────────┘
+          │                     │                     │
+          ▼                     ▼                     ▼
+    ┌──────────┐          ┌──────────┐          ┌──────────┐
+    │ Anthropic│          │  MiniMax │          │   Z.AI   │
+    └──────────┘          └──────────┘          └──────────┘
+```
+
+Each profile's agent runs with `baseUrl` pointing to its local proxy instance.
+
+## Prerequisites
+
+The ultrallm binary must be available. Clown looks for it in:
+
+1. `~/.cache/clown/binaries/ultrallm`
+2. `~/.local/bin/ultrallm`
+3. System PATH
+
+You can build ultrallm from source or download a release.
+
+## Creating Profiles with Proxy
+
+Use the `--proxy` flag when creating a profile:
+
+```bash
+clown profiles create claude work --proxy -p anthropic
+```
+
+This creates a profile with proxy enabled. The proxy configuration is stored in the profile metadata.
+
+## How It Works
+
+### Port Allocation
+
+- Base port: 8080
+- Range: 8080-8180 (supports up to 100 profiles)
+- Ports are automatically allocated and released
+- Each profile gets a unique port
+
+### Auto-Start Behavior
+
+When you run a profile with proxy enabled:
+
+1. Clown checks if the proxy is already running
+2. If not, it starts a new ultrallm instance
+3. The agent's configuration is updated with the proxy URL
+4. The agent starts and routes requests through the proxy
+
+```bash
+clown profiles run work
+# Proxy automatically starts on port 8081
+# Claude Code runs with baseUrl: http://127.0.0.1:8081
+```
+
+### Graceful Shutdown
+
+- Proxies stay running between profile runs (for faster subsequent starts)
+- When the daemon shuts down, all proxies are gracefully terminated
+- SIGTERM is sent first, then SIGKILL after 5 seconds if needed
+
+## Profile Home Structure
+
+When proxy is enabled, the profile home includes:
+
+```
+~/.claude-profiles/work/
+├── .claude/
+│   └── settings.json     # baseUrl: http://localhost:{port}
+├── .ultrallm/
+│   ├── config.yaml       # Generated routing configuration
+│   └── logs/
+│       └── proxy.log     # Proxy logs
+└── ...
+```
+
+## Routing Configuration
+
+Routing rules determine how requests are distributed to different providers.
+
+### Routing Strategies
+
+| Strategy | Description |
+|----------|-------------|
+| `Simple` | Use first matching rule |
+| `Weighted` | Weighted random among matches |
+| `LowestCost` | Pick cheapest option |
+| `Adaptive` | Learn from latency/errors |
+| `Conditional` | Rule-based routing |
+
+### Routing Conditions
+
+| Condition | Description | Example |
+|-----------|-------------|---------|
+| `TokenCount` | Route based on token count | Long context → cheaper provider |
+| `HasTools` | Route if request has tools | Tool-heavy → capable provider |
+| `ThinkingMode` | Route if thinking/extended mode | Thinking → premium provider |
+| `ModelPattern` | Route based on model name | Specific model → specific provider |
+| `Always` | Default fallback | Catch-all rule |
+
+### Model Aliases
+
+Map requested models to provider-specific models:
+
+```json
+{
+  "model_aliases": {
+    "claude-sonnet-4": {
+      "provider": "minimax",
+      "model": "claude-3-sonnet"
+    }
+  }
+}
+```
+
+## Configuration Format
+
+The proxy configuration is stored in `proxy_config` within profile metadata:
+
+```json
+{
+  "proxy_config": {
+    "enabled": true,
+    "port": null,
+    "routing": {
+      "strategy": "Conditional",
+      "rules": [
+        {
+          "name": "long-context",
+          "condition": { "type": "token_count", "min": 50000 },
+          "target": "minimax/claude-3-sonnet",
+          "priority": 10
+        },
+        {
+          "name": "default",
+          "condition": { "type": "always" },
+          "target": "anthropic/claude-sonnet-4",
+          "priority": 0
+        }
+      ]
+    },
+    "model_aliases": {}
+  }
+}
+```
+
+### Generated ultrallm Config
+
+Clown generates `~/.claude-profiles/{alias}/.ultrallm/config.yaml`:
+
+```yaml
+server:
+  host: "127.0.0.1"
+  port: 8081
+
+model_list:
+  - model_name: "anthropic/claude-sonnet-4"
+    litellm_params:
+      model: "anthropic/claude-sonnet-4-20250514"
+      api_key: "${ANTHROPIC_API_KEY}"
+
+  - model_name: "minimax/claude-3-sonnet"
+    litellm_params:
+      model: "openai_compatible/claude-3-sonnet"
+      api_key: "${MINIMAX_API_KEY}"
+      api_base: "https://api.minimax.io/v1"
+
+router_settings:
+  routing_strategy: "conditional"
+  rules:
+    - name: "long-context"
+      condition: "request.max_tokens > 50000"
+      model: "minimax/claude-3-sonnet"
+      priority: 10
+    - name: "default"
+      condition: "true"
+      model: "anthropic/claude-sonnet-4"
+      priority: 0
+```
+
+## Use Cases
+
+### Cost Optimization
+
+Route long-context requests to cheaper providers:
+
+```bash
+# Create profile with proxy
+clown profiles create claude work --proxy -p anthropic
+
+# Configure to use MiniMax for long context
+# (Future: clown profiles proxy route add ...)
+```
+
+### Multi-Provider Fallback
+
+Configure fallback to alternative providers when primary is unavailable.
+
+### Development vs Production
+
+- **Development profile**: Route to cheaper/faster providers
+- **Production profile**: Route to premium providers with best quality
+
+## Monitoring
+
+### View Proxy Logs
+
+```bash
+# View logs
+cat ~/.claude-profiles/work/.ultrallm/logs/proxy.log
+
+# Follow logs in real-time
+tail -f ~/.claude-profiles/work/.ultrallm/logs/proxy.log
+```
+
+### Check Proxy Status
+
+The proxy health endpoint is available at:
+
+```
+http://127.0.0.1:{port}/health
+```
+
+## Troubleshooting
+
+### Proxy not starting
+
+1. Verify ultrallm binary is installed and executable
+2. Check if port is already in use
+3. Review daemon logs: `clown --log-level debug daemon start`
+
+### Connection refused
+
+1. Verify proxy is running (check process list)
+2. Confirm port allocation in profile
+3. Check proxy logs for errors
+
+### Routing not working
+
+1. Verify routing rules in proxy_config
+2. Check generated config.yaml in .ultrallm/
+3. Ensure API keys are set for target providers
+
+## Comparison with ccproxy
+
+| Feature | ccproxy (LiteLLM) | clown + ultrallm |
+|---------|-------------------|------------------|
+| Language | Python | Rust |
+| Startup | ~5s | ~100ms |
+| Memory | ~200MB | ~20MB |
+| Scope | Global proxy | Per-profile proxy |
+| Integration | Standalone | Native clown integration |
+| Config | Separate YAML | Stored in profile |
+| Management | Manual | Automatic |
+
+## See Also
+
+- [Profiles](profiles.md) - Profile management
+- [Providers](providers.md) - Provider configuration
+- [Architecture](architecture.md) - System architecture

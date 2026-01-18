@@ -6,6 +6,7 @@ use tracing::warn;
 
 pub mod agents;
 pub mod aliases;
+pub mod hooks;
 pub mod profiles;
 pub mod providers;
 pub mod registry;
@@ -45,6 +46,22 @@ pub async fn handle_request(request: &Request, state: &ServerState) -> Response 
         Request::Stats { agent_id, provider_id } => {
             stats::get_stats(agent_id.as_deref(), provider_id.as_deref(), state).await
         }
+
+        // Hooks commands
+        Request::HooksAdd {
+            alias,
+            event,
+            matcher,
+            command,
+        } => hooks::add(alias, event, matcher, command, state).await,
+        Request::HooksList { alias } => hooks::list(alias, state).await,
+        Request::HooksRemove {
+            alias,
+            event,
+            index,
+        } => hooks::remove(alias, event, *index, state).await,
+        Request::HooksImport { alias, config } => hooks::import(alias, config, state).await,
+        Request::HooksExport { alias } => hooks::export(alias, state).await,
 
         // Ping
         Request::Ping => Response::Pong,

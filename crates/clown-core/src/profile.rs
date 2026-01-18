@@ -1,5 +1,7 @@
 //! Profile types and management.
 
+use crate::hooks::HooksConfig;
+use crate::proxy::ProfileProxyConfig;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -56,13 +58,21 @@ pub struct ProfileMetadata {
     #[serde(default)]
     pub total_runs: u64,
 
-    /// Enabled hooks (for display/info).
+    /// Enabled hooks (for display/info, legacy).
     #[serde(default)]
     pub enabled_hooks: Vec<String>,
 
     /// Enabled MCP servers (for display/info).
     #[serde(default)]
     pub enabled_mcp_servers: Vec<String>,
+
+    /// Full hooks configuration (Claude Code hooks).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hooks_config: Option<HooksConfig>,
+
+    /// Proxy configuration for this profile.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub proxy_config: Option<ProfileProxyConfig>,
 }
 
 /// Summary information about a profile for listings.
@@ -129,6 +139,10 @@ pub struct ProfileCreateRequest {
     /// Whether to skip hooks and MCP servers (bare profile).
     #[serde(default)]
     pub bare: bool,
+
+    /// Enable proxy for this profile.
+    #[serde(default)]
+    pub proxy: bool,
 }
 
 impl Profile {
@@ -167,6 +181,22 @@ impl ProfileMetadata {
             total_runs: 0,
             enabled_hooks: Vec::new(),
             enabled_mcp_servers: Vec::new(),
+            hooks_config: None,
+            proxy_config: None,
+        }
+    }
+
+    /// Create new metadata with proxy enabled.
+    pub fn new_with_proxy(home: PathBuf) -> Self {
+        Self {
+            home,
+            created_at: Utc::now(),
+            last_used: None,
+            total_runs: 0,
+            enabled_hooks: Vec::new(),
+            enabled_mcp_servers: Vec::new(),
+            hooks_config: None,
+            proxy_config: Some(ProfileProxyConfig::default()),
         }
     }
 }
