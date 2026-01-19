@@ -1,0 +1,194 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_release:
+        description: 'Force release even if version unchanged'
+        required: false
+        default: 'false'
+
+jobs:
+  check-version:
+    name: Check Version Change
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+      previous_version: ${{ steps.check.outputs.previous_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get current version from Cargo.toml
+        id: current
+        run: |
+          VERSION=$(grep -m1 '^version = "' Cargo.toml | sed 's/.*version = "\([^"]*\)".*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get latest release version
+        id: latest
+        run: |
+          # Get latest release tag, strip 'v' prefix if present
+          LATEST=$(gh release view --json tagName -q '.tagName' 2>/dev/null || echo "v0.0.0")
+          LATEST=${LATEST#v}
+          echo "version=$LATEST" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compare versions
+        id: check
+        run: |
+          CURRENT="${{ steps.current.outputs.version }}"
+          LATEST="${{ steps.latest.outputs.version }}"
+          FORCE="${{ github.event.inputs.force_release }}"
+
+          echo "Current version: $CURRENT"
+          echo "Latest release: $LATEST"
+
+          if [ "$CURRENT" != "$LATEST" ] || [ "$FORCE" = "true" ]; then
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          fi
+
+          echo "version=$CURRENT" >> $GITHUB_OUTPUT
+          echo "previous_version=$LATEST" >> $GITHUB_OUTPUT
+
+  build-binaries:
+    name: Build Binaries
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    uses: ./.github/workflows/build-binaries.yml
+    with:
+      version: ${{ needs.check-version.outputs.version }}
+
+  create-release:
+    name: Create GitHub Release
+    needs: [check-version, build-binaries]
+    runs-on: ubuntu-latest
+    outputs:
+      release_url: ${{ steps.create.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} release/ \;
+
+      - name: Generate checksums
+        run: |
+          cd release
+          sha256sum * > checksums.txt
+          cat checksums.txt
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG="v${{ needs.check-version.outputs.previous_version }}"
+          VERSION="${{ needs.check-version.outputs.version }}"
+
+          # Generate changelog from commits since last release
+          if git rev-parse "$PREV_TAG" >/dev/null 2>&1; then
+            CHANGELOG=$(git log "$PREV_TAG"..HEAD --pretty=format:"- %s" --no-merges)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s" --no-merges -20)
+          fi
+
+          # Write changelog to file
+          cat > changelog.md << EOF
+          ## What's Changed
+
+          $CHANGELOG
+
+          ## Installation
+
+          ### Quick Install (Linux/macOS)
+          \`\`\`bash
+          curl -fsSL https://raw.githubusercontent.com/neul-labs/ccswitch/main/install.sh | bash
+          \`\`\`
+
+          ### Package Managers
+          - **Cargo**: \`cargo install clown\`
+          - **npm**: \`npm install -g clown-cli\`
+          - **Homebrew**: \`brew install neul-labs/clown/clown\`
+          - **pip**: \`pip install clown-cli\`
+          - **gem**: \`gem install clown-cli\`
+          - **Chocolatey**: \`choco install clown\`
+
+          ## Checksums
+
+          See \`checksums.txt\` in the release assets.
+          EOF
+
+      - name: Create Release
+        id: create
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: clown v${{ needs.check-version.outputs.version }}
+          body_path: changelog.md
+          files: release/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-cargo:
+    name: Publish to crates.io
+    needs: [check-version, create-release]
+    uses: ./.github/workflows/publish-cargo.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.check-version.outputs.version }}
+
+  publish-npm:
+    name: Publish to npm
+    needs: [check-version, create-release]
+    uses: ./.github/workflows/publish-npm.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.check-version.outputs.version }}
+
+  publish-homebrew:
+    name: Update Homebrew Tap
+    needs: [check-version, create-release]
+    uses: ./.github/workflows/publish-homebrew.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.check-version.outputs.version }}
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [check-version, create-release]
+    uses: ./.github/workflows/publish-pypi.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.check-version.outputs.version }}
+
+  publish-rubygems:
+    name: Publish to RubyGems
+    needs: [check-version, create-release]
+    uses: ./.github/workflows/publish-rubygems.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.check-version.outputs.version }}
+
+  publish-chocolatey:
+    name: Publish to Chocolatey
+    needs: [check-version, create-release]
+    uses: ./.github/workflows/publish-chocolatey.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.check-version.outputs.version }}

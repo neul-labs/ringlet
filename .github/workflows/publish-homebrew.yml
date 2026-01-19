@@ -1,0 +1,51 @@
+name: Update Homebrew Tap
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+jobs:
+  update-tap:
+    name: Update Formula
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts for checksums
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Calculate SHA256 checksums
+        id: checksums
+        run: |
+          echo "darwin_arm64=$(sha256sum artifacts/clown-darwin-arm64/*.tar.gz | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "darwin_x64=$(sha256sum artifacts/clown-darwin-x64/*.tar.gz | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "linux_arm64=$(sha256sum artifacts/clown-linux-arm64/*.tar.gz | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "linux_x64=$(sha256sum artifacts/clown-linux-x64/*.tar.gz | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+
+      - name: Generate formula
+        run: |
+          sed -e "s/{{VERSION}}/${{ inputs.version }}/g" \
+              -e "s/{{SHA256_DARWIN_ARM64}}/${{ steps.checksums.outputs.darwin_arm64 }}/g" \
+              -e "s/{{SHA256_DARWIN_X64}}/${{ steps.checksums.outputs.darwin_x64 }}/g" \
+              -e "s/{{SHA256_LINUX_ARM64}}/${{ steps.checksums.outputs.linux_arm64 }}/g" \
+              -e "s/{{SHA256_LINUX_X64}}/${{ steps.checksums.outputs.linux_x64 }}/g" \
+              packaging/homebrew/clown.rb.template > clown.rb
+
+          cat clown.rb
+
+      - name: Update Homebrew tap repository
+        uses: dmnemec/copy_file_to_another_repo_action@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        with:
+          source_file: 'clown.rb'
+          destination_repo: 'neul-labs/homebrew-clown'
+          destination_folder: 'Formula'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          user_name: 'github-actions[bot]'
+          commit_message: 'Update clown to v${{ inputs.version }}'

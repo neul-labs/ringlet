@@ -1,0 +1,38 @@
+name: Publish to RubyGems
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+jobs:
+  publish:
+    name: Publish Gem
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      - name: Update version
+        run: |
+          cd packaging/rubygems
+          sed -i "s/s.version.*=.*/s.version     = '${{ inputs.version }}'/" clown-cli.gemspec
+          sed -i "s/VERSION = .*/VERSION = '${{ inputs.version }}'/" lib/clown.rb
+
+      - name: Build gem
+        run: |
+          cd packaging/rubygems
+          gem build clown-cli.gemspec
+
+      - name: Publish to RubyGems
+        run: |
+          cd packaging/rubygems
+          mkdir -p ~/.gem
+          echo ":rubygems_api_key: ${{ secrets.RUBYGEMS_API_KEY }}" > ~/.gem/credentials
+          chmod 0600 ~/.gem/credentials
+          gem push clown-cli-${{ inputs.version }}.gem

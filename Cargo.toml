@@ -7,6 +7,10 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT"
 authors = ["Dipankar Sarkar"]
+repository = "https://github.com/neul-labs/ccswitch"
+homepage = "https://github.com/neul-labs/ccswitch"
+keywords = ["cli", "agent", "orchestrator", "coding"]
+categories = ["command-line-utilities", "development-tools"]
 
 [workspace.dependencies]
 # Async runtime
@@ -66,5 +70,5 @@ hex = "0.4"
 mimalloc = "0.1"
 
 # Internal crates
-clown-core = { path = "crates/clown-core" }
-clown-scripting = { path = "crates/clown-scripting" }
+clown-core = { path = "crates/clown-core", version = "0.1.0" }
+clown-scripting = { path = "crates/clown-scripting", version = "0.1.0" }

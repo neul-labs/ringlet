@@ -1,0 +1,57 @@
+name: Publish to Chocolatey
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+jobs:
+  publish:
+    name: Publish Chocolatey Package
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: clown-win32-x64
+          path: artifact
+
+      - name: Calculate checksum
+        id: checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash artifact\*.zip -Algorithm SHA256).Hash.ToLower()
+          echo "sha256=$hash" >> $env:GITHUB_OUTPUT
+
+      - name: Update package files
+        shell: pwsh
+        run: |
+          $version = "${{ inputs.version }}"
+          $checksum = "${{ steps.checksum.outputs.sha256 }}"
+
+          # Update nuspec
+          $nuspec = Get-Content packaging/chocolatey/clown.nuspec -Raw
+          $nuspec = $nuspec -replace '<version>.*</version>', "<version>$version</version>"
+          Set-Content packaging/chocolatey/clown.nuspec $nuspec
+
+          # Update install script
+          $install = Get-Content packaging/chocolatey/tools/chocolateyInstall.ps1 -Raw
+          $install = $install -replace '\$version = .*', "`$version = '$version'"
+          $install = $install -replace '{{CHECKSUM}}', $checksum
+          Set-Content packaging/chocolatey/tools/chocolateyInstall.ps1 $install
+
+      - name: Build package
+        shell: pwsh
+        run: |
+          cd packaging/chocolatey
+          choco pack
+
+      - name: Publish to Chocolatey
+        shell: pwsh
+        run: |
+          cd packaging/chocolatey
+          choco push clown.${{ inputs.version }}.nupkg --source https://push.chocolatey.org/ --api-key ${{ secrets.CHOCOLATEY_API_KEY }}

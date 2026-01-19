@@ -4,7 +4,12 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
 description = "Background daemon for the clown CLI orchestrator"
+readme = "../../README.md"
 
 [[bin]]
 name = "clownd"
@@ -12,7 +17,7 @@ path = "src/main.rs"
 
 [dependencies]
 clown-core = { workspace = true }
-clown-scripting = { path = "../clown-scripting" }
+clown-scripting = { workspace = true }
 
 # CLI parsing
 clap = { workspace = true }

@@ -1,12 +1,18 @@
 [package]
 name = "clown-scripting"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
 description = "Rhai scripting engine for clown configuration generation"
-license = "MIT"
+readme = "../../README.md"
 
 [dependencies]
-clown-core = { path = "../clown-core" }
+clown-core = { workspace = true }
 rhai = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

@@ -1,0 +1,123 @@
+name: Build Binaries
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: clown-linux-x64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            artifact_name: clown-linux-arm64
+            cross: true
+          - os: macos-13
+            target: x86_64-apple-darwin
+            artifact_name: clown-darwin-x64
+          - os: macos-14
+            target: aarch64-apple-darwin
+            artifact_name: clown-darwin-arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: clown-win32-x64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.target }}
+
+      - name: Install cross
+        if: matrix.cross
+        uses: taiki-e/install-action@cross
+
+      - name: Build (native)
+        if: ${{ !matrix.cross }}
+        run: cargo build --workspace --release --target ${{ matrix.target }}
+
+      - name: Build (cross)
+        if: matrix.cross
+        run: cross build --workspace --release --target ${{ matrix.target }}
+
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/clown dist/
+          cp target/${{ matrix.target }}/release/clownd dist/
+          cd dist
+          tar -czvf ../${{ matrix.artifact_name }}-${{ inputs.version }}.tar.gz *
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
+          Copy-Item target/${{ matrix.target }}/release/clown.exe dist/
+          Copy-Item target/${{ matrix.target }}/release/clownd.exe dist/
+          Compress-Archive -Path dist/* -DestinationPath ${{ matrix.artifact_name }}-${{ inputs.version }}.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            *.tar.gz
+            *.zip
+
+  build-universal-macos:
+    name: Build macOS Universal
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download x64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: clown-darwin-x64
+          path: x64
+
+      - name: Download arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: clown-darwin-arm64
+          path: arm64
+
+      - name: Create Universal Binary
+        run: |
+          mkdir -p universal x64-extract arm64-extract
+
+          # Extract archives
+          tar -xzf x64/*.tar.gz -C x64-extract
+          tar -xzf arm64/*.tar.gz -C arm64-extract
+
+          # Create universal binaries using lipo
+          lipo -create x64-extract/clown arm64-extract/clown -output universal/clown
+          lipo -create x64-extract/clownd arm64-extract/clownd -output universal/clownd
+
+          # Package
+          cd universal
+          tar -czvf ../clown-darwin-universal-${{ inputs.version }}.tar.gz *
+
+      - name: Upload universal artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: clown-darwin-universal
+          path: clown-darwin-universal-*.tar.gz

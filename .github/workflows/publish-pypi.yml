@@ -1,0 +1,38 @@
+name: Publish to PyPI
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+jobs:
+  publish:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build tools
+        run: pip install build twine
+
+      - name: Update version
+        run: |
+          cd packaging/pypi
+          sed -i "s/version = \".*\"/version = \"${{ inputs.version }}\"/" pyproject.toml
+          sed -i "s/__version__ = \".*\"/__version__ = \"${{ inputs.version }}\"/" clown/__init__.py
+
+      - name: Build wheel
+        run: |
+          cd packaging/pypi
+          python -m build --wheel
+
+      - name: Publish to PyPI
+        run: |
+          cd packaging/pypi
+          twine upload dist/* -u __token__ -p ${{ secrets.PYPI_TOKEN }}

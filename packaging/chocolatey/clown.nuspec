@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>clown</id>
+    <version>0.1.0</version>
+    <title>clown - CLI Orchestrator for Coding Agents</title>
+    <authors>Dipankar Sarkar</authors>
+    <owners>neul-labs</owners>
+    <licenseUrl>https://github.com/neul-labs/ccswitch/blob/main/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/neul-labs/ccswitch</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>clown is a cross-platform orchestrator for CLI-based coding agents, built around a central daemon that manages profiles, tracks usage, and coordinates agent execution.</description>
+    <summary>CLI orchestrator for coding agents</summary>
+    <tags>cli rust coding-agent orchestrator developer-tools ai</tags>
+    <releaseNotes>https://github.com/neul-labs/ccswitch/releases</releaseNotes>
+    <packageSourceUrl>https://github.com/neul-labs/ccswitch</packageSourceUrl>
+    <docsUrl>https://github.com/neul-labs/ccswitch#readme</docsUrl>
+    <bugTrackerUrl>https://github.com/neul-labs/ccswitch/issues</bugTrackerUrl>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

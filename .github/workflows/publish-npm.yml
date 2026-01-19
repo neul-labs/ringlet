@@ -1,0 +1,98 @@
+name: Publish to npm
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+jobs:
+  publish-platforms:
+    name: Publish Platform Packages
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        include:
+          - platform: linux-x64
+            artifact: clown-linux-x64
+          - platform: linux-arm64
+            artifact: clown-linux-arm64
+          - platform: darwin-x64
+            artifact: clown-darwin-x64
+          - platform: darwin-arm64
+            artifact: clown-darwin-arm64
+          - platform: win32-x64
+            artifact: clown-win32-x64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: artifact
+
+      - name: Prepare platform package
+        run: |
+          PLATFORM="${{ matrix.platform }}"
+          PKG_DIR="packaging/npm/platforms/clown-${PLATFORM}"
+
+          mkdir -p "${PKG_DIR}/bin"
+
+          # Extract binary
+          if [[ "$PLATFORM" == "win32-x64" ]]; then
+            unzip artifact/*.zip -d "${PKG_DIR}/bin"
+          else
+            tar -xzf artifact/*.tar.gz -C "${PKG_DIR}/bin"
+          fi
+
+          # Update version
+          cd "${PKG_DIR}"
+          npm version ${{ inputs.version }} --no-git-tag-version --allow-same-version
+
+      - name: Publish platform package
+        run: |
+          cd "packaging/npm/platforms/clown-${{ matrix.platform }}"
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-main:
+    name: Publish Main Package
+    needs: publish-platforms
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Update version and publish
+        run: |
+          cd packaging/npm
+
+          # Update version in main package
+          npm version ${{ inputs.version }} --no-git-tag-version --allow-same-version
+
+          # Update optional dependency versions
+          node -e "
+            const fs = require('fs');
+            const pkg = require('./package.json');
+            for (const dep of Object.keys(pkg.optionalDependencies || {})) {
+              pkg.optionalDependencies[dep] = '${{ inputs.version }}';
+            }
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+          "
+
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

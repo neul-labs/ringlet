@@ -1,0 +1,42 @@
+{
+  "name": "clown-cli",
+  "version": "0.1.0",
+  "description": "CLI orchestrator for coding agents",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/neul-labs/ccswitch.git"
+  },
+  "homepage": "https://github.com/neul-labs/ccswitch",
+  "bugs": {
+    "url": "https://github.com/neul-labs/ccswitch/issues"
+  },
+  "keywords": [
+    "cli",
+    "agent",
+    "orchestrator",
+    "coding",
+    "ai"
+  ],
+  "bin": {
+    "clown": "bin/clown",
+    "clownd": "bin/clownd"
+  },
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "optionalDependencies": {
+    "@clown-cli/linux-x64": "0.1.0",
+    "@clown-cli/linux-arm64": "0.1.0",
+    "@clown-cli/darwin-x64": "0.1.0",
+    "@clown-cli/darwin-arm64": "0.1.0",
+    "@clown-cli/win32-x64": "0.1.0"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "files": [
+    "bin",
+    "install.js"
+  ]
+}

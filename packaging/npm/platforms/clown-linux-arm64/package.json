@@ -1,0 +1,13 @@
+{
+  "name": "@clown-cli/linux-arm64",
+  "version": "0.1.0",
+  "description": "clown CLI binary for Linux arm64",
+  "license": "MIT",
+  "os": ["linux"],
+  "cpu": ["arm64"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/neul-labs/ccswitch.git"
+  },
+  "files": ["bin"]
+}
