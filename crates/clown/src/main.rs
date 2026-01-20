@@ -63,7 +63,7 @@ enum Commands {
         command: RegistryCommands,
     },
 
-    /// View usage statistics
+    /// View usage statistics (legacy)
     Stats {
         /// Filter by agent ID
         #[arg(long)]
@@ -72,6 +72,24 @@ enum Commands {
         /// Filter by provider ID
         #[arg(long)]
         provider: Option<String>,
+    },
+
+    /// View token/cost usage
+    Usage {
+        #[command(subcommand)]
+        command: Option<UsageCommands>,
+
+        /// Time period (today, yesterday, week, month, 7d, 30d, all)
+        #[arg(long, short, default_value = "today")]
+        period: String,
+
+        /// Filter by profile
+        #[arg(long)]
+        profile: Option<String>,
+
+        /// Filter by model
+        #[arg(long)]
+        model: Option<String>,
     },
 
     /// Daemon management
@@ -245,6 +263,35 @@ enum EnvCommands {
         alias: String,
         /// Task name
         task: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum UsageCommands {
+    /// Show daily usage breakdown
+    Daily {
+        /// Time period
+        #[arg(long, short, default_value = "week")]
+        period: String,
+    },
+    /// Show usage by model
+    Models,
+    /// Show usage by profile
+    Profiles,
+    /// Export usage data
+    Export {
+        /// Output format (json, csv)
+        #[arg(long, short, default_value = "json")]
+        format: String,
+        /// Time period
+        #[arg(long, short, default_value = "all")]
+        period: String,
+    },
+    /// Import usage from Claude's native files
+    ImportClaude {
+        /// Path to Claude home directory (default: ~/.claude)
+        #[arg(long)]
+        claude_dir: Option<std::path::PathBuf>,
     },
 }
 

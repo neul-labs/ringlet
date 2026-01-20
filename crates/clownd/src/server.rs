@@ -1,6 +1,7 @@
 //! IPC server using nng (nanomsg next generation).
 
 use crate::agent_registry::AgentRegistry;
+use crate::events::EventBroadcaster;
 use crate::execution::ExecutionAdapter;
 use crate::handlers;
 use crate::profile_manager::ProfileManager;
@@ -8,14 +9,15 @@ use crate::provider_registry::ProviderRegistry;
 use crate::proxy_manager::ProxyManager;
 use crate::registry_client::RegistryClient;
 use crate::telemetry::TelemetryCollector;
+use crate::usage_watcher::UsageWatcher;
 use anyhow::{Context, Result};
-use clown_core::{ClownPaths, Request, Response};
+use clown_core::{ClownPaths, Event, Request, Response};
 use nng::options::Options;
 use nng::{Protocol, Socket};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::Mutex;
+use tokio::sync::{oneshot, Mutex};
 use tracing::{debug, error, info, warn};
 
 /// Server state shared across request handlers.
@@ -29,10 +31,14 @@ pub struct ServerState {
     pub registry_client: RegistryClient,
     pub telemetry: TelemetryCollector,
     pub proxy_manager: ProxyManager,
+    /// Shutdown signal sender (for HTTP API to request shutdown).
+    pub shutdown_tx: Mutex<Option<oneshot::Sender<()>>>,
+    /// Event broadcaster for WebSocket clients.
+    pub events: EventBroadcaster,
 }
 
 impl ServerState {
-    pub fn new(paths: ClownPaths) -> Result<Self> {
+    pub fn new(paths: ClownPaths, shutdown_tx: oneshot::Sender<()>) -> Result<Self> {
         let agent_registry = AgentRegistry::new(&paths)?;
         let provider_registry = ProviderRegistry::new(&paths)?;
         let profile_manager = ProfileManager::new(paths.clone());
@@ -40,6 +46,13 @@ impl ServerState {
         let registry_client = RegistryClient::new(paths.clone());
         let telemetry = TelemetryCollector::new(paths.clone());
         let proxy_manager = ProxyManager::new(paths.clone());
+        let events = EventBroadcaster::default();
+
+        // Start usage watcher for real-time agent usage tracking
+        let usage_watcher = UsageWatcher::new(Arc::new(events.clone()));
+        if let Err(e) = usage_watcher.start() {
+            warn!("Failed to start usage watcher: {}", e);
+        }
 
         Ok(Self {
             paths,
@@ -51,6 +64,8 @@ impl ServerState {
             registry_client,
             telemetry,
             proxy_manager,
+            shutdown_tx: Mutex::new(Some(shutdown_tx)),
+            events,
         })
     }
 
@@ -61,6 +76,11 @@ impl ServerState {
     pub async fn idle_duration(&self) -> Duration {
         self.last_activity.lock().await.elapsed()
     }
+
+    /// Broadcast an event to all WebSocket subscribers.
+    pub fn broadcast(&self, event: Event) {
+        self.events.broadcast(event);
+    }
 }
 
 /// Run the IPC server.
@@ -68,6 +88,8 @@ pub async fn run(
     socket_path: &Path,
     idle_timeout: Option<Duration>,
     paths: &ClownPaths,
+    state: Arc<ServerState>,
+    mut shutdown_rx: oneshot::Receiver<()>,
 ) -> Result<()> {
     // Remove stale socket file if it exists
     if socket_path.exists() {
@@ -84,9 +106,7 @@ pub async fn run(
     socket.listen(&url)
         .context(format!("Failed to listen on {}", url))?;
 
-    info!("Listening on {}", url);
-
-    let state = Arc::new(ServerState::new(paths.clone())?);
+    info!("IPC server listening on {}", url);
 
     // Spawn idle timeout checker if configured
     let state_clone = state.clone();
@@ -109,8 +129,14 @@ pub async fn run(
 
     // Main request loop
     loop {
-        // Check shutdown flag
+        // Check shutdown flag (from idle timeout)
         if *shutdown_flag.lock().await {
+            break;
+        }
+
+        // Check for external shutdown signal (non-blocking)
+        if shutdown_rx.try_recv().is_ok() {
+            info!("External shutdown signal received");
             break;
         }
 
@@ -156,12 +182,6 @@ pub async fn run(
         debug!("Sending response: {:?}", response);
 
         send_response(&socket, &response)?;
-    }
-
-    // Stop all proxy instances gracefully
-    info!("Stopping proxy instances...");
-    if let Err(e) = state.proxy_manager.stop_all().await {
-        warn!("Error stopping proxies: {}", e);
     }
 
     Ok(())

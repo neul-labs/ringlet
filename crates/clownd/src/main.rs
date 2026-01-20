@@ -10,20 +10,28 @@ use mimalloc::MiMalloc;
 static GLOBAL: MiMalloc = MiMalloc;
 
 mod agent_registry;
+mod agent_usage;
+mod claude_import;
+mod events;
 mod execution;
 mod handlers;
+mod http;
+mod pricing;
 mod profile_manager;
 mod provider_registry;
 mod proxy_manager;
 mod registry_client;
 mod server;
 mod telemetry;
+mod usage_watcher;
 mod watcher;
 
 use anyhow::Result;
 use clap::Parser;
 use clown_core::ClownPaths;
+use server::ServerState;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
@@ -91,15 +99,48 @@ async fn main() -> Result<()> {
         Some(std::time::Duration::from_secs(config.daemon.idle_timeout_secs))
     };
 
-    // Run the server
-    match server::run(&socket_path, idle_timeout, &paths).await {
+    // Create shutdown channels
+    // - shutdown_tx: stored in ServerState, used by HTTP API to trigger shutdown
+    // - nng_shutdown_rx: received by NNG server to know when to stop
+    // - http_shutdown_rx: received by HTTP server to know when to stop
+    let (shutdown_tx, nng_shutdown_rx) = tokio::sync::oneshot::channel();
+    let (http_shutdown_tx, http_shutdown_rx) = tokio::sync::oneshot::channel();
+
+    // Create shared state
+    let state = Arc::new(ServerState::new(paths.clone(), shutdown_tx)?);
+
+    // Get HTTP port from config
+    let http_port = config.daemon.http_port;
+
+    // Start HTTP server in background task
+    let http_state = state.clone();
+    let http_handle = tokio::spawn(async move {
+        http::run_http_server(http_state, http_port, http_shutdown_rx).await;
+    });
+
+    // Run the IPC server (blocks until shutdown)
+    let result = server::run(&socket_path, idle_timeout, &paths, state.clone(), nng_shutdown_rx).await;
+
+    // Signal HTTP server to shut down
+    let _ = http_shutdown_tx.send(());
+
+    // Wait for HTTP server to finish
+    let _ = http_handle.await;
+
+    match result {
         Ok(()) => {
             info!("clownd shutting down gracefully");
         }
         Err(e) => {
             error!("clownd error: {}", e);
-            return Err(e);
+            // Continue with cleanup even on error
         }
+    }
+
+    // Stop all proxy instances gracefully
+    info!("Stopping proxy instances...");
+    if let Err(e) = state.proxy_manager.stop_all().await {
+        error!("Error stopping proxies: {}", e);
     }
 
     // Cleanup

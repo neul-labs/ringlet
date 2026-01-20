@@ -5,6 +5,7 @@ use crate::hooks::HooksConfig;
 use crate::profile::{ProfileCreateRequest, ProfileInfo};
 use crate::provider::ProviderInfo;
 use crate::proxy::{ProfileProxyConfig, ProxyInstanceInfo, RoutingRule};
+use crate::usage::{CostBreakdown, TokenUsage, UsageAggregates, UsagePeriod};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -40,6 +41,16 @@ pub enum Request {
 
     // Stats commands
     Stats { agent_id: Option<String>, provider_id: Option<String> },
+
+    // Usage commands
+    Usage {
+        period: Option<UsagePeriod>,
+        profile: Option<String>,
+        model: Option<String>,
+    },
+    UsageImportClaude {
+        claude_dir: Option<PathBuf>,
+    },
 
     // Env setup commands
     EnvSetup { alias: String, task: String },
@@ -128,8 +139,11 @@ pub enum Response {
     /// Registry status.
     RegistryStatus(RegistryStatus),
 
-    /// Usage statistics.
+    /// Usage statistics (legacy).
     Stats(StatsResponse),
+
+    /// Token/cost usage statistics.
+    Usage(UsageStatsResponse),
 
     /// Generic success message.
     Success { message: String },
@@ -172,7 +186,7 @@ pub struct RegistryStatus {
     pub cached_scripts: usize,
 }
 
-/// Usage statistics response.
+/// Usage statistics response (legacy, without token/cost).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatsResponse {
     /// Per-agent statistics.
@@ -183,6 +197,28 @@ pub struct StatsResponse {
 
     /// Per-profile statistics.
     pub by_profile: HashMap<String, ProfileStats>,
+
+    /// Total sessions.
+    pub total_sessions: u64,
+
+    /// Total runtime (seconds).
+    pub total_runtime_secs: u64,
+}
+
+/// Token/cost usage statistics response.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UsageStatsResponse {
+    /// Period description.
+    pub period: String,
+
+    /// Aggregated usage data.
+    pub aggregates: UsageAggregates,
+
+    /// Total token usage.
+    pub total_tokens: TokenUsage,
+
+    /// Total cost (only from "self" provider profiles).
+    pub total_cost: Option<CostBreakdown>,
 
     /// Total sessions.
     pub total_sessions: u64,

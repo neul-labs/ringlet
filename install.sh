@@ -7,6 +7,7 @@ set -euo pipefail
 VERSION="${CLOWN_VERSION:-latest}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 FROM_SOURCE="${FROM_SOURCE:-false}"
+LOCAL_BUILD="${LOCAL_BUILD:-false}"
 GITHUB_REPO="neul-labs/ccswitch"
 
 # Colors for output
@@ -36,6 +37,10 @@ while [[ $# -gt 0 ]]; do
             FROM_SOURCE="true"
             shift
             ;;
+        --local|-l)
+            LOCAL_BUILD="true"
+            shift
+            ;;
         --help|-h)
             cat << EOF
 clown installer
@@ -46,6 +51,7 @@ Options:
     --version, -v VERSION    Install specific version (default: latest)
     --install-dir, -d DIR    Installation directory (default: ~/.local/bin)
     --from-source, -s        Build from source instead of downloading binary
+    --local, -l              Build from current directory (when inside clown repo)
     --help, -h               Show this help message
 
 Environment variables:
@@ -65,6 +71,9 @@ Examples:
 
     # Build from source
     curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPO}/main/install.sh | bash -s -- --from-source
+
+    # Build from local clone
+    cd /path/to/clown && ./install.sh --local
 EOF
             exit 0
             ;;
@@ -208,6 +217,38 @@ build_from_source() {
     rm -rf "$tmpdir"
 }
 
+build_local() {
+    local install_dir="$1"
+
+    info "Building from local repository..."
+
+    # Check for Rust
+    if ! command -v cargo &> /dev/null; then
+        error "Rust/Cargo not found. Please install Rust: https://rustup.rs"
+    fi
+
+    info "Building (this may take a few minutes)..."
+
+    cargo build --release
+
+    info "Installing..."
+
+    mkdir -p "$install_dir"
+    cp target/release/clown "$install_dir/"
+    cp target/release/clownd "$install_dir/"
+
+    chmod +x "${install_dir}/clown"
+    chmod +x "${install_dir}/clownd"
+}
+
+is_clown_repo() {
+    # Check if we're in a clown repository
+    if [[ -f "Cargo.toml" ]] && grep -q 'name = "clown"' Cargo.toml 2>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
 verify_installation() {
     local install_dir="$1"
 
@@ -250,12 +291,51 @@ main() {
     echo "  ╰─────────────────────────────────╯"
     echo ""
 
-    # Get version
+    # Check for local build mode (explicit flag or auto-detect)
+    if [[ "$LOCAL_BUILD" == "true" ]]; then
+        if ! is_clown_repo; then
+            error "Not in a clown repository. Use --local only from within the clown source directory."
+        fi
+        info "Local build mode enabled"
+        info "Install directory: $INSTALL_DIR"
+        build_local "$INSTALL_DIR"
+        verify_installation "$INSTALL_DIR"
+        check_path "$INSTALL_DIR"
+        echo ""
+        info "To get started, run: clown --help"
+        echo ""
+        return
+    fi
+
+    # Auto-detect local repository (when running ./install.sh from repo)
+    if is_clown_repo && [[ "$FROM_SOURCE" != "true" ]]; then
+        info "Detected local clown repository"
+        info "Install directory: $INSTALL_DIR"
+        build_local "$INSTALL_DIR"
+        verify_installation "$INSTALL_DIR"
+        check_path "$INSTALL_DIR"
+        echo ""
+        info "To get started, run: clown --help"
+        echo ""
+        return
+    fi
+
+    # Get version (with graceful network failure handling)
     if [[ "$VERSION" == "latest" ]]; then
         info "Fetching latest version..."
-        VERSION="$(get_latest_version)"
+        if ! VERSION="$(get_latest_version 2>/dev/null)"; then
+            warn "Could not fetch latest version (network unavailable?)"
+            info "Falling back to source build from main branch..."
+            FROM_SOURCE="true"
+            VERSION="main"
+        fi
     fi
-    info "Version: v${VERSION}"
+
+    if [[ "$FROM_SOURCE" != "true" ]]; then
+        info "Version: v${VERSION}"
+    else
+        info "Building from: ${VERSION}"
+    fi
 
     # Detect platform
     local platform

@@ -34,6 +34,10 @@ clap = { version = "4", features = ["derive"] }
 
 # Platform paths
 directories = "5"
+dirs = "5"
+
+# Directory walking
+walkdir = "2"
 
 # Time
 chrono = { version = "0.4", features = ["serde"] }
@@ -68,6 +72,16 @@ hex = "0.4"
 
 # Memory allocator
 mimalloc = "0.1"
+
+# HTTP server (for daemon web UI)
+axum = { version = "0.8", features = ["ws"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "fs", "trace"] }
+futures-util = "0.3"
+
+# Asset embedding
+rust-embed = { version = "8", features = ["compression"] }
+mime_guess = "2"
 
 # Internal crates
 clown-core = { path = "crates/clown-core", version = "0.1.0" }

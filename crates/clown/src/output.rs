@@ -4,6 +4,7 @@ use clown_core::agent::AgentInfo;
 use clown_core::profile::ProfileInfo;
 use clown_core::provider::ProviderInfo;
 use clown_core::proxy::{ProfileProxyConfig, ProxyInstanceInfo, ProxyStatus, RoutingCondition, RoutingRule};
+use clown_core::UsageStatsResponse;
 use comfy_table::{Cell, Color, Table};
 use std::collections::HashMap;
 
@@ -279,6 +280,154 @@ pub fn proxy_aliases(aliases: &HashMap<String, String>) {
     }
 
     println!("{}", table);
+}
+
+/// Format usage summary for CLI display.
+pub fn usage_summary(usage: &UsageStatsResponse) {
+    println!("Usage Summary: {}", usage.period);
+    println!();
+
+    // Total tokens
+    println!("Tokens:");
+    let mut token_table = Table::new();
+    token_table.set_header(vec!["Type", "Count"]);
+    token_table.add_row(vec![
+        Cell::new("Input"),
+        Cell::new(format_number(usage.total_tokens.input_tokens)),
+    ]);
+    token_table.add_row(vec![
+        Cell::new("Output"),
+        Cell::new(format_number(usage.total_tokens.output_tokens)),
+    ]);
+    token_table.add_row(vec![
+        Cell::new("Cache Creation"),
+        Cell::new(format_number(usage.total_tokens.cache_creation_input_tokens)),
+    ]);
+    token_table.add_row(vec![
+        Cell::new("Cache Read"),
+        Cell::new(format_number(usage.total_tokens.cache_read_input_tokens)),
+    ]);
+    let total_tokens = usage.total_tokens.input_tokens
+        + usage.total_tokens.output_tokens
+        + usage.total_tokens.cache_creation_input_tokens
+        + usage.total_tokens.cache_read_input_tokens;
+    token_table.add_row(vec![
+        Cell::new("Total").fg(Color::Cyan),
+        Cell::new(format_number(total_tokens)).fg(Color::Cyan),
+    ]);
+    println!("{}", token_table);
+    println!();
+
+    // Cost breakdown (only if available)
+    if let Some(ref cost) = usage.total_cost {
+        println!("Cost:");
+        let mut cost_table = Table::new();
+        cost_table.set_header(vec!["Type", "Cost"]);
+        cost_table.add_row(vec![
+            Cell::new("Input"),
+            Cell::new(format_cost(cost.input_cost)),
+        ]);
+        cost_table.add_row(vec![
+            Cell::new("Output"),
+            Cell::new(format_cost(cost.output_cost)),
+        ]);
+        cost_table.add_row(vec![
+            Cell::new("Cache Creation"),
+            Cell::new(format_cost(cost.cache_creation_cost)),
+        ]);
+        cost_table.add_row(vec![
+            Cell::new("Cache Read"),
+            Cell::new(format_cost(cost.cache_read_cost)),
+        ]);
+        cost_table.add_row(vec![
+            Cell::new("Total").fg(Color::Green),
+            Cell::new(format_cost(cost.total_cost)).fg(Color::Green),
+        ]);
+        println!("{}", cost_table);
+        println!();
+    }
+
+    // Session stats
+    println!(
+        "Sessions: {}  |  Runtime: {}",
+        usage.total_sessions,
+        format_duration(usage.total_runtime_secs)
+    );
+    println!();
+
+    // By profile breakdown
+    if !usage.aggregates.by_profile.is_empty() {
+        println!("By Profile:");
+        let mut profile_table = Table::new();
+        profile_table.set_header(vec!["Profile", "Sessions", "Tokens", "Cost", "Last Used"]);
+
+        let mut profiles: Vec<_> = usage.aggregates.by_profile.iter().collect();
+        profiles.sort_by(|a, b| b.1.sessions.cmp(&a.1.sessions));
+
+        for (name, profile_usage) in profiles {
+            let total_tokens = profile_usage.tokens.input_tokens
+                + profile_usage.tokens.output_tokens
+                + profile_usage.tokens.cache_creation_input_tokens
+                + profile_usage.tokens.cache_read_input_tokens;
+
+            let cost_str = profile_usage
+                .cost
+                .as_ref()
+                .map(|c| format_cost(c.total_cost))
+                .unwrap_or_else(|| "-".to_string());
+
+            let last_used = profile_usage
+                .last_used
+                .map(|dt| dt.format("%Y-%m-%d %H:%M").to_string())
+                .unwrap_or_else(|| "-".to_string());
+
+            profile_table.add_row(vec![
+                Cell::new(name),
+                Cell::new(profile_usage.sessions),
+                Cell::new(format_number(total_tokens)),
+                Cell::new(&cost_str),
+                Cell::new(&last_used),
+            ]);
+        }
+        println!("{}", profile_table);
+    }
+}
+
+/// Format a number with thousands separators.
+fn format_number(n: u64) -> String {
+    let s = n.to_string();
+    let mut result = String::new();
+    for (i, c) in s.chars().rev().enumerate() {
+        if i > 0 && i % 3 == 0 {
+            result.push(',');
+        }
+        result.push(c);
+    }
+    result.chars().rev().collect()
+}
+
+/// Format a cost value as USD.
+fn format_cost(cost: f64) -> String {
+    if cost < 0.01 {
+        format!("${:.4}", cost)
+    } else {
+        format!("${:.2}", cost)
+    }
+}
+
+/// Format a duration in seconds to human-readable format.
+fn format_duration(secs: u64) -> String {
+    if secs < 60 {
+        format!("{}s", secs)
+    } else if secs < 3600 {
+        let mins = secs / 60;
+        let remaining_secs = secs % 60;
+        format!("{}m {}s", mins, remaining_secs)
+    } else {
+        let hours = secs / 3600;
+        let mins = (secs % 3600) / 60;
+        format!("{}h {}m", hours, mins)
+    }
 }
 
 /// Format a routing condition as a human-readable string.

@@ -10,6 +10,7 @@ clown is a Rust-native workspace built around a central background daemon (`clow
 - Support multiple model providers (MiniMax, Anthropic, OpenAI-compatible APIs, internal gateways) without baking in vendor-specific assumptions.
 - Centralize orchestration in a daemon (`clownd`) that the CLI auto-starts, ensuring a single source of truth for profiles, agent state, and usage telemetry.
 - Collect and expose usage statistics (profile invocations, session durations, resource consumption) so users and teams can understand their agent usage patterns.
+- Track token usage and costs per session, with pricing from LiteLLM's model database.
 - Make it trivial to add new agents through readable manifests rather than bespoke code.
 
 ## Components
@@ -24,7 +25,7 @@ A thin client that parses commands such as `agents list`, `profiles create`, and
 A loader that scans declarative manifest files (TOML/YAML) describing how to detect and run each agent. Built-in manifests for Claude Code, Grok CLI, Codex CLI, Droid, and OpenCode ship with the binary, while additional manifests can be dropped into `~/.config/clown/agents.d/`. Detection collects binary paths, versions, and last-used timestamps (persisted under `cache/agent-detections.json`) so `clown agents list` can surface both availability and freshness.
 
 ### Registry client
-Synchronizes GitHub-hosted metadata (manifests, profile templates, model catalog). Responsible for pulling `registry.json`, verifying checksums/signatures, caching artifacts under `~/.config/clown/registry/`, and exposing commands such as `registry sync`, `registry pin`, and `registry inspect`. Enterprises can redirect it to private registries via config/env vars.
+Synchronizes GitHub-hosted metadata (manifests, profile templates, model catalog). Responsible for pulling `registry.json`, verifying checksums/signatures, caching artifacts under `~/.config/clown/registry/`, and exposing commands such as `registry sync`, `registry pin`, and `registry inspect`. Additionally downloads LiteLLM's `model_prices_and_context_window.json` for usage cost calculations. Enterprises can redirect it to private registries via config/env vars.
 
 ### Provider registry
 Manages API backend definitions (Anthropic, MiniMax, OpenAI, OpenRouter, etc.) that profiles bind to. Each provider specifies endpoints, authentication requirements, and available models. Built-in providers ship with the binary while custom providers can be added to `~/.config/clown/providers.d/`. This separation lets users run the same agent (e.g., Claude Code) against different backends (Anthropic API vs MiniMax API) without modifying agent manifests.
@@ -61,6 +62,17 @@ Handles event-driven hooks configured at the profile level. When agents that sup
 - **Timeout handling** – respects configured timeouts for command actions
 
 See [Hooks](hooks.md) for user-facing documentation.
+
+### Usage tracking
+Collects token usage (input, output, cache creation, cache read) for every agent session. The system tracks:
+
+- **Token metrics** – input tokens, output tokens, cache creation tokens, cache read tokens
+- **Cost calculation** – uses LiteLLM's `model_prices_and_context_window.json` pricing database
+- **Aggregations** – rolled-up stats by profile, model, and date
+
+Cost calculation only runs for profiles using the "self" provider (direct API keys), since other providers handle billing differently. Usage data is queryable via CLI (`clown usage`), HTTP API (`GET /api/usage`), and the embedded Web UI.
+
+See [Usage](usage.md) for user-facing documentation.
 
 ### Background service (`clownd`) – the core
 The daemon is the heart of clown. It runs as a long-lived process (auto-started by the CLI) and owns all stateful operations:
@@ -196,6 +208,7 @@ The `script` field references a Rhai script that generates agent-specific config
 ├── registry/                 # cached GitHub metadata
 │   ├── current -> commits/f4a12c3
 │   ├── registry.lock
+│   ├── litellm-pricing.json  # LiteLLM model pricing for cost calculation
 │   └── commits/
 │       └── f4a12c3/
 │           ├── registry.json
@@ -210,8 +223,8 @@ The `script` field references a Rhai script that generates agent-specific config
 ├── cache/
 │   └── agent-detections.json
 ├── telemetry/                # daemon-collected usage stats
-│   ├── sessions.jsonl        # per-session records (profile, duration, resources)
-│   └── aggregates.json       # rolled-up stats per agent/provider/model
+│   ├── sessions.jsonl        # per-session records with token/cost data
+│   └── aggregates.json       # rolled-up stats per profile/model
 └── logs/
     └── clownd.log
 ```

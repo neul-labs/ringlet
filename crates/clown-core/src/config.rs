@@ -110,8 +110,8 @@ pub struct DaemonConfig {
     #[serde(default = "default_idle_timeout")]
     pub idle_timeout_secs: u64,
 
-    /// TCP port for optional HTTP API (0 = disabled).
-    #[serde(default)]
+    /// TCP port for HTTP API and web UI.
+    #[serde(default = "default_http_port")]
     pub http_port: u16,
 }
 
@@ -119,9 +119,13 @@ impl Default for DaemonConfig {
     fn default() -> Self {
         Self {
             idle_timeout_secs: default_idle_timeout(),
-            http_port: 0,
+            http_port: default_http_port(),
         }
     }
+}
+
+fn default_http_port() -> u16 {
+    8765
 }
 
 fn default_idle_timeout() -> u64 {

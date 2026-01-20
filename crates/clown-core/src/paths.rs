@@ -76,6 +76,16 @@ impl ClownPaths {
         self.telemetry_dir().join("aggregates.json")
     }
 
+    /// Usage aggregates file (token/cost tracking).
+    pub fn usage_aggregates_file(&self) -> PathBuf {
+        self.telemetry_dir().join("usage-aggregates.json")
+    }
+
+    /// LiteLLM pricing cache file.
+    pub fn litellm_pricing_cache(&self) -> PathBuf {
+        self.registry_dir().join("litellm-pricing.json")
+    }
+
     /// Agent detection cache.
     pub fn agent_detections_cache(&self) -> PathBuf {
         self.cache_dir.join("agent-detections.json")

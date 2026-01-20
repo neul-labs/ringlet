@@ -12,6 +12,7 @@ pub mod providers;
 pub mod proxy;
 pub mod registry;
 pub mod stats;
+pub mod usage;
 
 /// Handle an incoming request.
 pub async fn handle_request(request: &Request, state: &ServerState) -> Response {
@@ -46,6 +47,14 @@ pub async fn handle_request(request: &Request, state: &ServerState) -> Response 
         // Stats commands
         Request::Stats { agent_id, provider_id } => {
             stats::get_stats(agent_id.as_deref(), provider_id.as_deref(), state).await
+        }
+
+        // Usage commands
+        Request::Usage { period, profile, model } => {
+            usage::get_usage(period.as_ref(), profile.as_deref(), model.as_deref(), state).await
+        }
+        Request::UsageImportClaude { claude_dir } => {
+            usage::import_claude(claude_dir.as_ref(), state).await
         }
 
         // Hooks commands

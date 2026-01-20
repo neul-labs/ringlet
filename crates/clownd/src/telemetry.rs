@@ -2,12 +2,13 @@
 //!
 //! This module handles:
 //! - Tracking per-session data (profile, start time, duration, exit code)
+//! - Token usage and cost tracking (costs only for "self" provider)
 //! - Persisting sessions to sessions.jsonl
 //! - Aggregating statistics
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
-use clown_core::ClownPaths;
+use clown_core::{ClownPaths, CostBreakdown, TokenUsage};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
@@ -31,6 +32,15 @@ pub struct Session {
     pub duration_secs: Option<u64>,
     /// Exit code.
     pub exit_code: Option<i32>,
+    /// Model used (if known).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    /// Token usage (always tracked when available).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tokens: Option<TokenUsage>,
+    /// Cost breakdown (only for "self" provider).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<CostBreakdown>,
 }
 
 /// Aggregated statistics.
@@ -51,6 +61,12 @@ pub struct Aggregates {
     /// Total runtime in seconds.
     #[serde(default)]
     pub total_runtime_secs: u64,
+    /// Total token usage.
+    #[serde(default)]
+    pub total_tokens: TokenUsage,
+    /// Total cost (only from "self" provider profiles).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_cost: Option<CostBreakdown>,
 }
 
 /// Per-agent statistics.
@@ -58,6 +74,10 @@ pub struct Aggregates {
 pub struct AgentStats {
     pub sessions: u64,
     pub runtime_secs: u64,
+    #[serde(default)]
+    pub tokens: TokenUsage,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<CostBreakdown>,
 }
 
 /// Per-provider statistics.
@@ -65,6 +85,10 @@ pub struct AgentStats {
 pub struct ProviderStats {
     pub sessions: u64,
     pub runtime_secs: u64,
+    #[serde(default)]
+    pub tokens: TokenUsage,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<CostBreakdown>,
 }
 
 /// Per-profile statistics.
@@ -73,6 +97,10 @@ pub struct ProfileStats {
     pub sessions: u64,
     pub runtime_secs: u64,
     pub last_used: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub tokens: TokenUsage,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<CostBreakdown>,
 }
 
 /// Telemetry collector.
@@ -116,6 +144,20 @@ impl TelemetryCollector {
         aggregates.total_sessions += 1;
         aggregates.total_runtime_secs += duration;
 
+        // Update token totals
+        if let Some(ref tokens) = session.tokens {
+            aggregates.total_tokens += tokens.clone();
+        }
+
+        // Update cost totals (only for "self" provider)
+        if let Some(ref cost) = session.cost {
+            if let Some(ref mut total_cost) = aggregates.total_cost {
+                *total_cost += cost.clone();
+            } else {
+                aggregates.total_cost = Some(cost.clone());
+            }
+        }
+
         // Update by-agent
         let agent_stats = aggregates
             .by_agent
@@ -123,6 +165,16 @@ impl TelemetryCollector {
             .or_default();
         agent_stats.sessions += 1;
         agent_stats.runtime_secs += duration;
+        if let Some(ref tokens) = session.tokens {
+            agent_stats.tokens += tokens.clone();
+        }
+        if let Some(ref cost) = session.cost {
+            if let Some(ref mut agent_cost) = agent_stats.cost {
+                *agent_cost += cost.clone();
+            } else {
+                agent_stats.cost = Some(cost.clone());
+            }
+        }
 
         // Update by-provider
         let provider_stats = aggregates
@@ -131,6 +183,16 @@ impl TelemetryCollector {
             .or_default();
         provider_stats.sessions += 1;
         provider_stats.runtime_secs += duration;
+        if let Some(ref tokens) = session.tokens {
+            provider_stats.tokens += tokens.clone();
+        }
+        if let Some(ref cost) = session.cost {
+            if let Some(ref mut provider_cost) = provider_stats.cost {
+                *provider_cost += cost.clone();
+            } else {
+                provider_stats.cost = Some(cost.clone());
+            }
+        }
 
         // Update by-profile
         let profile_stats = aggregates
@@ -140,6 +202,16 @@ impl TelemetryCollector {
         profile_stats.sessions += 1;
         profile_stats.runtime_secs += duration;
         profile_stats.last_used = session.ended_at;
+        if let Some(ref tokens) = session.tokens {
+            profile_stats.tokens += tokens.clone();
+        }
+        if let Some(ref cost) = session.cost {
+            if let Some(ref mut profile_cost) = profile_stats.cost {
+                *profile_cost += cost.clone();
+            } else {
+                profile_stats.cost = Some(cost.clone());
+            }
+        }
 
         self.save_aggregates(&aggregates)?;
         Ok(())

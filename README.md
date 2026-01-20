@@ -13,7 +13,8 @@ clown is a cross-platform orchestrator for CLI-based coding agents, built around
 - **Composable architecture** – extension manifests describe how to detect, configure, and run an agent, making it straightforward to add entirely new CLI coding agents.
 - **Event-driven hooks** – configure PreToolUse, PostToolUse, Notification, and Stop hooks to log activity, send notifications, or integrate with external systems.
 - **Intelligent routing** – enable per-profile proxy with ultrallm to route requests to different providers based on token count, tool usage, or custom rules.
-- **Daemon-backed service** – the `clownd` daemon owns all state and can drive future UI integrations without rebuilding orchestration logic.
+- **Native usage tracking** – track token usage and costs across all profiles with built-in ccusage-like functionality, including import from Claude's native files.
+- **Daemon-backed service** – the `clownd` daemon owns all state and drives the embedded Web UI without rebuilding orchestration logic.
 - **GitHub-backed registry** – manifests, profile templates, and model catalogs live in a public repository so new agents/models can ship without rebuilding the CLI while remaining reviewable.
 
 ## Project status
@@ -76,6 +77,11 @@ $ clown profiles list --agent claude
 Alias              Provider    Endpoint       Model           Last Used
 work-sonnet        minimax     international  MiniMax-M2.1    2024-05-04T11:23:51Z
 work-sre           minimax     international  MiniMax-M2.1    2024-05-03T09:18:12Z
+
+# View token usage and costs
+$ clown usage
+$ clown usage --period month --profile work-sonnet
+$ clown usage import-claude
 ```
 
 Commands such as `clown agents inspect <id>` and `clown profiles env <alias>` (for shell integration) will be detailed in `docs/profiles.md` as the implementation evolves. See `docs/providers.md` for how providers (MiniMax, Anthropic, OpenRouter, etc.) are configured separately from agents.
@@ -90,6 +96,7 @@ The daemon is started transparently the first time it is needed (for example, wh
 - `docs/profiles.md` – lifecycle of agent profiles and CLI workflows that manage them.
 - `docs/hooks.md` – event-driven hooks for logging, auditing, and integration.
 - `docs/proxy.md` – intelligent request routing via ultrallm proxy.
+- `docs/usage.md` – token/cost tracking, usage queries, and Claude data import.
 - `docs/scripting.md` – Rhai scripting guide for configuration generation.
 - `docs/registry.md` – GitHub registry layout, sync workflow, templates, and model catalog.
 
@@ -131,11 +138,11 @@ See `docs/agents.md` for agent-specific setup and `docs/providers.md` for provid
 - Proxy CLI commands for managing routes and model aliases
 - Rhai scripting engine for configuration generation
 - Telemetry collection for profile usage and session tracking
+- Native token/cost usage tracking with LiteLLM pricing
+- HTTP/WebSocket APIs and embedded Vue.js Web UI
 - Support for 5 agents: Claude Code, Grok, Codex, Droid, OpenCode
 
 ### Planned
-- HTTP/WebSocket endpoints for UI integrations
-- Desktop/web UI for profile management
 - Plugin SDK for third-party agent manifests
 - Cross-device profile sync
 

@@ -2,7 +2,7 @@
 
 use crate::server::ServerState;
 use clown_core::rpc::error_codes;
-use clown_core::{ProfileCreateRequest, Response};
+use clown_core::{Event, ProfileCreateRequest, Response};
 use tracing::info;
 
 /// Create a new profile.
@@ -67,6 +67,12 @@ pub async fn create(req: &ProfileCreateRequest, state: &ServerState) -> Response
     match state.profile_manager.create(req, &source_home, &endpoint, &resolved_model) {
         Ok(profile) => {
             info!("Profile '{}' created successfully", profile.alias);
+
+            // Broadcast event
+            state.broadcast(Event::ProfileCreated {
+                alias: profile.alias.clone(),
+            });
+
             Response::success(format!("Profile '{}' created successfully", profile.alias))
         }
         Err(e) => Response::error(
@@ -191,6 +197,14 @@ pub async fn run(alias: &str, args: &[String], state: &ServerState) -> Response 
     // Run the profile using execution adapter
     match state.execution_adapter.run(&profile, &agent, &provider, &api_key, args, proxy_url.as_deref()) {
         Ok(result) => {
+            let pid = result.child.id();
+
+            // Broadcast run started event
+            state.broadcast(Event::ProfileRunStarted {
+                alias: alias.to_string(),
+                pid,
+            });
+
             // Mark profile as used
             if let Err(e) = state.profile_manager.mark_used(alias) {
                 tracing::warn!("Failed to mark profile as used: {}", e);
@@ -207,6 +221,7 @@ pub async fn run(alias: &str, args: &[String], state: &ServerState) -> Response 
                     info!("Profile '{}' completed with exit code {}", alias, exit_code);
 
                     // Record session to telemetry
+                    // TODO: Add token/cost tracking once we can capture model usage from agent output
                     let session = crate::telemetry::Session {
                         profile: alias.to_string(),
                         agent_id: profile.agent_id.clone(),
@@ -215,10 +230,19 @@ pub async fn run(alias: &str, args: &[String], state: &ServerState) -> Response 
                         ended_at: Some(ended_at),
                         duration_secs: Some(duration.num_seconds() as u64),
                         exit_code: Some(exit_code),
+                        model: None,
+                        tokens: None,
+                        cost: None,
                     };
                     if let Err(e) = state.telemetry.record_session(&session) {
                         tracing::warn!("Failed to record session: {}", e);
                     }
+
+                    // Broadcast run completed event
+                    state.broadcast(Event::ProfileRunCompleted {
+                        alias: alias.to_string(),
+                        exit_code,
+                    });
 
                     Response::RunCompleted { exit_code }
                 }
@@ -238,7 +262,14 @@ pub async fn run(alias: &str, args: &[String], state: &ServerState) -> Response 
 /// Delete a profile.
 pub async fn delete(alias: &str, state: &ServerState) -> Response {
     match state.profile_manager.delete(alias) {
-        Ok(()) => Response::success(format!("Profile '{}' deleted", alias)),
+        Ok(()) => {
+            // Broadcast event
+            state.broadcast(Event::ProfileDeleted {
+                alias: alias.to_string(),
+            });
+
+            Response::success(format!("Profile '{}' deleted", alias))
+        }
         Err(e) => {
             // Check if it's a "not found" error
             let msg = e.to_string();

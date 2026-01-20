@@ -4,7 +4,7 @@ use crate::server::ServerState;
 use clown_core::{
     proxy::{ModelTarget, ProfileProxyConfig, RoutingRule},
     rpc::error_codes,
-    Response,
+    Event, Response,
 };
 use std::collections::HashMap;
 use tracing::info;
@@ -124,6 +124,13 @@ pub async fn start(alias: &str, state: &ServerState) -> Response {
     match state.proxy_manager.start(alias, &profile_home, &proxy_config).await {
         Ok(port) => {
             info!("Started proxy for profile '{}' on port {}", alias, port);
+
+            // Broadcast event
+            state.broadcast(Event::ProxyStarted {
+                alias: alias.to_string(),
+                port,
+            });
+
             Response::success(format!("Proxy started for profile '{}' on port {}", alias, port))
         }
         Err(e) => Response::error(error_codes::PROXY_START_FAILED, e.to_string()),
@@ -135,6 +142,12 @@ pub async fn stop(alias: &str, state: &ServerState) -> Response {
     match state.proxy_manager.stop(alias).await {
         Ok(()) => {
             info!("Stopped proxy for profile '{}'", alias);
+
+            // Broadcast event
+            state.broadcast(Event::ProxyStopped {
+                alias: alias.to_string(),
+            });
+
             Response::success(format!("Proxy stopped for profile '{}'", alias))
         }
         Err(e) => Response::error(error_codes::INTERNAL_ERROR, e.to_string()),

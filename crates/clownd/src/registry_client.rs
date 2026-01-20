@@ -5,6 +5,7 @@
 //! - Downloading agent/provider manifests and scripts
 //! - Caching artifacts under ~/.config/clown/registry/commits/
 //! - Managing registry.lock (current commit/channel)
+//! - Syncing LiteLLM pricing data
 //! - Offline mode support
 
 use anyhow::{anyhow, Context, Result};
@@ -125,6 +126,11 @@ impl RegistryClient {
 
         // Download artifacts
         self.download_artifacts(&index)?;
+
+        // Sync LiteLLM pricing data
+        if let Err(e) = self.sync_litellm_pricing() {
+            warn!("Failed to sync LiteLLM pricing: {}. Cost tracking may be unavailable.", e);
+        }
 
         // Update lock file
         let new_lock = RegistryLock {
@@ -277,6 +283,33 @@ impl RegistryClient {
         let lock_path = self.paths.registry_lock();
         let content = serde_json::to_string_pretty(lock)?;
         std::fs::write(lock_path, content)?;
+        Ok(())
+    }
+
+    /// Sync LiteLLM pricing data.
+    fn sync_litellm_pricing(&self) -> Result<()> {
+        use crate::pricing::{PricingLoader, LITELLM_PRICING_URL};
+
+        debug!("Syncing LiteLLM pricing data");
+
+        let response = ureq::get(LITELLM_PRICING_URL)
+            .call()
+            .context("Failed to fetch LiteLLM pricing data")?;
+
+        let content = response
+            .into_string()
+            .context("Failed to read pricing data")?;
+
+        // Validate it's valid JSON before saving
+        let _: serde_json::Value =
+            serde_json::from_str(&content).context("Failed to parse LiteLLM pricing JSON")?;
+
+        // Save to cache file
+        let cache_path = self.paths.litellm_pricing_cache();
+        std::fs::write(&cache_path, &content)
+            .context("Failed to write pricing cache")?;
+
+        info!("LiteLLM pricing data synced ({} bytes)", content.len());
         Ok(())
     }
 }

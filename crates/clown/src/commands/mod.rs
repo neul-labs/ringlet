@@ -5,10 +5,10 @@ use crate::output;
 use crate::{
     AgentsCommands, AliasesCommands, Commands, DaemonCommands, EnvCommands, HooksCommands,
     ProfilesCommands, ProvidersCommands, ProxyAliasCommands, ProxyCommands, ProxyRouteCommands,
-    RegistryCommands,
+    RegistryCommands, UsageCommands,
 };
 use anyhow::{anyhow, Result};
-use clown_core::{HooksConfig, ModelTarget, ProfileCreateRequest, Request, Response, RoutingCondition, RoutingRule};
+use clown_core::{HooksConfig, ModelTarget, ProfileCreateRequest, Request, Response, RoutingCondition, RoutingRule, UsagePeriod};
 
 /// Execute a command.
 pub async fn execute(command: &Commands, json: bool) -> Result<()> {
@@ -19,6 +19,9 @@ pub async fn execute(command: &Commands, json: bool) -> Result<()> {
         Commands::Aliases { command } => execute_aliases(command, json).await,
         Commands::Registry { command } => execute_registry(command, json).await,
         Commands::Stats { agent, provider } => execute_stats(agent, provider, json).await,
+        Commands::Usage { command, period, profile, model } => {
+            execute_usage(command.as_ref(), period, profile.as_deref(), model.as_deref(), json).await
+        }
         Commands::Daemon { command } => execute_daemon(command, json).await,
         Commands::Env { command } => execute_env(command, json).await,
         Commands::Hooks { command } => execute_hooks(command, json).await,
@@ -434,6 +437,121 @@ async fn execute_stats(
     }
 
     Ok(())
+}
+
+async fn execute_usage(
+    command: Option<&UsageCommands>,
+    period: &str,
+    profile: Option<&str>,
+    model: Option<&str>,
+    json: bool,
+) -> Result<()> {
+    let client = DaemonClient::connect()?;
+
+    // Parse period string to UsagePeriod
+    let usage_period = parse_period(period);
+
+    match command {
+        Some(UsageCommands::Daily { period }) => {
+            let response = client.request(&Request::Usage {
+                period: Some(parse_period(period)),
+                profile: None,
+                model: None,
+            })?;
+            handle_usage_response(response, json)?;
+        }
+        Some(UsageCommands::Models) => {
+            let response = client.request(&Request::Usage {
+                period: Some(UsagePeriod::All),
+                profile: None,
+                model: None,
+            })?;
+            handle_usage_response(response, json)?;
+        }
+        Some(UsageCommands::Profiles) => {
+            let response = client.request(&Request::Usage {
+                period: Some(UsagePeriod::All),
+                profile: None,
+                model: None,
+            })?;
+            handle_usage_response(response, json)?;
+        }
+        Some(UsageCommands::Export { format, period }) => {
+            let response = client.request(&Request::Usage {
+                period: Some(parse_period(period)),
+                profile: None,
+                model: None,
+            })?;
+            match response {
+                Response::Usage(usage) => {
+                    // Always output as requested format
+                    if format == "csv" {
+                        println!("period,total_sessions,total_runtime_secs,input_tokens,output_tokens,cache_creation_tokens,cache_read_tokens,total_cost");
+                        println!(
+                            "{},{},{},{},{},{},{},{}",
+                            usage.period,
+                            usage.total_sessions,
+                            usage.total_runtime_secs,
+                            usage.total_tokens.input_tokens,
+                            usage.total_tokens.output_tokens,
+                            usage.total_tokens.cache_creation_input_tokens,
+                            usage.total_tokens.cache_read_input_tokens,
+                            usage.total_cost.as_ref().map(|c| c.total_cost).unwrap_or(0.0)
+                        );
+                    } else {
+                        println!("{}", serde_json::to_string_pretty(&usage)?);
+                    }
+                }
+                Response::Error { message, .. } => return Err(anyhow!(message)),
+                _ => return Err(anyhow!("Unexpected response")),
+            }
+        }
+        Some(UsageCommands::ImportClaude { claude_dir }) => {
+            let response = client.request(&Request::UsageImportClaude {
+                claude_dir: claude_dir.clone(),
+            })?;
+            handle_success_response(response, json)?;
+        }
+        None => {
+            // Default: show usage summary
+            let response = client.request(&Request::Usage {
+                period: Some(usage_period),
+                profile: profile.map(|s| s.to_string()),
+                model: model.map(|s| s.to_string()),
+            })?;
+            handle_usage_response(response, json)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn parse_period(period: &str) -> UsagePeriod {
+    match period.to_lowercase().as_str() {
+        "today" => UsagePeriod::Today,
+        "yesterday" => UsagePeriod::Yesterday,
+        "week" | "thisweek" | "this_week" => UsagePeriod::ThisWeek,
+        "month" | "thismonth" | "this_month" => UsagePeriod::ThisMonth,
+        "7d" | "7days" | "last7days" => UsagePeriod::Last7Days,
+        "30d" | "30days" | "last30days" => UsagePeriod::Last30Days,
+        "all" | "alltime" | "all_time" => UsagePeriod::All,
+        _ => UsagePeriod::Today,
+    }
+}
+
+fn handle_usage_response(response: Response, json: bool) -> Result<()> {
+    match response {
+        Response::Usage(usage) => {
+            if json {
+                println!("{}", serde_json::to_string_pretty(&usage)?);
+            } else {
+                output::usage_summary(&usage);
+            }
+            Ok(())
+        }
+        Response::Error { message, .. } => Err(anyhow!(message)),
+        _ => Err(anyhow!("Unexpected response")),
+    }
 }
 
 async fn execute_daemon(command: &DaemonCommands, json: bool) -> Result<()> {
