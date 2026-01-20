@@ -7,8 +7,8 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT"
 authors = ["Dipankar Sarkar"]
-repository = "https://github.com/neul-labs/ccswitch"
-homepage = "https://github.com/neul-labs/ccswitch"
+repository = "https://github.com/neul-labs/clown"
+homepage = "https://github.com/neul-labs/clown"
 keywords = ["cli", "agent", "orchestrator", "coding"]
 categories = ["command-line-utilities", "development-tools"]
 
