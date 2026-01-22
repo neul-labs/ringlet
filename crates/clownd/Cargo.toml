@@ -71,6 +71,9 @@ dirs = { workspace = true }
 # Memory allocator
 mimalloc = { workspace = true }
 
+# PTY support for remote terminal
+portable-pty = "0.9"
+
 # Unix process management
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

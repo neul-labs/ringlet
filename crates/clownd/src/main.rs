@@ -23,6 +23,7 @@ mod proxy_manager;
 mod registry_client;
 mod server;
 mod telemetry;
+mod terminal;
 mod usage_watcher;
 mod watcher;
 
@@ -136,6 +137,10 @@ async fn main() -> Result<()> {
             // Continue with cleanup even on error
         }
     }
+
+    // Terminate all terminal sessions gracefully
+    info!("Terminating terminal sessions...");
+    state.terminal_sessions.terminate_all().await;
 
     // Stop all proxy instances gracefully
     info!("Stopping proxy instances...");

@@ -63,6 +63,19 @@ Handles event-driven hooks configured at the profile level. When agents that sup
 
 See [Hooks](hooks.md) for user-facing documentation.
 
+### Terminal session manager
+Manages remote terminal sessions that allow agents to run in PTY (pseudo-terminal) mode within the daemon. This enables:
+
+- **PTY emulation** – uses `portable-pty` for cross-platform pseudo-terminal support
+- **Multi-client access** – multiple WebSocket clients can view and interact with the same session
+- **Scrollback buffer** – maintains up to 1MB of terminal history for reconnecting clients
+- **Session lifecycle** – tracks session state (starting, running, terminated) and exit codes
+- **Working directory** – supports custom working directories per session
+
+Terminal sessions are accessed via WebSocket (`/ws/terminal/{session_id}`) for real-time I/O (binary data) and control messages (JSON). REST endpoints manage session creation, listing, and termination.
+
+See the HTTP API documentation for endpoint details.
+
 ### Usage tracking
 Collects token usage (input, output, cache creation, cache read) for every agent session. The system tracks:
 
@@ -85,8 +98,15 @@ The daemon is the heart of clown. It runs as a long-lived process (auto-started 
 
 The CLI is intentionally thin; it auto-spawns the daemon on first use and delegates all real work to it.
 
-### UI layer (planned)
-A small desktop/web frontend that connects to `clownd` to visualize profiles, switch contexts, and trigger commands. The same APIs keep terminal workflows and graphical workflows consistent.
+### Web UI
+A Vue 3 single-page application embedded in the daemon binary (via `rust-embed`) and served at `http://127.0.0.1:8765`. The UI provides:
+
+- **Profile management** – view, create, and manage profiles
+- **Usage dashboard** – visualize token usage and costs
+- **Remote terminal** – full interactive terminal sessions using xterm.js
+- **Real-time updates** – WebSocket connections for live session state
+
+The UI connects to the same HTTP/WebSocket APIs available to external tools, keeping terminal workflows and graphical workflows consistent.
 
 ## CLI ↔ daemon transport
 
@@ -239,13 +259,14 @@ Windows uses `%APPDATA%\\clown\\` and Linux adheres to the XDG Base Directory sp
 4. Mirror CLI commands as structured RPC payloads consumed over the `async-nng` channel and, when needed, expose equivalent HTTP routes (`GET /agents`, `POST /profiles`) for graphical clients.
 5. Publish change notifications via `async-nng` pub/sub sockets and mirror them to Server-Sent Events or WebSockets so UI clients stay in sync without polling.
 6. Schedule background registry syncs (respecting offline mode) so metadata stays fresh.
-7. **Collect usage telemetry:**
+7. **Host remote terminal sessions** via PTY emulation, allowing agents to run interactively and be accessed through the web UI or multiple CLI/WebSocket clients simultaneously.
+8. **Collect usage telemetry:**
    - Profile invocation counts and timestamps (`last_used`, `total_runs`)
    - Session durations (time from `profiles run` start to exit)
    - Resource consumption snapshots (peak memory, CPU time) for supervised agent processes
    - Aggregate stats per agent, provider, and model for dashboard views
    - Persist telemetry under `~/.config/clown/telemetry/` with rotation/compaction
-8. Expose structured logs and telemetry via `clown stats` commands and optional Prometheus/OpenTelemetry endpoints for enterprise observability.
+9. Expose structured logs and telemetry via `clown stats` commands and optional Prometheus/OpenTelemetry endpoints for enterprise observability.
 
 ## Cross-platform considerations
 

@@ -115,6 +115,12 @@ enum Commands {
         #[command(subcommand)]
         command: ProxyCommands,
     },
+
+    /// Manage remote terminal sessions
+    Terminal {
+        #[command(subcommand)]
+        command: TerminalCommands,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -187,6 +193,15 @@ enum ProfilesCommands {
     Run {
         /// Profile alias
         alias: String,
+        /// Run in remote mode (PTY session viewable via web UI)
+        #[arg(long)]
+        remote: bool,
+        /// Initial terminal columns (for remote mode)
+        #[arg(long, default_value = "80")]
+        cols: u16,
+        /// Initial terminal rows (for remote mode)
+        #[arg(long, default_value = "24")]
+        rows: u16,
         /// Arguments to pass to the agent
         #[arg(trailing_var_arg = true)]
         args: Vec<String>,
@@ -447,6 +462,27 @@ pub enum ProxyAliasCommands {
         alias: String,
         /// Source model name to remove
         from: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum TerminalCommands {
+    /// List active terminal sessions
+    List,
+    /// Show session info
+    Info {
+        /// Session ID
+        id: String,
+    },
+    /// Terminate a session
+    Kill {
+        /// Session ID
+        id: String,
+    },
+    /// Attach to a session (opens web UI)
+    Attach {
+        /// Session ID
+        id: String,
     },
 }
 

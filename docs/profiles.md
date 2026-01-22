@@ -8,9 +8,10 @@ Profiles are the heart of clown. Each one binds an agent installation to a speci
 2. **Inspect** – `clown profiles inspect <alias>` prints the stored configuration and redacts secrets by default.
 3. **List** – `clown profiles list --agent <agent-id>` summarizes aliases per agent and feeds the aggregate counts shown by `clown agents list`.
 4. **Run** – `clown profiles run <alias> -- <agent args>` launches the selected agent with the stored configuration, then streams stdout/stderr directly to the caller.
-5. **Switch (shell helper)** – `eval "$(clown profiles env <alias>)"` exports environment variables into the current shell when you want to run the agent manually.
-6. **Delete** – `clown profiles delete <alias>` removes the JSON file and executes any teardown hooks defined in the manifest.
-7. **Optional env setup** – `clown env setup <alias> <task>` runs manual environment adjustments (e.g., remapping CLI shims) defined by the manifest.
+5. **Run remote** – `clown profiles run <alias> --remote` runs the agent in the daemon's PTY, enabling access through the web UI or multiple clients.
+6. **Switch (shell helper)** – `eval "$(clown profiles env <alias>)"` exports environment variables into the current shell when you want to run the agent manually.
+7. **Delete** – `clown profiles delete <alias>` removes the JSON file and executes any teardown hooks defined in the manifest.
+8. **Optional env setup** – `clown env setup <alias> <task>` runs manual environment adjustments (e.g., remapping CLI shims) defined by the manifest.
 
 ## Schema reference
 
@@ -163,6 +164,30 @@ When `clownd` is active (the CLI bootstraps it automatically and it shuts down a
 - CLI commands proxy through the daemon over the `async-nng` request/reply channel, avoiding concurrent writes.
 - UI clients subscribe to `/profiles/stream` (SSE/WebSocket) or tap into the `async-nng` pub/sub feed to update automatically when counts change.
 - Portable export/import endpoints (`GET /profiles/<alias>` / `POST /profiles`) allow cross-device sync workflows.
+
+## Remote terminal sessions
+
+Profiles can be run in "remote" mode, where the agent executes in a PTY (pseudo-terminal) managed by the daemon. This enables:
+
+- **Web UI access** – interact with the terminal through `http://127.0.0.1:8765/terminal`
+- **Multi-client viewing** – multiple browsers/clients can connect to the same session
+- **Session persistence** – sessions continue running even when you disconnect
+- **Scrollback history** – reconnecting shows up to 1MB of terminal history
+
+```bash
+# Start a remote session
+$ clown profiles run work-anthropic --remote
+Session ID: 46e15057-abbb-42cd-ad0e-52471a76ef9f
+Connect at: http://127.0.0.1:8765/terminal
+
+# List active sessions
+$ clown terminal list
+
+# Terminate a session
+$ clown terminal kill <session-id>
+```
+
+Sessions can also be created through the web UI or HTTP API. See the Terminal Sessions section in the HTTP API documentation.
 
 ## Best practices
 

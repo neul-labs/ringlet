@@ -1,0 +1,101 @@
+site_name: Clown Documentation
+site_description: CLI orchestrator for coding agents - manage multiple AI coding assistants with isolated profiles
+site_url: https://neul-labs.github.io/ccswitch/
+repo_url: https://github.com/neul-labs/ccswitch
+repo_name: neul-labs/ccswitch
+edit_uri: edit/main/documentation/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - getting-started/index.md
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Key Concepts: getting-started/concepts.md
+  - Guides:
+    - Profiles: guides/profiles.md
+    - Agents: guides/agents.md
+    - Providers: guides/providers.md
+    - Proxy & Routing: guides/proxy.md
+    - Hooks: guides/hooks.md
+    - Usage Tracking: guides/usage.md
+    - Remote Terminal: guides/terminal.md
+    - Scripting: guides/scripting.md
+  - Reference:
+    - CLI Commands: reference/cli.md
+    - Configuration: reference/configuration.md
+    - HTTP API: reference/api.md
+    - WebSocket Events: reference/events.md
+  - Advanced:
+    - Architecture: advanced/architecture.md
+    - Registry: advanced/registry.md
+    - Troubleshooting: advanced/troubleshooting.md
+  - Contributing: contributing.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.mark
+  - pymdownx.keys
+  - tables
+  - attr_list
+  - md_in_html
+  - def_list
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/neul-labs/ccswitch
+  generator: false
+
+extra_css:
+  - stylesheets/extra.css

@@ -5,7 +5,7 @@ use crate::output;
 use crate::{
     AgentsCommands, AliasesCommands, Commands, DaemonCommands, EnvCommands, HooksCommands,
     ProfilesCommands, ProvidersCommands, ProxyAliasCommands, ProxyCommands, ProxyRouteCommands,
-    RegistryCommands, UsageCommands,
+    RegistryCommands, TerminalCommands, UsageCommands,
 };
 use anyhow::{anyhow, Result};
 use clown_core::{HooksConfig, ModelTarget, ProfileCreateRequest, Request, Response, RoutingCondition, RoutingRule, UsagePeriod};
@@ -26,6 +26,7 @@ pub async fn execute(command: &Commands, json: bool) -> Result<()> {
         Commands::Env { command } => execute_env(command, json).await,
         Commands::Hooks { command } => execute_hooks(command, json).await,
         Commands::Proxy { command } => execute_proxy(command, json).await,
+        Commands::Terminal { command } => execute_terminal(command, json).await,
     }
 }
 
@@ -219,7 +220,12 @@ async fn execute_profiles(command: &ProfilesCommands, json: bool) -> Result<()> 
                 _ => return Err(anyhow!("Unexpected response")),
             }
         }
-        ProfilesCommands::Run { alias, args } => {
+        ProfilesCommands::Run { alias, remote, cols, rows, args } => {
+            if *remote {
+                // Run in remote mode - create a terminal session via HTTP API
+                return execute_remote_run(alias, args, *cols, *rows, json).await;
+            }
+
             let response = client.request(&Request::ProfilesRun {
                 alias: alias.clone(),
                 args: args.clone(),
@@ -994,4 +1000,161 @@ fn handle_success_response(response: Response, json: bool) -> Result<()> {
         Response::Error { message, .. } => Err(anyhow!(message)),
         _ => Err(anyhow!("Unexpected response")),
     }
+}
+
+// Terminal API base URL (uses HTTP server port)
+const TERMINAL_API_BASE: &str = "http://127.0.0.1:8765";
+
+/// Execute remote run - creates a terminal session via HTTP API.
+async fn execute_remote_run(alias: &str, args: &[String], cols: u16, rows: u16, json: bool) -> Result<()> {
+    let url = format!("{}/api/terminal/sessions", TERMINAL_API_BASE);
+
+    let request_body = serde_json::json!({
+        "profile_alias": alias,
+        "args": args,
+        "cols": cols,
+        "rows": rows,
+    });
+
+    let response: serde_json::Value = ureq::post(&url)
+        .set("Content-Type", "application/json")
+        .send_json(&request_body)
+        .map_err(|e| anyhow!("Failed to create terminal session: {}", e))?
+        .into_json()
+        .map_err(|e| anyhow!("Failed to parse response: {}", e))?;
+
+    if response["success"].as_bool() != Some(true) {
+        if let Some(error) = response["error"]["message"].as_str() {
+            return Err(anyhow!("{}", error));
+        }
+        return Err(anyhow!("Failed to create terminal session"));
+    }
+
+    let session_id = response["data"]["session_id"]
+        .as_str()
+        .ok_or_else(|| anyhow!("Missing session_id in response"))?;
+
+    if json {
+        println!("{}", serde_json::json!({
+            "session_id": session_id,
+            "ws_url": format!("ws://127.0.0.1:8765/ws/terminal/{}", session_id),
+            "web_url": format!("http://127.0.0.1:8765/terminal/{}", session_id),
+        }));
+    } else {
+        println!("Terminal session created:");
+        println!("  Session ID: {}", session_id);
+        println!("  Web UI: http://127.0.0.1:8765/terminal/{}", session_id);
+        println!("\nTo attach from CLI: clown terminal attach {}", session_id);
+    }
+
+    Ok(())
+}
+
+/// Execute terminal commands via HTTP API.
+async fn execute_terminal(command: &TerminalCommands, json: bool) -> Result<()> {
+    match command {
+        TerminalCommands::List => {
+            let url = format!("{}/api/terminal/sessions", TERMINAL_API_BASE);
+            let response: serde_json::Value = ureq::get(&url)
+                .call()
+                .map_err(|e| anyhow!("Failed to list sessions: {}", e))?
+                .into_json()
+                .map_err(|e| anyhow!("Failed to parse response: {}", e))?;
+
+            if response["success"].as_bool() != Some(true) {
+                if let Some(error) = response["error"]["message"].as_str() {
+                    return Err(anyhow!("{}", error));
+                }
+                return Err(anyhow!("Failed to list sessions"));
+            }
+
+            let sessions = response["data"].as_array()
+                .ok_or_else(|| anyhow!("Invalid response format"))?;
+
+            if json {
+                println!("{}", serde_json::to_string_pretty(sessions)?);
+            } else if sessions.is_empty() {
+                println!("No active terminal sessions");
+            } else {
+                println!("{:<36}  {:<15}  {:<10}  {}", "SESSION ID", "PROFILE", "STATE", "CLIENTS");
+                println!("{}", "-".repeat(80));
+                for session in sessions {
+                    println!(
+                        "{:<36}  {:<15}  {:<10}  {}",
+                        session["id"].as_str().unwrap_or("-"),
+                        session["profile_alias"].as_str().unwrap_or("-"),
+                        session["state"].as_str().unwrap_or("-"),
+                        session["client_count"].as_u64().unwrap_or(0),
+                    );
+                }
+            }
+        }
+        TerminalCommands::Info { id } => {
+            let url = format!("{}/api/terminal/sessions/{}", TERMINAL_API_BASE, id);
+            let response: serde_json::Value = ureq::get(&url)
+                .call()
+                .map_err(|e| anyhow!("Failed to get session: {}", e))?
+                .into_json()
+                .map_err(|e| anyhow!("Failed to parse response: {}", e))?;
+
+            if response["success"].as_bool() != Some(true) {
+                if let Some(error) = response["error"]["message"].as_str() {
+                    return Err(anyhow!("{}", error));
+                }
+                return Err(anyhow!("Session not found"));
+            }
+
+            let session = &response["data"];
+            if json {
+                println!("{}", serde_json::to_string_pretty(session)?);
+            } else {
+                println!("Session ID: {}", session["id"].as_str().unwrap_or("-"));
+                println!("Profile: {}", session["profile_alias"].as_str().unwrap_or("-"));
+                println!("State: {}", session["state"].as_str().unwrap_or("-"));
+                println!("PID: {}", session["pid"].as_u64().map(|p| p.to_string()).unwrap_or("-".to_string()));
+                println!("Size: {}x{}", session["cols"].as_u64().unwrap_or(0), session["rows"].as_u64().unwrap_or(0));
+                println!("Clients: {}", session["client_count"].as_u64().unwrap_or(0));
+                println!("Created: {}", session["created_at"].as_str().unwrap_or("-"));
+            }
+        }
+        TerminalCommands::Kill { id } => {
+            let url = format!("{}/api/terminal/sessions/{}", TERMINAL_API_BASE, id);
+            let response: serde_json::Value = ureq::delete(&url)
+                .call()
+                .map_err(|e| anyhow!("Failed to kill session: {}", e))?
+                .into_json()
+                .map_err(|e| anyhow!("Failed to parse response: {}", e))?;
+
+            if response["success"].as_bool() != Some(true) {
+                if let Some(error) = response["error"]["message"].as_str() {
+                    return Err(anyhow!("{}", error));
+                }
+                return Err(anyhow!("Failed to kill session"));
+            }
+
+            if json {
+                println!("{}", serde_json::json!({"success": "Session terminated"}));
+            } else {
+                output::success(&format!("Session {} terminated", id));
+            }
+        }
+        TerminalCommands::Attach { id } => {
+            // For now, just print the URL - full terminal attach would require
+            // more complex terminal handling (crossterm, raw mode, etc.)
+            if json {
+                println!("{}", serde_json::json!({
+                    "session_id": id,
+                    "ws_url": format!("ws://127.0.0.1:8765/ws/terminal/{}", id),
+                    "web_url": format!("http://127.0.0.1:8765/terminal/{}", id),
+                }));
+            } else {
+                println!("To view this terminal session, open the web UI:");
+                println!("  http://127.0.0.1:8765/terminal/{}", id);
+                println!("\nWebSocket URL (for custom clients):");
+                println!("  ws://127.0.0.1:8765/ws/terminal/{}", id);
+            }
+        }
+    }
+
+    Ok(())
 }

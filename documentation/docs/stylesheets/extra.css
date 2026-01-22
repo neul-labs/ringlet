@@ -1,0 +1,32 @@
+/* Custom styles for Clown documentation */
+
+/* Hero section styling */
+.md-typeset .hero {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+/* Feature grid */
+.md-typeset .feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.md-typeset .feature-card {
+  padding: 1.5rem;
+  border-radius: 8px;
+  background: var(--md-code-bg-color);
+}
+
+/* Quick install code block */
+.md-typeset .install-command {
+  font-size: 1.1em;
+}
+
+/* Command reference tables */
+.md-typeset .command-table td:first-child {
+  font-family: var(--md-code-font-family);
+  white-space: nowrap;
+}

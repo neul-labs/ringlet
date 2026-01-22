@@ -43,6 +43,16 @@ const router = createRouter({
       name: 'usage',
       component: () => import('@/views/UsageView.vue'),
     },
+    {
+      path: '/terminal',
+      name: 'terminal',
+      component: () => import('@/views/TerminalView.vue'),
+    },
+    {
+      path: '/terminal/:sessionId',
+      name: 'terminal-session',
+      component: () => import('@/views/TerminalView.vue'),
+    },
   ],
 })
 

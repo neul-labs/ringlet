@@ -49,3 +49,6 @@ keyring = { workspace = true }
 
 # Memory allocator
 mimalloc = { workspace = true }
+
+# HTTP client for terminal API
+ureq = { version = "2", features = ["json"] }

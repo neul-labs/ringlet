@@ -8,6 +8,7 @@ pub mod proxy;
 pub mod registry;
 pub mod stats;
 pub mod system;
+pub mod terminal;
 pub mod usage;
 
 use crate::server::ServerState;
@@ -76,4 +77,14 @@ pub fn api_routes() -> Router<Arc<ServerState>> {
         // System
         .route("/ping", get(system::ping))
         .route("/shutdown", post(system::shutdown))
+        // Terminal sessions
+        .route(
+            "/terminal/sessions",
+            get(terminal::list_sessions).post(terminal::create_session),
+        )
+        .route(
+            "/terminal/sessions/{id}",
+            get(terminal::get_session).delete(terminal::terminate_session),
+        )
+        .route("/terminal/cleanup", post(terminal::cleanup_sessions))
 }

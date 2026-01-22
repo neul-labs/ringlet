@@ -266,3 +266,41 @@ export interface ClientMessage {
   type: 'subscribe' | 'unsubscribe' | 'ping'
   topics?: string[]
 }
+
+// Terminal session types
+export type TerminalSessionState = 'starting' | 'running' | 'terminated'
+
+export interface TerminalSessionInfo {
+  id: string
+  profile_alias: string
+  state: TerminalSessionState | { terminated: { exit_code: number | null } }
+  created_at: string
+  pid: number | null
+  cols: number
+  rows: number
+  client_count: number
+}
+
+export interface CreateTerminalSessionRequest {
+  profile_alias: string
+  args?: string[]
+  cols?: number
+  rows?: number
+  working_dir?: string
+}
+
+export interface CreateTerminalSessionResponse {
+  session_id: string
+  ws_url: string
+}
+
+// Terminal WebSocket message types
+export type TerminalClientMessage =
+  | { type: 'resize'; cols: number; rows: number }
+  | { type: 'signal'; signal: number }
+
+export type TerminalServerMessage =
+  | { type: 'connected'; session_id: string }
+  | { type: 'state_changed'; state: string; exit_code: number | null }
+  | { type: 'resized'; cols: number; rows: number }
+  | { type: 'error'; message: string }

@@ -1,6 +1,6 @@
 //! HTTP server setup using Axum.
 
-use crate::http::{assets, routes, websocket};
+use crate::http::{assets, routes, terminal_ws, websocket};
 use crate::server::ServerState;
 use axum::{routing::get, Router};
 use std::net::SocketAddr;
@@ -21,10 +21,13 @@ pub async fn run_http_server(
     let app = Router::new()
         // API routes
         .nest("/api", routes::api_routes())
-        // WebSocket endpoint
+        // WebSocket endpoints
         .route("/ws", get(websocket::ws_handler))
+        .route("/ws/terminal/{session_id}", get(terminal_ws::terminal_ws_handler))
         // Static assets (CSS, JS, etc.)
         .route("/assets/{*path}", get(assets::serve_static))
+        // Favicon
+        .route("/favicon.svg", get(assets::serve_favicon))
         // Serve index.html at root
         .route("/", get(assets::serve_index))
         // SPA fallback - serve index.html for all other routes

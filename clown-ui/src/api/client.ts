@@ -11,6 +11,9 @@ import type {
   StatsResponse,
   RegistryStatus,
   UsageStatsResponse,
+  TerminalSessionInfo,
+  CreateTerminalSessionRequest,
+  CreateTerminalSessionResponse,
 } from './types'
 
 class ApiError extends Error {
@@ -205,6 +208,21 @@ export const api = {
   system: {
     ping: () => request<{ status: string; version: string }>('/ping'),
     shutdown: () => request<void>('/shutdown', { method: 'POST' }),
+  },
+
+  // Terminal sessions
+  terminal: {
+    list: () => request<TerminalSessionInfo[]>('/terminal/sessions'),
+    get: (id: string) => request<TerminalSessionInfo>(`/terminal/sessions/${id}`),
+    create: (data: CreateTerminalSessionRequest) =>
+      request<CreateTerminalSessionResponse>('/terminal/sessions', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    terminate: (id: string) =>
+      request<void>(`/terminal/sessions/${id}`, { method: 'DELETE' }),
+    cleanup: () =>
+      request<void>('/terminal/cleanup', { method: 'POST' }),
   },
 }
 

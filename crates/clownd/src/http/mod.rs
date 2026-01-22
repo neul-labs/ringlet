@@ -7,6 +7,7 @@ pub mod assets;
 pub mod error;
 pub mod routes;
 pub mod server;
+pub mod terminal_ws;
 pub mod websocket;
 
 pub use server::run_http_server;

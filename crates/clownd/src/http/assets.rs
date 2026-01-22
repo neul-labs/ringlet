@@ -27,6 +27,11 @@ pub async fn serve_index() -> impl IntoResponse {
     serve_file("index.html")
 }
 
+/// Serve the favicon.
+pub async fn serve_favicon() -> impl IntoResponse {
+    serve_file("favicon.svg")
+}
+
 /// Serve a file by path, with proper content type.
 fn serve_file(path: &str) -> Response<Body> {
     // Try to get the file from embedded assets

@@ -9,6 +9,7 @@ use crate::provider_registry::ProviderRegistry;
 use crate::proxy_manager::ProxyManager;
 use crate::registry_client::RegistryClient;
 use crate::telemetry::TelemetryCollector;
+use crate::terminal::TerminalSessionManager;
 use crate::usage_watcher::UsageWatcher;
 use anyhow::{Context, Result};
 use clown_core::{ClownPaths, Event, Request, Response};
@@ -31,6 +32,8 @@ pub struct ServerState {
     pub registry_client: RegistryClient,
     pub telemetry: TelemetryCollector,
     pub proxy_manager: ProxyManager,
+    /// Terminal session manager for remote terminal access.
+    pub terminal_sessions: TerminalSessionManager,
     /// Shutdown signal sender (for HTTP API to request shutdown).
     pub shutdown_tx: Mutex<Option<oneshot::Sender<()>>>,
     /// Event broadcaster for WebSocket clients.
@@ -46,6 +49,7 @@ impl ServerState {
         let registry_client = RegistryClient::new(paths.clone());
         let telemetry = TelemetryCollector::new(paths.clone());
         let proxy_manager = ProxyManager::new(paths.clone());
+        let terminal_sessions = TerminalSessionManager::new();
         let events = EventBroadcaster::default();
 
         // Start usage watcher for real-time agent usage tracking
@@ -64,6 +68,7 @@ impl ServerState {
             registry_client,
             telemetry,
             proxy_manager,
+            terminal_sessions,
             shutdown_tx: Mutex::new(Some(shutdown_tx)),
             events,
         })
