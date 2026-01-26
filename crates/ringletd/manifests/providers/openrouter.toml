@@ -1,0 +1,14 @@
+id = "openrouter"
+name = "OpenRouter"
+type = "openai-compatible"
+
+[endpoints]
+default = "https://openrouter.ai/api/v1"
+
+[auth]
+env_key = "OPENROUTER_API_KEY"
+prompt = "Enter your OpenRouter API key"
+
+[models]
+available = ["auto", "anthropic/claude-3.5-sonnet", "openai/gpt-4o"]
+default = "auto"

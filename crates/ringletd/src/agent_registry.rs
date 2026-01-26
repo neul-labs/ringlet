@@ -8,11 +8,11 @@ use tracing::{debug, warn};
 
 /// Built-in agent manifests (embedded at compile time).
 const BUILTIN_AGENTS: &[(&str, &str)] = &[
-    ("claude", include_str!("../../../manifests/agents/claude.toml")),
-    ("grok", include_str!("../../../manifests/agents/grok.toml")),
-    ("codex", include_str!("../../../manifests/agents/codex.toml")),
-    ("droid", include_str!("../../../manifests/agents/droid.toml")),
-    ("opencode", include_str!("../../../manifests/agents/opencode.toml")),
+    ("claude", include_str!("../manifests/agents/claude.toml")),
+    ("grok", include_str!("../manifests/agents/grok.toml")),
+    ("codex", include_str!("../manifests/agents/codex.toml")),
+    ("droid", include_str!("../manifests/agents/droid.toml")),
+    ("opencode", include_str!("../manifests/agents/opencode.toml")),
 ];
 
 /// Agent registry.

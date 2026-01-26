@@ -10,9 +10,9 @@ use axum::{
 };
 use rust_embed::Embed;
 
-/// Embedded UI assets from the ringlet-ui/dist directory.
+/// Embedded UI assets from the ui-dist directory.
 #[derive(Embed)]
-#[folder = "../../ringlet-ui/dist"]
+#[folder = "ui-dist"]
 struct Assets;
 
 /// Serve a static file from the embedded assets.

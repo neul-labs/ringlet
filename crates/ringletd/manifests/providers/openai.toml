@@ -1,0 +1,14 @@
+id = "openai"
+name = "OpenAI API"
+type = "openai"
+
+[endpoints]
+default = "https://api.openai.com/v1"
+
+[auth]
+env_key = "OPENAI_API_KEY"
+prompt = "Enter your OpenAI API key"
+
+[models]
+available = ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]
+default = "gpt-4o"

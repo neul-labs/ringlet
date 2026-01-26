@@ -1,0 +1,15 @@
+id = "zai-openai"
+name = "Z.AI (OpenAI Compatible)"
+type = "openai-compatible"
+
+[endpoints]
+international = "https://api.z.ai/api/coding/paas/v4"
+default = "international"
+
+[auth]
+env_key = "ZAI_API_KEY"
+prompt = "Enter your Z.AI API key"
+
+[models]
+available = ["glm-4.7", "glm-4.5-air"]
+default = "glm-4.7"

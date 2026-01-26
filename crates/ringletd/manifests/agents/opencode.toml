@@ -1,0 +1,25 @@
+id = "opencode"
+name = "OpenCode"
+binary = "opencode"
+version_flag = "--version"
+
+[detect]
+commands = ["opencode --version"]
+files = ["~/.config/opencode/opencode.json"]
+
+[profile]
+strategy = "home-wrapper"
+source_home = "~/.opencode-profiles/{alias}"
+script = "opencode.rhai"
+required_env = []
+optional_env = []
+
+[models]
+default = "claude-sonnet-4"
+supported = ["claude-sonnet-4", "claude-opus-4", "MiniMax-M2.1", "GLM-4.7", "GLM-4.5-Air"]
+
+[hooks]
+create = []
+delete = []
+pre_run = []
+post_run = []

@@ -1,0 +1,26 @@
+id = "codex"
+name = "Codex CLI"
+binary = "codex"
+version_flag = "--version"
+
+[detect]
+commands = ["codex --version"]
+files = ["~/.codex/config.toml"]
+
+[profile]
+strategy = "home-wrapper"
+source_home = "~/.codex-profiles/{alias}"
+script = "codex.rhai"
+required_env = []
+optional_env = []
+default_provider = "self"
+
+[models]
+default = "gpt-4o"
+supported = ["gpt-4o", "gpt-4-turbo", "codex-MiniMax-M2.1", "MiniMax-M2.1", "glm-4.7", "glm-4.5-air"]
+
+[hooks]
+create = []
+delete = []
+pre_run = []
+post_run = []

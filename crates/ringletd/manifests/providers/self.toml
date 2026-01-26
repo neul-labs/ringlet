@@ -1,0 +1,20 @@
+# Self-authenticated provider
+# Used for agents that handle their own authentication (e.g., Claude Code, Codex)
+
+id = "self"
+name = "Self-Authenticated"
+type = "self"
+
+[endpoints]
+# Placeholder endpoint - not used by self-auth agents
+native = ""
+default = "native"
+
+[auth]
+env_key = ""
+prompt = ""
+required = false
+
+[models]
+available = []
+default = ""

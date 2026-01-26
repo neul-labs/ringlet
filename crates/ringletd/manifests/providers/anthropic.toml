@@ -1,0 +1,14 @@
+id = "anthropic"
+name = "Anthropic API"
+type = "anthropic"
+
+[endpoints]
+default = "https://api.anthropic.com"
+
+[auth]
+env_key = "ANTHROPIC_API_KEY"
+prompt = "Enter your Anthropic API key"
+
+[models]
+available = ["claude-sonnet-4", "claude-opus-4", "claude-haiku-3"]
+default = "claude-sonnet-4"

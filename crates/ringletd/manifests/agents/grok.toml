@@ -1,0 +1,25 @@
+id = "grok"
+name = "Grok CLI"
+binary = "grok"
+version_flag = "--version"
+
+[detect]
+commands = ["grok --version"]
+files = []
+
+[profile]
+strategy = "home-wrapper"
+source_home = "~/.grok-profiles/{alias}"
+script = "grok.rhai"
+required_env = []
+optional_env = []
+
+[models]
+default = "grok-3"
+supported = ["grok-3", "grok-2", "MiniMax-M2.1", "glm-4.7", "glm-4.5-air"]
+
+[hooks]
+create = []
+delete = []
+pre_run = []
+post_run = []
