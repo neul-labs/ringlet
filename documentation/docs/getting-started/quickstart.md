@@ -19,7 +19,7 @@ Before starting, ensure you have:
 First, see what agents Clown has detected:
 
 ```bash
-clown agents list
+ringlet agents list
 ```
 
 Example output:
@@ -34,7 +34,7 @@ grok        Grok CLI     No          -
 !!! tip "Agent Not Detected?"
     If your agent isn't showing, ensure it's in your PATH and try:
     ```bash
-    clown registry sync --force
+    ringlet registry sync --force
     ```
 
 ---
@@ -44,7 +44,7 @@ grok        Grok CLI     No          -
 See what providers are available for your agent:
 
 ```bash
-clown providers list
+ringlet providers list
 ```
 
 Example output:
@@ -64,7 +64,7 @@ openrouter  OpenRouter  openai-compatible    anthropic/claude-3.5-sonnet
 Create a profile that binds Claude Code to Anthropic:
 
 ```bash
-clown profiles create claude my-project --provider anthropic
+ringlet profiles create claude my-project --provider anthropic
 ```
 
 You'll be prompted for your API key:
@@ -84,7 +84,7 @@ Profile 'my-project' created successfully!
 Start your agent with the new profile:
 
 ```bash
-clown profiles run my-project
+ringlet profiles run my-project
 ```
 
 Claude Code will launch with:
@@ -100,7 +100,7 @@ Claude Code will launch with:
 For faster access, install a shell alias:
 
 ```bash
-clown aliases install my-project
+ringlet aliases install my-project
 ```
 
 Now you can simply run:
@@ -116,7 +116,7 @@ my-project
 After using your agent, check token usage:
 
 ```bash
-clown usage
+ringlet usage
 ```
 
 Example output:
@@ -159,8 +159,8 @@ You've now:
     Create profiles for different projects or providers.
 
     ```bash
-    clown profiles create claude work --provider minimax
-    clown profiles create claude personal --provider anthropic
+    ringlet profiles create claude work --provider minimax
+    ringlet profiles create claude personal --provider anthropic
     ```
 
 -   :material-swap-horizontal:{ .lg .middle } **Switch Profiles**
@@ -170,8 +170,8 @@ You've now:
     List and switch between profiles easily.
 
     ```bash
-    clown profiles list
-    clown profiles run work
+    ringlet profiles list
+    ringlet profiles run work
     ```
 
 -   :material-chart-bar:{ .lg .middle } **Track Usage**
@@ -181,8 +181,8 @@ You've now:
     Monitor costs across profiles and time periods.
 
     ```bash
-    clown usage --period week
-    clown usage profiles
+    ringlet usage --period week
+    ringlet usage profiles
     ```
 
 -   :material-book-open:{ .lg .middle } **Learn More**
@@ -201,9 +201,9 @@ You've now:
 
 | Command | Description |
 |---------|-------------|
-| `clown profiles list` | List all profiles |
-| `clown profiles run <alias>` | Run a profile |
-| `clown profiles inspect <alias>` | View profile details |
-| `clown usage` | Show today's usage |
-| `clown aliases install <alias>` | Create shell alias |
-| `clown daemon status` | Check daemon status |
+| `ringlet profiles list` | List all profiles |
+| `ringlet profiles run <alias>` | Run a profile |
+| `ringlet profiles inspect <alias>` | View profile details |
+| `ringlet usage` | Show today's usage |
+| `ringlet aliases install <alias>` | Create shell alias |
+| `ringlet daemon status` | Check daemon status |

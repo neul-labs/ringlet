@@ -4,7 +4,7 @@ The proxy feature enables intelligent request routing from agents to multiple LL
 
 ## Overview
 
-Clown integrates with [ultrallm](https://github.com/starbaser/ultrallm), a high-performance Rust-based LLM proxy that supports 25+ providers and multiple routing strategies. The proxy runs as a separate process managed by the clown daemon.
+Clown integrates with [ultrallm](https://github.com/starbaser/ultrallm), a high-performance Rust-based LLM proxy that supports 25+ providers and multiple routing strategies. The proxy runs as a separate process managed by the ringlet daemon.
 
 ### Key Benefits
 
@@ -17,7 +17,7 @@ Clown integrates with [ultrallm](https://github.com/starbaser/ultrallm), a high-
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                          clown daemon                            │
+│                          ringlet daemon                            │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
 │  │ Profile: work   │  │ Profile: test   │  │ Profile: cheap  │  │
 │  │ Port: 8081      │  │ Port: 8082      │  │ Port: 8083      │  │
@@ -41,7 +41,7 @@ Each profile's agent runs with `baseUrl` pointing to its local proxy instance.
 
 The ultrallm binary must be available. Clown looks for it in:
 
-1. `~/.cache/clown/binaries/ultrallm`
+1. `~/.cache/ringlet/binaries/ultrallm`
 2. `~/.local/bin/ultrallm`
 3. System PATH
 
@@ -52,7 +52,7 @@ You can build ultrallm from source or download a release.
 Use the `--proxy` flag when creating a profile:
 
 ```bash
-clown profiles create claude work --proxy -p anthropic
+ringlet profiles create claude work --proxy -p anthropic
 ```
 
 This creates a profile with proxy enabled. The proxy configuration is stored in the profile metadata.
@@ -63,41 +63,41 @@ This creates a profile with proxy enabled. The proxy configuration is stored in 
 
 ```bash
 # Enable proxy for an existing profile
-clown proxy enable <alias>
+ringlet proxy enable <alias>
 
 # Disable proxy for a profile
-clown proxy disable <alias>
+ringlet proxy disable <alias>
 
 # Start proxy instance manually
-clown proxy start <alias>
+ringlet proxy start <alias>
 
 # Stop proxy instance
-clown proxy stop <alias>
+ringlet proxy stop <alias>
 
 # Stop all proxy instances
-clown proxy stop-all
+ringlet proxy stop-all
 
 # Restart proxy instance
-clown proxy restart <alias>
+ringlet proxy restart <alias>
 ```
 
 ### Status and Monitoring
 
 ```bash
 # Show status of all proxy instances
-clown proxy status
+ringlet proxy status
 
 # Show status for a specific profile
-clown proxy status <alias>
+ringlet proxy status <alias>
 
 # Show proxy configuration for a profile
-clown proxy config <alias>
+ringlet proxy config <alias>
 
 # View proxy logs (last 50 lines by default)
-clown proxy logs <alias>
+ringlet proxy logs <alias>
 
 # View more log lines
-clown proxy logs <alias> --lines 200
+ringlet proxy logs <alias> --lines 200
 ```
 
 ### Routing Rules
@@ -106,18 +106,18 @@ Routing rules determine how requests are distributed to providers based on condi
 
 ```bash
 # Add a routing rule
-clown proxy route add <alias> <name> <condition> <target> [--priority N]
+ringlet proxy route add <alias> <name> <condition> <target> [--priority N]
 
 # Examples:
-clown proxy route add work "long-context" "tokens > 100000" "minimax/claude-3-sonnet" --priority 10
-clown proxy route add work "thinking" "thinking" "anthropic/claude-opus-4" --priority 5
-clown proxy route add work "default" "always" "anthropic/claude-sonnet-4"
+ringlet proxy route add work "long-context" "tokens > 100000" "minimax/claude-3-sonnet" --priority 10
+ringlet proxy route add work "thinking" "thinking" "anthropic/claude-opus-4" --priority 5
+ringlet proxy route add work "default" "always" "anthropic/claude-sonnet-4"
 
 # List routing rules
-clown proxy route list <alias>
+ringlet proxy route list <alias>
 
 # Remove a routing rule
-clown proxy route remove <alias> <name>
+ringlet proxy route remove <alias> <name>
 ```
 
 **Condition Syntax:**
@@ -133,17 +133,17 @@ Model aliases map requested model names to provider-specific targets.
 
 ```bash
 # Set a model alias
-clown proxy alias set <alias> <from-model> <to-target>
+ringlet proxy alias set <alias> <from-model> <to-target>
 
 # Examples:
-clown proxy alias set work "claude-sonnet-4" "minimax/claude-3-sonnet"
-clown proxy alias set work "fast-model" "anthropic/claude-haiku-3"
+ringlet proxy alias set work "claude-sonnet-4" "minimax/claude-3-sonnet"
+ringlet proxy alias set work "fast-model" "anthropic/claude-haiku-3"
 
 # List model aliases
-clown proxy alias list <alias>
+ringlet proxy alias list <alias>
 
 # Remove a model alias
-clown proxy alias remove <alias> <from-model>
+ringlet proxy alias remove <alias> <from-model>
 ```
 
 ## How It Works
@@ -165,7 +165,7 @@ When you run a profile with proxy enabled:
 4. The agent starts and routes requests through the proxy
 
 ```bash
-clown profiles run work
+ringlet profiles run work
 # Proxy automatically starts on port 8081
 # Claude Code runs with baseUrl: http://127.0.0.1:8081
 ```
@@ -303,16 +303,16 @@ Route long-context requests to cheaper providers:
 
 ```bash
 # Create profile with proxy
-clown profiles create claude work --proxy -p anthropic
+ringlet profiles create claude work --proxy -p anthropic
 
 # Add rule to route long context to cheaper provider
-clown proxy route add work "long-context" "tokens > 100000" "minimax/claude-3-sonnet" --priority 10
+ringlet proxy route add work "long-context" "tokens > 100000" "minimax/claude-3-sonnet" --priority 10
 
 # Add default rule for normal requests
-clown proxy route add work "default" "always" "anthropic/claude-sonnet-4"
+ringlet proxy route add work "default" "always" "anthropic/claude-sonnet-4"
 
 # Start using the profile
-clown profiles run work
+ringlet profiles run work
 ```
 
 ### Multi-Provider Fallback
@@ -321,26 +321,26 @@ Configure fallback to alternative providers when primary is unavailable:
 
 ```bash
 # Create profile with proxy
-clown profiles create claude reliable --proxy -p anthropic
+ringlet profiles create claude reliable --proxy -p anthropic
 
 # Primary provider (highest priority)
-clown proxy route add reliable "primary" "always" "anthropic/claude-sonnet-4" --priority 10
+ringlet proxy route add reliable "primary" "always" "anthropic/claude-sonnet-4" --priority 10
 
 # Fallback provider (lower priority, used when primary fails)
-clown proxy route add reliable "fallback" "always" "minimax/claude-3-sonnet" --priority 0
+ringlet proxy route add reliable "fallback" "always" "minimax/claude-3-sonnet" --priority 0
 ```
 
 ### Development vs Production
 
 ```bash
 # Development profile: Route to cheaper/faster providers
-clown profiles create claude dev --proxy -p minimax
-clown proxy route add dev "default" "always" "minimax/claude-3-sonnet"
+ringlet profiles create claude dev --proxy -p minimax
+ringlet proxy route add dev "default" "always" "minimax/claude-3-sonnet"
 
 # Production profile: Route to premium providers
-clown profiles create claude prod --proxy -p anthropic
-clown proxy route add prod "thinking" "thinking" "anthropic/claude-opus-4" --priority 10
-clown proxy route add prod "default" "always" "anthropic/claude-sonnet-4"
+ringlet profiles create claude prod --proxy -p anthropic
+ringlet proxy route add prod "thinking" "thinking" "anthropic/claude-opus-4" --priority 10
+ringlet proxy route add prod "default" "always" "anthropic/claude-sonnet-4"
 ```
 
 ### Tool-Heavy Workloads
@@ -348,8 +348,8 @@ clown proxy route add prod "default" "always" "anthropic/claude-sonnet-4"
 Route requests with many tools to more capable models:
 
 ```bash
-clown proxy route add work "heavy-tools" "tools >= 10" "anthropic/claude-opus-4" --priority 5
-clown proxy route add work "default" "always" "anthropic/claude-sonnet-4"
+ringlet proxy route add work "heavy-tools" "tools >= 10" "anthropic/claude-opus-4" --priority 5
+ringlet proxy route add work "default" "always" "anthropic/claude-sonnet-4"
 ```
 
 ## Monitoring
@@ -358,7 +358,7 @@ clown proxy route add work "default" "always" "anthropic/claude-sonnet-4"
 
 ```bash
 # Show all running proxies
-clown proxy status
+ringlet proxy status
 
 # Output:
 # Profile   Port   PID      Status    Restarts   Started
@@ -370,7 +370,7 @@ clown proxy status
 
 ```bash
 # Show proxy configuration for a profile
-clown proxy config work
+ringlet proxy config work
 
 # Output:
 # Enabled: true
@@ -386,10 +386,10 @@ clown proxy config work
 
 ```bash
 # View last 50 lines of proxy logs
-clown proxy logs work
+ringlet proxy logs work
 
 # View more lines
-clown proxy logs work --lines 200
+ringlet proxy logs work --lines 200
 
 # Or access log files directly
 cat ~/.claude-profiles/work/.ultrallm/logs/proxy.log
@@ -412,7 +412,7 @@ http://127.0.0.1:{port}/health
 
 1. Verify ultrallm binary is installed and executable
 2. Check if port is already in use
-3. Review daemon logs: `clown --log-level debug daemon start`
+3. Review daemon logs: `ringlet --log-level debug daemon start`
 
 ### Connection refused
 
@@ -428,13 +428,13 @@ http://127.0.0.1:{port}/health
 
 ## Comparison with ccproxy
 
-| Feature | ccproxy (LiteLLM) | clown + ultrallm |
+| Feature | ccproxy (LiteLLM) | ringlet + ultrallm |
 |---------|-------------------|------------------|
 | Language | Python | Rust |
 | Startup | ~5s | ~100ms |
 | Memory | ~200MB | ~20MB |
 | Scope | Global proxy | Per-profile proxy |
-| Integration | Standalone | Native clown integration |
+| Integration | Standalone | Native ringlet integration |
 | Config | Separate YAML | Stored in profile |
 | Management | Manual | Automatic |
 

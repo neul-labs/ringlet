@@ -20,10 +20,10 @@ Before creating a bug report, check existing issues to avoid duplicates.
 
 ```bash
 # Get version info
-clown --version
+ringlet --version
 
 # Get debug logs
-clown --log-level debug <command>
+ringlet --log-level debug <command>
 ```
 
 ### Suggest Features
@@ -67,7 +67,7 @@ cargo build
 cargo test
 
 # Run specific crate tests
-cargo test -p clown-core
+cargo test -p ringlet-core
 ```
 
 ### Check Code Quality
@@ -88,12 +88,12 @@ cargo fmt --check
 ## Project Structure
 
 ```
-clown/
+ringlet/
 ├── crates/
-│   ├── clown/           # CLI binary
-│   ├── clownd/          # Background daemon
-│   ├── clown-core/      # Core types and utilities
-│   └── clown-scripting/ # Rhai scripting engine
+│   ├── ringlet/           # CLI binary
+│   ├── ringletd/          # Background daemon
+│   ├── ringlet-core/      # Core types and utilities
+│   └── ringlet-scripting/ # Rhai scripting engine
 ├── docs/                # Developer documentation
 ├── documentation/       # User-facing MkDocs site
 ├── manifests/           # Built-in agent/provider manifests
@@ -104,10 +104,10 @@ clown/
 
 | Crate | Description |
 |-------|-------------|
-| `clown` | CLI binary - thin client for daemon |
-| `clownd` | Background daemon - core orchestration |
-| `clown-core` | Shared types, serialization, filesystem |
-| `clown-scripting` | Rhai script engine and built-ins |
+| `ringlet` | CLI binary - thin client for daemon |
+| `ringletd` | Background daemon - core orchestration |
+| `ringlet-core` | Shared types, serialization, filesystem |
+| `ringlet-scripting` | Rhai script engine and built-ins |
 
 ---
 
@@ -196,7 +196,7 @@ let config = #{
 
 ```bash
 cargo build
-./target/debug/clown agents list
+./target/debug/ringlet agents list
 ```
 
 ---
@@ -262,8 +262,8 @@ fn test_profile_creation() {
 ```bash
 # Build and test
 cargo build
-./target/debug/clown agents list
-./target/debug/clown providers list
+./target/debug/ringlet agents list
+./target/debug/ringlet providers list
 ```
 
 ---

@@ -30,7 +30,7 @@ Clown detects installed agents automatically and knows how to configure them.
 
 ```bash
 # See what agents are available
-clown agents list
+ringlet agents list
 ```
 
 ### Providers
@@ -52,7 +52,7 @@ Providers are separate from agents because:
 
 ```bash
 # See available providers
-clown providers list
+ringlet providers list
 ```
 
 ### Profiles
@@ -71,7 +71,7 @@ For example:
 
 ```bash
 # Create a profile
-clown profiles create claude my-profile --provider anthropic
+ringlet profiles create claude my-profile --provider anthropic
 ```
 
 ---
@@ -109,7 +109,7 @@ The agent runs with `HOME` set to this directory, so:
 
 ## The Daemon
 
-Clown uses a background daemon (`clownd`) that:
+Clown uses a background daemon (`ringletd`) that:
 
 - **Manages profiles** - Stores and retrieves profile data
 - **Tracks usage** - Monitors token consumption and costs
@@ -120,10 +120,10 @@ The daemon starts automatically when needed and stops after idle timeout.
 
 ```bash
 # Check daemon status
-clown daemon status
+ringlet daemon status
 
 # Keep daemon running indefinitely
-clown daemon start --stay-alive
+ringlet daemon start --stay-alive
 ```
 
 ### Why a Daemon?
@@ -148,13 +148,13 @@ The registry syncs automatically, but you can control it:
 
 ```bash
 # Force sync
-clown registry sync --force
+ringlet registry sync --force
 
 # Check status
-clown registry inspect
+ringlet registry inspect
 
 # Pin to specific version
-clown registry pin v1.2.3
+ringlet registry pin v1.2.3
 ```
 
 ---
@@ -164,7 +164,7 @@ clown registry pin v1.2.3
 Here's how a typical profile run works:
 
 ```
-1. You run: clown profiles run my-profile
+1. You run: ringlet profiles run my-profile
 
 2. CLI sends request to daemon (via IPC)
 
@@ -192,8 +192,8 @@ Here's how a typical profile run works:
 ### One Profile Per Project
 
 ```bash
-clown profiles create claude project-a --provider anthropic
-clown profiles create claude project-b --provider minimax
+ringlet profiles create claude project-a --provider anthropic
+ringlet profiles create claude project-b --provider minimax
 ```
 
 Each project gets isolated history and settings.
@@ -202,18 +202,18 @@ Each project gets isolated history and settings.
 
 ```bash
 # Cheap provider for experiments
-clown profiles create claude experiment --provider openrouter
+ringlet profiles create claude experiment --provider openrouter
 
 # Premium provider for production
-clown profiles create claude production --provider anthropic
+ringlet profiles create claude production --provider anthropic
 ```
 
 ### Quick Switching with Aliases
 
 ```bash
 # Install aliases for fast access
-clown aliases install project-a
-clown aliases install project-b
+ringlet aliases install project-a
+ringlet aliases install project-b
 
 # Now just run:
 project-a   # Starts Claude with project-a profile
@@ -229,7 +229,7 @@ project-b   # Starts Claude with project-b profile
 | Agent | AI coding CLI tool | Claude Code, Codex |
 | Provider | API backend | Anthropic, MiniMax |
 | Profile | Agent + Provider binding | `work-claude` |
-| Daemon | Background service | `clownd` |
+| Daemon | Background service | `ringletd` |
 | Registry | Configuration source | GitHub repo |
 
 ---

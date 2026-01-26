@@ -17,20 +17,20 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: clown-linux-x64
+            artifact_name: ringlet-linux-x64
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            artifact_name: clown-linux-arm64
+            artifact_name: ringlet-linux-arm64
             cross: true
           - os: macos-13
             target: x86_64-apple-darwin
-            artifact_name: clown-darwin-x64
+            artifact_name: ringlet-darwin-x64
           - os: macos-14
             target: aarch64-apple-darwin
-            artifact_name: clown-darwin-arm64
+            artifact_name: ringlet-darwin-arm64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact_name: clown-win32-x64
+            artifact_name: ringlet-win32-x64
 
     steps:
       - uses: actions/checkout@v4
@@ -59,8 +59,8 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/clown dist/
-          cp target/${{ matrix.target }}/release/clownd dist/
+          cp target/${{ matrix.target }}/release/ringlet dist/
+          cp target/${{ matrix.target }}/release/ringletd dist/
           cd dist
           tar -czvf ../${{ matrix.artifact_name }}-${{ inputs.version }}.tar.gz *
 
@@ -69,8 +69,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist
-          Copy-Item target/${{ matrix.target }}/release/clown.exe dist/
-          Copy-Item target/${{ matrix.target }}/release/clownd.exe dist/
+          Copy-Item target/${{ matrix.target }}/release/ringlet.exe dist/
+          Copy-Item target/${{ matrix.target }}/release/ringletd.exe dist/
           Compress-Archive -Path dist/* -DestinationPath ${{ matrix.artifact_name }}-${{ inputs.version }}.zip
 
       - name: Upload artifact
@@ -91,13 +91,13 @@ jobs:
       - name: Download x64 artifact
         uses: actions/download-artifact@v4
         with:
-          name: clown-darwin-x64
+          name: ringlet-darwin-x64
           path: x64
 
       - name: Download arm64 artifact
         uses: actions/download-artifact@v4
         with:
-          name: clown-darwin-arm64
+          name: ringlet-darwin-arm64
           path: arm64
 
       - name: Create Universal Binary
@@ -109,15 +109,15 @@ jobs:
           tar -xzf arm64/*.tar.gz -C arm64-extract
 
           # Create universal binaries using lipo
-          lipo -create x64-extract/clown arm64-extract/clown -output universal/clown
-          lipo -create x64-extract/clownd arm64-extract/clownd -output universal/clownd
+          lipo -create x64-extract/ringlet arm64-extract/ringlet -output universal/ringlet
+          lipo -create x64-extract/ringletd arm64-extract/ringletd -output universal/ringletd
 
           # Package
           cd universal
-          tar -czvf ../clown-darwin-universal-${{ inputs.version }}.tar.gz *
+          tar -czvf ../ringlet-darwin-universal-${{ inputs.version }}.tar.gz *
 
       - name: Upload universal artifact
         uses: actions/upload-artifact@v4
         with:
-          name: clown-darwin-universal
-          path: clown-darwin-universal-*.tar.gz
+          name: ringlet-darwin-universal
+          path: ringlet-darwin-universal-*.tar.gz

@@ -17,26 +17,26 @@ Common issues and their solutions when working with Clown.
 
 1. Check if daemon is already running:
    ```bash
-   clown daemon status
+   ringlet daemon status
    ```
 
 2. Check for stale socket file:
    ```bash
    # Linux/macOS
-   rm /tmp/clownd.sock
+   rm /tmp/ringletd.sock
 
    # Windows
-   del %LOCALAPPDATA%\clown\clownd.ipc
+   del %LOCALAPPDATA%\ringlet\ringletd.ipc
    ```
 
 3. Start daemon manually with debug logging:
    ```bash
-   clown --log-level debug daemon start
+   ringlet --log-level debug daemon start
    ```
 
 4. Check daemon logs:
    ```bash
-   cat ~/.config/clown/logs/clownd.log
+   cat ~/.config/ringlet/logs/ringletd.log
    ```
 
 ### Daemon Keeps Stopping
@@ -46,7 +46,7 @@ Common issues and their solutions when working with Clown.
 **Solution:** Keep daemon running indefinitely:
 
 ```bash
-clown daemon start --stay-alive
+ringlet daemon start --stay-alive
 ```
 
 ---
@@ -64,18 +64,18 @@ clown daemon start --stay-alive
 
 1. Verify agent-provider compatibility:
    ```bash
-   clown agents inspect <agent-id>
+   ringlet agents inspect <agent-id>
    # Check "Compatible Providers"
    ```
 
 2. Sync registry for latest scripts:
    ```bash
-   clown registry sync --force
+   ringlet registry sync --force
    ```
 
 3. Check if custom script has syntax errors:
    ```bash
-   clown scripts test <agent>.rhai --provider <provider>
+   ringlet scripts test <agent>.rhai --provider <provider>
    ```
 
 ### Profile Won't Run
@@ -89,25 +89,25 @@ clown daemon start --stay-alive
 
 1. Verify agent is installed:
    ```bash
-   clown agents list
+   ringlet agents list
    which <agent-binary>
    ```
 
 2. Check profile configuration:
    ```bash
-   clown profiles inspect <alias>
+   ringlet profiles inspect <alias>
    ```
 
 3. Verify API key is valid:
    ```bash
    # Check if key is stored
-   clown profiles inspect <alias>
+   ringlet profiles inspect <alias>
    # Should show "API Key: ****...****"
    ```
 
 4. Run with debug logging:
    ```bash
-   clown --log-level debug profiles run <alias>
+   ringlet --log-level debug profiles run <alias>
    ```
 
 ### Wrong Model Being Used
@@ -118,13 +118,13 @@ clown daemon start --stay-alive
 
 1. Inspect profile:
    ```bash
-   clown profiles inspect <alias>
+   ringlet profiles inspect <alias>
    ```
 
 2. Recreate with explicit model:
    ```bash
-   clown profiles delete <alias>
-   clown profiles create <agent> <alias> --provider <provider> --model <model>
+   ringlet profiles delete <alias>
+   ringlet profiles create <agent> <alias> --provider <provider> --model <model>
    ```
 
 ---
@@ -153,12 +153,12 @@ clown daemon start --stay-alive
 
 3. Sync registry to update manifests:
    ```bash
-   clown registry sync --force
+   ringlet registry sync --force
    ```
 
 4. Check agent manifest detection config:
    ```bash
-   clown agents inspect <agent-id>
+   ringlet agents inspect <agent-id>
    ```
 
 ### Wrong Version Displayed
@@ -169,13 +169,13 @@ clown daemon start --stay-alive
 
 1. Force registry sync:
    ```bash
-   clown registry sync --force
+   ringlet registry sync --force
    ```
 
 2. Clear detection cache:
    ```bash
-   rm ~/.config/clown/cache/agent-detections.json
-   clown agents list
+   rm ~/.config/ringlet/cache/agent-detections.json
+   ringlet agents list
    ```
 
 ---
@@ -194,8 +194,8 @@ clown daemon start --stay-alive
 1. Verify key is correct with provider directly
 2. Recreate profile to re-enter key:
    ```bash
-   clown profiles delete <alias>
-   clown profiles create <agent> <alias> --provider <provider>
+   ringlet profiles delete <alias>
+   ringlet profiles create <agent> <alias> --provider <provider>
    ```
 
 3. Check environment variables aren't overriding:
@@ -214,17 +214,17 @@ clown daemon start --stay-alive
 
 1. Specify endpoint explicitly:
    ```bash
-   clown profiles create <agent> <alias> --provider minimax --endpoint china
+   ringlet profiles create <agent> <alias> --provider minimax --endpoint china
    ```
 
 2. Check profile endpoint:
    ```bash
-   clown profiles inspect <alias>
+   ringlet profiles inspect <alias>
    ```
 
 3. Verify provider endpoints:
    ```bash
-   clown providers inspect <provider-id>
+   ringlet providers inspect <provider-id>
    ```
 
 ---
@@ -243,8 +243,8 @@ clown daemon start --stay-alive
 1. Check if ultrallm is installed:
    ```bash
    which ultrallm
-   # Or check clown's binary cache
-   ls ~/.cache/clown/binaries/ultrallm
+   # Or check ringlet's binary cache
+   ls ~/.cache/ringlet/binaries/ultrallm
    ```
 
 2. Check if port is in use:
@@ -254,12 +254,12 @@ clown daemon start --stay-alive
 
 3. View proxy logs:
    ```bash
-   clown proxy logs <alias>
+   ringlet proxy logs <alias>
    ```
 
 4. Start proxy manually to see errors:
    ```bash
-   clown proxy start <alias>
+   ringlet proxy start <alias>
    ```
 
 ### Routing Not Working
@@ -273,7 +273,7 @@ clown daemon start --stay-alive
 
 1. Verify routing rules:
    ```bash
-   clown proxy route list <alias>
+   ringlet proxy route list <alias>
    ```
 
 2. Check generated config:
@@ -294,13 +294,13 @@ clown daemon start --stay-alive
 
 1. Verify proxy status:
    ```bash
-   clown proxy status <alias>
+   ringlet proxy status <alias>
    ```
 
 2. Check port matches profile config:
    ```bash
-   clown profiles inspect <alias>
-   clown proxy config <alias>
+   ringlet profiles inspect <alias>
+   ringlet proxy config <alias>
    ```
 
 3. Test proxy health endpoint:
@@ -316,25 +316,25 @@ clown daemon start --stay-alive
 
 **Symptoms:**
 
-- `clown usage` shows zeros
+- `ringlet usage` shows zeros
 - "No data for period" message
 
 **Solutions:**
 
 1. Verify daemon is running:
    ```bash
-   clown daemon status
+   ringlet daemon status
    ```
 
 2. Check if profiles have been used:
    ```bash
-   clown profiles list
+   ringlet profiles list
    # Check "Last Used" column
    ```
 
 3. Verify telemetry directory exists:
    ```bash
-   ls ~/.config/clown/telemetry/
+   ls ~/.config/ringlet/telemetry/
    ```
 
 ### Costs Showing as Null
@@ -345,17 +345,17 @@ clown daemon start --stay-alive
 
 1. Check provider type:
    ```bash
-   clown profiles inspect <alias>
+   ringlet profiles inspect <alias>
    ```
 
 2. Verify pricing data is synced:
    ```bash
-   ls ~/.config/clown/registry/litellm-pricing.json
+   ls ~/.config/ringlet/registry/litellm-pricing.json
    ```
 
 3. Sync registry:
    ```bash
-   clown registry sync
+   ringlet registry sync
    ```
 
 ### Import Not Finding Data
@@ -379,7 +379,7 @@ clown daemon start --stay-alive
 
 3. Specify path explicitly:
    ```bash
-   clown usage import-claude --claude-dir ~/.claude
+   ringlet usage import-claude --claude-dir ~/.claude
    ```
 
 ---
@@ -398,7 +398,7 @@ clown daemon start --stay-alive
 1. Check internet connectivity
 2. Use offline mode:
    ```bash
-   clown registry sync --offline
+   ringlet registry sync --offline
    ```
 
 3. Check if GitHub is accessible:
@@ -422,19 +422,19 @@ clown daemon start --stay-alive
 
 1. Verify file location:
    ```bash
-   ls ~/.config/clown/agents.d/
-   ls ~/.config/clown/providers.d/
+   ls ~/.config/ringlet/agents.d/
+   ls ~/.config/ringlet/providers.d/
    ```
 
 2. Check TOML syntax:
    ```bash
    # Use a TOML validator
-   cat ~/.config/clown/agents.d/my-agent.toml | python3 -c "import sys, toml; toml.load(sys.stdin)"
+   cat ~/.config/ringlet/agents.d/my-agent.toml | python3 -c "import sys, toml; toml.load(sys.stdin)"
    ```
 
 3. Force sync:
    ```bash
-   clown registry sync --force
+   ringlet registry sync --force
    ```
 
 ---
@@ -458,18 +458,18 @@ clown daemon start --stay-alive
 
 2. Check matcher pattern:
    ```bash
-   clown hooks list <alias>
+   ringlet hooks list <alias>
    ```
 
 3. Ensure agent supports hooks:
    ```bash
-   clown agents inspect <agent-id>
+   ringlet agents inspect <agent-id>
    # Check "Supports Hooks: Yes"
    ```
 
 4. Enable debug logging:
    ```bash
-   clown --log-level debug profiles run <alias>
+   ringlet --log-level debug profiles run <alias>
    ```
 
 ### Hook Command Errors
@@ -509,19 +509,19 @@ If you're still stuck:
 
 1. **Check logs:**
    ```bash
-   cat ~/.config/clown/logs/clownd.log
+   cat ~/.config/ringlet/logs/ringletd.log
    ```
 
 2. **Enable debug mode:**
    ```bash
-   clown --log-level debug <command>
+   ringlet --log-level debug <command>
    ```
 
 3. **Report issues:**
    [https://github.com/neul-labs/ccswitch/issues](https://github.com/neul-labs/ccswitch/issues)
 
 4. **Include in bug reports:**
-   - Clown version (`clown --version`)
+   - Clown version (`ringlet --version`)
    - OS and version
    - Agent and provider being used
    - Relevant log output

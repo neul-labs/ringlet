@@ -33,10 +33,10 @@ If you want to dive right in:
 curl -fsSL https://raw.githubusercontent.com/neul-labs/ccswitch/main/install.sh | bash
 
 # 2. Create a profile
-clown profiles create claude my-project --provider anthropic
+ringlet profiles create claude my-project --provider anthropic
 
 # 3. Run it
-clown profiles run my-project
+ringlet profiles run my-project
 ```
 
 That's it! Your agent will start with its own isolated configuration.

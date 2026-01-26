@@ -120,12 +120,12 @@ jobs:
           \`\`\`
 
           ### Package Managers
-          - **Cargo**: \`cargo install clown\`
-          - **npm**: \`npm install -g clown-cli\`
-          - **Homebrew**: \`brew install neul-labs/clown/clown\`
-          - **pip**: \`pip install clown-cli\`
-          - **gem**: \`gem install clown-cli\`
-          - **Chocolatey**: \`choco install clown\`
+          - **Cargo**: \`cargo install ringlet\`
+          - **npm**: \`npm install -g ringlet-cli\`
+          - **Homebrew**: \`brew install neul-labs/ringlet/ringlet\`
+          - **pip**: \`pip install ringlet-cli\`
+          - **gem**: \`gem install ringlet-cli\`
+          - **Chocolatey**: \`choco install ringlet\`
 
           ## Checksums
 
@@ -137,7 +137,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.check-version.outputs.version }}
-          name: clown v${{ needs.check-version.outputs.version }}
+          name: ringlet v${{ needs.check-version.outputs.version }}
           body_path: changelog.md
           files: release/*
           draft: false

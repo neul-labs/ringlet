@@ -22,10 +22,10 @@ jobs:
       - name: Calculate SHA256 checksums
         id: checksums
         run: |
-          echo "darwin_arm64=$(sha256sum artifacts/clown-darwin-arm64/*.tar.gz | cut -d' ' -f1)" >> $GITHUB_OUTPUT
-          echo "darwin_x64=$(sha256sum artifacts/clown-darwin-x64/*.tar.gz | cut -d' ' -f1)" >> $GITHUB_OUTPUT
-          echo "linux_arm64=$(sha256sum artifacts/clown-linux-arm64/*.tar.gz | cut -d' ' -f1)" >> $GITHUB_OUTPUT
-          echo "linux_x64=$(sha256sum artifacts/clown-linux-x64/*.tar.gz | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "darwin_arm64=$(sha256sum artifacts/ringlet-darwin-arm64/*.tar.gz | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "darwin_x64=$(sha256sum artifacts/ringlet-darwin-x64/*.tar.gz | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "linux_arm64=$(sha256sum artifacts/ringlet-linux-arm64/*.tar.gz | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "linux_x64=$(sha256sum artifacts/ringlet-linux-x64/*.tar.gz | cut -d' ' -f1)" >> $GITHUB_OUTPUT
 
       - name: Generate formula
         run: |
@@ -34,18 +34,18 @@ jobs:
               -e "s/{{SHA256_DARWIN_X64}}/${{ steps.checksums.outputs.darwin_x64 }}/g" \
               -e "s/{{SHA256_LINUX_ARM64}}/${{ steps.checksums.outputs.linux_arm64 }}/g" \
               -e "s/{{SHA256_LINUX_X64}}/${{ steps.checksums.outputs.linux_x64 }}/g" \
-              packaging/homebrew/clown.rb.template > clown.rb
+              packaging/homebrew/ringlet.rb.template > ringlet.rb
 
-          cat clown.rb
+          cat ringlet.rb
 
       - name: Update Homebrew tap repository
         uses: dmnemec/copy_file_to_another_repo_action@main
         env:
           API_TOKEN_GITHUB: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         with:
-          source_file: 'clown.rb'
-          destination_repo: 'neul-labs/homebrew-clown'
+          source_file: 'ringlet.rb'
+          destination_repo: 'neul-labs/homebrew-ringlet'
           destination_folder: 'Formula'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           user_name: 'github-actions[bot]'
-          commit_message: 'Update clown to v${{ inputs.version }}'
+          commit_message: 'Update ringlet to v${{ inputs.version }}'

@@ -21,13 +21,13 @@ jobs:
       - name: Update version
         run: |
           cd packaging/rubygems
-          sed -i "s/s.version.*=.*/s.version     = '${{ inputs.version }}'/" clown-cli.gemspec
-          sed -i "s/VERSION = .*/VERSION = '${{ inputs.version }}'/" lib/clown.rb
+          sed -i "s/s.version.*=.*/s.version     = '${{ inputs.version }}'/" ringlet-cli.gemspec
+          sed -i "s/VERSION = .*/VERSION = '${{ inputs.version }}'/" lib/ringlet.rb
 
       - name: Build gem
         run: |
           cd packaging/rubygems
-          gem build clown-cli.gemspec
+          gem build ringlet-cli.gemspec
 
       - name: Publish to RubyGems
         run: |
@@ -35,4 +35,4 @@ jobs:
           mkdir -p ~/.gem
           echo ":rubygems_api_key: ${{ secrets.RUBYGEMS_API_KEY }}" > ~/.gem/credentials
           chmod 0600 ~/.gem/credentials
-          gem push clown-cli-${{ inputs.version }}.gem
+          gem push ringlet-cli-${{ inputs.version }}.gem

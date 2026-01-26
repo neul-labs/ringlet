@@ -31,22 +31,22 @@ Download the latest release directly:
 
 | Platform | Architecture | Download |
 |----------|--------------|----------|
-| Linux | x86_64 | [clown-linux-x64](https://github.com/neul-labs/ccswitch/releases/latest) |
-| Linux | arm64 | [clown-linux-arm64](https://github.com/neul-labs/ccswitch/releases/latest) |
-| macOS | x86_64 | [clown-darwin-x64](https://github.com/neul-labs/ccswitch/releases/latest) |
-| macOS | Apple Silicon | [clown-darwin-arm64](https://github.com/neul-labs/ccswitch/releases/latest) |
+| Linux | x86_64 | [ringlet-linux-x64](https://github.com/neul-labs/ccswitch/releases/latest) |
+| Linux | arm64 | [ringlet-linux-arm64](https://github.com/neul-labs/ccswitch/releases/latest) |
+| macOS | x86_64 | [ringlet-darwin-x64](https://github.com/neul-labs/ccswitch/releases/latest) |
+| macOS | Apple Silicon | [ringlet-darwin-arm64](https://github.com/neul-labs/ccswitch/releases/latest) |
 
 After downloading:
 
 ```bash
 # Extract
-tar -xzf clown-*.tar.gz
+tar -xzf ringlet-*.tar.gz
 
 # Move to PATH
-mv clown clownd ~/.local/bin/
+mv ringlet ringletd ~/.local/bin/
 
 # Make executable
-chmod +x ~/.local/bin/clown ~/.local/bin/clownd
+chmod +x ~/.local/bin/ringlet ~/.local/bin/ringletd
 ```
 
 ### From Source
@@ -55,13 +55,13 @@ Build from source using Cargo:
 
 ```bash
 # Install from git
-cargo install --git https://github.com/neul-labs/ccswitch clown
+cargo install --git https://github.com/neul-labs/ccswitch ringlet
 
 # Or clone and build
 git clone https://github.com/neul-labs/ccswitch
 cd ccswitch
 cargo build --release
-cp target/release/clown target/release/clownd ~/.local/bin/
+cp target/release/ringlet target/release/ringletd ~/.local/bin/
 ```
 
 !!! note "Requirements"
@@ -93,26 +93,26 @@ After installation, verify everything works:
 
 ```bash
 # Check version
-clown --version
+ringlet --version
 
 # List available agents
-clown agents list
+ringlet agents list
 
 # Check daemon status
-clown daemon status
+ringlet daemon status
 ```
 
 Expected output:
 
 ```
-clown 0.1.0
+ringlet 0.1.0
 ```
 
 ---
 
 ## PATH Configuration
 
-If `clown` is not found after installation, add it to your PATH:
+If `ringlet` is not found after installation, add it to your PATH:
 
 === "Bash"
 
@@ -168,7 +168,7 @@ codex --version
 ```
 
 !!! tip "Agent Detection"
-    Clown automatically detects installed agents. Run `clown agents list` to see what's available.
+    Clown automatically detects installed agents. Run `ringlet agents list` to see what's available.
 
 ---
 
@@ -178,13 +178,13 @@ To remove Clown:
 
 ```bash
 # Stop the daemon
-clown daemon stop
+ringlet daemon stop
 
 # Remove binaries
-rm ~/.local/bin/clown ~/.local/bin/clownd
+rm ~/.local/bin/ringlet ~/.local/bin/ringletd
 
 # Remove configuration (optional)
-rm -rf ~/.config/clown
+rm -rf ~/.config/ringlet
 ```
 
 ---

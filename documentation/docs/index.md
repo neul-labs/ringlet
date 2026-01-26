@@ -26,7 +26,7 @@ Clown is a command-line tool that helps you manage multiple AI coding agents (li
 === "From Source"
 
     ```bash
-    cargo install --git https://github.com/neul-labs/ccswitch clown
+    cargo install --git https://github.com/neul-labs/ccswitch ringlet
     ```
 
 === "Local Build"
@@ -101,16 +101,16 @@ Create your first profile in under a minute:
 
 ```bash
 # List available agents
-clown agents list
+ringlet agents list
 
 # Create a profile binding Claude Code to Anthropic
-clown profiles create claude my-claude --provider anthropic
+ringlet profiles create claude my-claude --provider anthropic
 
 # Run your profile
-clown profiles run my-claude
+ringlet profiles run my-claude
 
 # Check your usage
-clown usage
+ringlet usage
 ```
 
 [:octicons-arrow-right-24: Full quick start guide](getting-started/quickstart.md)
@@ -134,7 +134,7 @@ Clown uses a daemon-first architecture where a background service manages all st
 
 ```
 ┌─────────┐     ┌─────────┐     ┌──────────────┐
-│  CLI    │────▶│ clownd  │────▶│  Agent       │
+│  CLI    │────▶│ ringletd  │────▶│  Agent       │
 │         │     │ daemon  │     │  (isolated)  │
 └─────────┘     └────┬────┘     └──────────────┘
                      │
@@ -154,7 +154,7 @@ Clown uses a daemon-first architecture where a background service manages all st
 
 - **Documentation**: You're reading it!
 - **GitHub Issues**: [Report bugs or request features](https://github.com/neul-labs/ccswitch/issues)
-- **CLI Help**: Run `clown --help` or `clown <command> --help`
+- **CLI Help**: Run `ringlet --help` or `ringlet <command> --help`
 
 ---
 

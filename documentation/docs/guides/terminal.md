@@ -21,7 +21,7 @@ Remote terminal sessions allow you to:
 ### 1. Start the Daemon
 
 ```bash
-clown daemon start --stay-alive
+ringlet daemon start --stay-alive
 ```
 
 ### 2. Create a Remote Session
@@ -29,7 +29,7 @@ clown daemon start --stay-alive
 **From CLI:**
 
 ```bash
-clown profiles run my-project --remote
+ringlet profiles run my-project --remote
 ```
 
 This outputs the session ID and runs the agent in the daemon's PTY.
@@ -52,7 +52,7 @@ Open the web UI at `http://127.0.0.1:8765` and select your session from the list
 ### Start a Remote Session
 
 ```bash
-clown profiles run <alias> --remote [--cols N] [--rows N]
+ringlet profiles run <alias> --remote [--cols N] [--rows N]
 ```
 
 | Option | Description |
@@ -65,19 +65,19 @@ clown profiles run <alias> --remote [--cols N] [--rows N]
 
 ```bash
 # Basic remote session
-clown profiles run my-project --remote
+ringlet profiles run my-project --remote
 
 # With custom terminal size
-clown profiles run my-project --remote --cols 120 --rows 40
+ringlet profiles run my-project --remote --cols 120 --rows 40
 
 # Pass additional arguments to the agent
-clown profiles run my-project --remote -- --dangerously-skip-permissions
+ringlet profiles run my-project --remote -- --dangerously-skip-permissions
 ```
 
 ### List Sessions
 
 ```bash
-clown terminal list
+ringlet terminal list
 ```
 
 Output:
@@ -92,7 +92,7 @@ SESSION ID                            PROFILE          STATE       CLIENTS
 ### Get Session Info
 
 ```bash
-clown terminal info <session-id>
+ringlet terminal info <session-id>
 ```
 
 Output:
@@ -110,7 +110,7 @@ Created: 2026-01-22T00:22:45Z
 ### Terminate a Session
 
 ```bash
-clown terminal kill <session-id>
+ringlet terminal kill <session-id>
 ```
 
 ---
@@ -242,7 +242,7 @@ See the [HTTP API Reference](../reference/api.md#terminal-sessions) for complete
 Check the daemon logs for errors:
 
 ```bash
-tail -f ~/.config/clown/clownd.log
+tail -f ~/.config/ringlet/ringletd.log
 ```
 
 Common causes:
@@ -257,4 +257,4 @@ Scrollback is only sent on initial connection. If you've been connected since th
 
 ### "Session not found" error
 
-The session may have been terminated. Run `clown terminal list` to see active sessions.
+The session may have been terminated. Run `ringlet terminal list` to see active sessions.

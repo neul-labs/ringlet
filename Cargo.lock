@@ -293,86 +293,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a1d728cc89cf3aee9ff92b05e62b19ee65a02b5702cff7d5a377e32c6ae29d8d"
 
 [[package]]
-name = "clown"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "clown-core",
- "comfy-table",
- "dialoguer",
- "keyring",
- "mimalloc",
- "nng",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "ureq",
-]
-
-[[package]]
-name = "clown-core"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "directories",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.17",
- "toml",
- "uuid",
-]
-
-[[package]]
-name = "clown-scripting"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clown-core",
- "rhai",
- "serde",
- "serde_json",
- "toml",
- "tracing",
-]
-
-[[package]]
-name = "clownd"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "chrono",
- "clap",
- "clown-core",
- "clown-scripting",
- "dirs",
- "futures-util",
- "libc",
- "mimalloc",
- "mime_guess",
- "nng",
- "notify",
- "portable-pty",
- "rust-embed",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "toml",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "ureq",
- "uuid",
- "walkdir",
-]
-
-[[package]]
 name = "cmake"
 version = "0.1.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1652,6 +1572,86 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "ringlet"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "comfy-table",
+ "dialoguer",
+ "keyring",
+ "mimalloc",
+ "nng",
+ "ringlet-core",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "ureq",
+]
+
+[[package]]
+name = "ringlet-core"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "directories",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.17",
+ "toml",
+ "uuid",
+]
+
+[[package]]
+name = "ringlet-scripting"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "rhai",
+ "ringlet-core",
+ "serde",
+ "serde_json",
+ "toml",
+ "tracing",
+]
+
+[[package]]
+name = "ringletd"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "clap",
+ "dirs",
+ "futures-util",
+ "libc",
+ "mimalloc",
+ "mime_guess",
+ "nng",
+ "notify",
+ "portable-pty",
+ "ringlet-core",
+ "ringlet-scripting",
+ "rust-embed",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "toml",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "ureq",
+ "uuid",
+ "walkdir",
 ]
 
 [[package]]

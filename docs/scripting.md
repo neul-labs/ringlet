@@ -1,10 +1,10 @@
 # Scripting with Rhai
 
-clown uses [Rhai](https://rhai.rs/), an embedded scripting language for Rust, to generate agent-specific configuration files. Each agent has a `.rhai` script that receives context about the provider, profile, and user preferences, then outputs the required configuration.
+ringlet uses [Rhai](https://rhai.rs/), an embedded scripting language for Rust, to generate agent-specific configuration files. Each agent has a `.rhai` script that receives context about the provider, profile, and user preferences, then outputs the required configuration.
 
 ## Why Rhai?
 
-- **Extensibility**: Add new agents without recompiling clown
+- **Extensibility**: Add new agents without recompiling ringlet
 - **Customization**: Users can override scripts for special cases
 - **Declarative**: Configuration logic is visible and editable
 - **Sandboxed**: Scripts can't access filesystem or network directly
@@ -14,7 +14,7 @@ clown uses [Rhai](https://rhai.rs/), an embedded scripting language for Rust, to
 
 Scripts are resolved in this order:
 
-1. `~/.config/clown/scripts/<agent-id>.rhai` (user override)
+1. `~/.config/ringlet/scripts/<agent-id>.rhai` (user override)
 2. `registry/scripts/<agent-id>.rhai` (from GitHub registry)
 3. Built-in scripts (compiled into binary)
 
@@ -22,7 +22,7 @@ Scripts are resolved in this order:
 
 ### Input Variables
 
-Scripts receive these variables from clown:
+Scripts receive these variables from ringlet:
 
 ```rhai
 // === Provider Context ===
@@ -43,7 +43,7 @@ profile.project_dir  // Current project directory (if applicable)
 agent.id             // "claude"
 agent.binary         // "claude"
 
-// === User Preferences (from ~/.config/clown/config.toml) ===
+// === User Preferences (from ~/.config/ringlet/config.toml) ===
 prefs.hooks.auto_format    // true/false
 prefs.hooks.auto_lint      // true/false
 prefs.hooks.custom         // Map of custom hooks
@@ -94,7 +94,7 @@ Scripts must return a map with these keys:
 
 ## Built-in Functions
 
-clown exposes these functions to Rhai scripts:
+ringlet exposes these functions to Rhai scripts:
 
 ```rhai
 // Encode a map as pretty-printed JSON
@@ -294,7 +294,7 @@ config.profiles[profile.alias] = profile_section;
 
 ## User Preferences
 
-Users can configure default preferences in `~/.config/clown/config.toml`:
+Users can configure default preferences in `~/.config/ringlet/config.toml`:
 
 ```toml
 [defaults]
@@ -326,27 +326,27 @@ Override preferences per profile:
 
 ```bash
 # Enable specific hooks
-clown profiles create claude work --provider minimax --hooks auto_format,auto_lint
+ringlet profiles create claude work --provider minimax --hooks auto_format,auto_lint
 
 # Enable MCP servers
-clown profiles create claude work --provider minimax --mcp filesystem,github
+ringlet profiles create claude work --provider minimax --mcp filesystem,github
 
 # Minimal profile (no hooks, no MCP)
-clown profiles create claude minimal --provider anthropic --bare
+ringlet profiles create claude minimal --provider anthropic --bare
 ```
 
 ## Creating Custom Scripts
 
-1. Create a script in `~/.config/clown/scripts/`:
+1. Create a script in `~/.config/ringlet/scripts/`:
 
 ```bash
-mkdir -p ~/.config/clown/scripts
+mkdir -p ~/.config/ringlet/scripts
 ```
 
 2. Write your script:
 
 ```rhai
-// ~/.config/clown/scripts/claude.rhai
+// ~/.config/ringlet/scripts/claude.rhai
 // Custom Claude Code configuration
 
 let settings = #{
@@ -368,19 +368,19 @@ let settings = #{
 3. Create a profile (your script will be used):
 
 ```bash
-clown profiles create claude custom --provider minimax
+ringlet profiles create claude custom --provider minimax
 ```
 
 ## Debugging Scripts
 
-Use `clown scripts test` to validate a script:
+Use `ringlet scripts test` to validate a script:
 
 ```bash
 # Test script with mock data
-clown scripts test claude.rhai --provider minimax --alias test
+ringlet scripts test claude.rhai --provider minimax --alias test
 
 # Show generated output without creating profile
-clown profiles create claude test --provider minimax --dry-run
+ringlet profiles create claude test --provider minimax --dry-run
 ```
 
 ## Rhai Language Reference

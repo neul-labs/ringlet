@@ -1,0 +1,55 @@
+[package]
+name = "ringlet"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "CLI orchestrator for coding agents"
+readme = "../../README.md"
+
+[[bin]]
+name = "ringlet"
+path = "src/main.rs"
+
+[dependencies]
+ringlet-core = { workspace = true }
+
+# CLI parsing
+clap = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# IPC messaging
+nng = { workspace = true }
+
+# Table output
+comfy-table = { workspace = true }
+
+# Interactive prompts
+dialoguer = { workspace = true }
+
+# Credentials
+keyring = { workspace = true }
+
+# Memory allocator
+mimalloc = { workspace = true }
+
+# HTTP client for terminal API
+ureq = { version = "2", features = ["json"] }

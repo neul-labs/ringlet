@@ -1,0 +1,83 @@
+[package]
+name = "ringletd"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Background daemon for the ringlet CLI orchestrator"
+readme = "../../README.md"
+
+[[bin]]
+name = "ringletd"
+path = "src/main.rs"
+
+[dependencies]
+ringlet-core = { workspace = true }
+ringlet-scripting = { workspace = true }
+
+# CLI parsing
+clap = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# IPC messaging
+nng = { workspace = true }
+
+# Time
+chrono = { workspace = true }
+
+# UUID
+uuid = { workspace = true }
+
+# HTTP client
+ureq = { version = "2", features = ["json"] }
+
+# HTTP server (web UI)
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+futures-util = { workspace = true }
+
+# Asset embedding
+rust-embed = { workspace = true }
+mime_guess = { workspace = true }
+
+# Filesystem watcher
+notify = { workspace = true }
+
+# Directory walking
+walkdir = { workspace = true }
+
+# Platform paths
+dirs = { workspace = true }
+
+# Memory allocator
+mimalloc = { workspace = true }
+
+# PTY support for remote terminal
+portable-pty = "0.9"
+
+# Unix process management
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+tempfile = "3"

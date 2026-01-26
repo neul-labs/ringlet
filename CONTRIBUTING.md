@@ -32,8 +32,8 @@ Feature suggestions are welcome! Please open an issue and include:
 
 2. **Set up development environment:**
    ```bash
-   git clone https://github.com/your-username/clown.git
-   cd clown
+   git clone https://github.com/your-username/ringlet.git
+   cd ringlet
    cargo build
    ```
 
@@ -69,12 +69,12 @@ Feature suggestions are welcome! Please open an issue and include:
 ### Project Structure
 
 ```
-clown/
+ringlet/
 ├── crates/
-│   ├── clown/          # CLI binary
-│   ├── clownd/         # Background daemon
-│   ├── clown-core/     # Core types and utilities
-│   └── clown-scripting/# Scripting engine
+│   ├── ringlet/          # CLI binary
+│   ├── ringletd/         # Background daemon
+│   ├── ringlet-core/     # Core types and utilities
+│   └── ringlet-scripting/# Scripting engine
 ├── docs/               # Documentation
 └── manifests/          # Configuration manifests
 ```

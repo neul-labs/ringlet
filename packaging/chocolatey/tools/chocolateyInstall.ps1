@@ -1,8 +1,8 @@
 $ErrorActionPreference = 'Stop'
 
-$packageName = 'clown'
+$packageName = 'ringlet'
 $version = '0.1.0'
-$url = "https://github.com/neul-labs/ccswitch/releases/download/v$version/clown-win32-x64-$version.zip"
+$url = "https://github.com/neul-labs/ccswitch/releases/download/v$version/ringlet-win32-x64-$version.zip"
 
 $toolsDir = "$(Split-Path -Parent $MyInvocation.MyCommand.Definition)"
 $installDir = Join-Path $toolsDir 'bin'
@@ -19,10 +19,10 @@ $packageArgs = @{
 Install-ChocolateyZipPackage @packageArgs
 
 # Add binaries to PATH
-$clownPath = Join-Path $installDir 'clown.exe'
-$daemonPath = Join-Path $installDir 'clownd.exe'
+$ringletPath = Join-Path $installDir 'ringlet.exe'
+$daemonPath = Join-Path $installDir 'ringletd.exe'
 
-Install-BinFile -Name 'clown' -Path $clownPath
-Install-BinFile -Name 'clownd' -Path $daemonPath
+Install-BinFile -Name 'ringlet' -Path $ringletPath
+Install-BinFile -Name 'ringletd' -Path $daemonPath
 
-Write-Host "clown has been installed. Run 'clown --help' to get started."
+Write-Host "ringlet has been installed. Run 'ringlet --help' to get started."

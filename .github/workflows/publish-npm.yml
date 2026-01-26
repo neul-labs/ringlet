@@ -16,15 +16,15 @@ jobs:
       matrix:
         include:
           - platform: linux-x64
-            artifact: clown-linux-x64
+            artifact: ringlet-linux-x64
           - platform: linux-arm64
-            artifact: clown-linux-arm64
+            artifact: ringlet-linux-arm64
           - platform: darwin-x64
-            artifact: clown-darwin-x64
+            artifact: ringlet-darwin-x64
           - platform: darwin-arm64
-            artifact: clown-darwin-arm64
+            artifact: ringlet-darwin-arm64
           - platform: win32-x64
-            artifact: clown-win32-x64
+            artifact: ringlet-win32-x64
     steps:
       - uses: actions/checkout@v4
 
@@ -42,7 +42,7 @@ jobs:
       - name: Prepare platform package
         run: |
           PLATFORM="${{ matrix.platform }}"
-          PKG_DIR="packaging/npm/platforms/clown-${PLATFORM}"
+          PKG_DIR="packaging/npm/platforms/ringlet-${PLATFORM}"
 
           mkdir -p "${PKG_DIR}/bin"
 
@@ -59,7 +59,7 @@ jobs:
 
       - name: Publish platform package
         run: |
-          cd "packaging/npm/platforms/clown-${{ matrix.platform }}"
+          cd "packaging/npm/platforms/ringlet-${{ matrix.platform }}"
           npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

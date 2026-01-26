@@ -1,0 +1,22 @@
+[package]
+name = "ringlet-scripting"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Rhai scripting engine for ringlet configuration generation"
+readme = "../../README.md"
+
+[dependencies]
+ringlet-core = { workspace = true }
+rhai = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }

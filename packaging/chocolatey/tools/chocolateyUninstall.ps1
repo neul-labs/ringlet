@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 
-Uninstall-BinFile -Name 'clown'
-Uninstall-BinFile -Name 'clownd'
+Uninstall-BinFile -Name 'ringlet'
+Uninstall-BinFile -Name 'ringletd'
 
-Write-Host "clown has been uninstalled."
+Write-Host "ringlet has been uninstalled."

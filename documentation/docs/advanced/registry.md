@@ -69,13 +69,13 @@ Update local cache from GitHub:
 
 ```bash
 # Normal sync (uses cache if fresh)
-clown registry sync
+ringlet registry sync
 
 # Force refresh
-clown registry sync --force
+ringlet registry sync --force
 
 # Use cached data only
-clown registry sync --offline
+ringlet registry sync --offline
 ```
 
 ### Inspect Registry
@@ -83,7 +83,7 @@ clown registry sync --offline
 View current registry status:
 
 ```bash
-clown registry inspect
+ringlet registry inspect
 ```
 
 **Output:**
@@ -108,17 +108,17 @@ Lock to a specific version:
 
 ```bash
 # Pin to specific commit
-clown registry pin f4a12c3
+ringlet registry pin f4a12c3
 
 # Pin to tag
-clown registry pin v1.2.3
+ringlet registry pin v1.2.3
 ```
 
 ---
 
 ## Sync Workflow
 
-When you run `clown registry sync`:
+When you run `ringlet registry sync`:
 
 1. **CLI** sends `RegistrySyncRequest` to daemon
 2. **Daemon** acquires per-channel lock
@@ -137,7 +137,7 @@ When you run `clown registry sync`:
 The registry is cached under:
 
 ```
-~/.config/clown/registry/
+~/.config/ringlet/registry/
 ├── current -> commits/f4a12c3    # Symlink to active version
 ├── registry.lock                  # Lock file with state
 ├── litellm-pricing.json          # Model pricing data
@@ -155,7 +155,7 @@ The registry is cached under:
 When GitHub is unreachable:
 
 ```bash
-clown registry sync --offline
+ringlet registry sync --offline
 ```
 
 Returns the currently pinned commit with `offline=true` indicator.
@@ -170,10 +170,10 @@ Templates define common setups for agent+provider combinations.
 
 ```bash
 # Create profile from template
-clown profiles create claude work --template minimax
+ringlet profiles create claude work --template minimax
 
 # List available templates
-clown registry templates
+ringlet registry templates
 ```
 
 ### Template Format
@@ -230,7 +230,7 @@ The model catalog provides metadata for autocomplete and validation.
 LiteLLM pricing is downloaded during sync:
 
 ```bash
-ls ~/.config/clown/registry/litellm-pricing.json
+ls ~/.config/ringlet/registry/litellm-pricing.json
 ```
 
 Contains per-token costs for 200+ models.
@@ -252,7 +252,7 @@ The registry supports multiple channels:
 ```bash
 # Use environment variable
 export CLOWN_REGISTRY_CHANNEL=beta
-clown registry sync
+ringlet registry sync
 ```
 
 ---
@@ -268,8 +268,8 @@ Enterprises can host their own registry:
 3. Configure Clown to use your registry:
 
 ```bash
-export CLOWN_REGISTRY_URL=https://github.example.com/org/clown-registry
-clown registry sync
+export CLOWN_REGISTRY_URL=https://github.example.com/org/ringlet-registry
+ringlet registry sync
 ```
 
 ### Benefits
@@ -339,11 +339,11 @@ Before submitting:
 
 ```bash
 # Validate manifests (planned)
-clown registry lint
+ringlet registry lint
 
 # Test locally
-cp -r my-changes ~/.config/clown/registry/
-clown agents list
+cp -r my-changes ~/.config/ringlet/registry/
+ringlet agents list
 ```
 
 ---
@@ -378,12 +378,12 @@ clown agents list
 ### Manifest Not Found
 
 1. Verify manifest exists in registry
-2. Force sync: `clown registry sync --force`
+2. Force sync: `ringlet registry sync --force`
 3. Check if using correct channel
 
 ### Custom Provider Not Detected
 
-1. Place in `~/.config/clown/providers.d/`
+1. Place in `~/.config/ringlet/providers.d/`
 2. Verify TOML syntax
-3. Run `clown registry sync --force`
-4. Check `clown providers list`
+3. Run `ringlet registry sync --force`
+4. Check `ringlet providers list`

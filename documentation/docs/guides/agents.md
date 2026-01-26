@@ -28,7 +28,7 @@ Each agent has a manifest that tells Clown:
 ### List Available Agents
 
 ```bash
-clown agents list
+ringlet agents list
 ```
 
 **Example output:**
@@ -45,7 +45,7 @@ opencode    OpenCode      No          -          0
 ### Inspect an Agent
 
 ```bash
-clown agents inspect claude
+ringlet agents inspect claude
 ```
 
 **Example output:**
@@ -119,10 +119,10 @@ brew install claude-code
 
 ```bash
 # With Anthropic
-clown profiles create claude my-claude --provider anthropic
+ringlet profiles create claude my-claude --provider anthropic
 
 # With MiniMax
-clown profiles create claude my-minimax --provider minimax
+ringlet profiles create claude my-minimax --provider minimax
 ```
 
 ---
@@ -145,10 +145,10 @@ npm install -g @openai/codex
 
 ```bash
 # With OpenAI
-clown profiles create codex my-codex --provider openai
+ringlet profiles create codex my-codex --provider openai
 
 # With OpenRouter
-clown profiles create codex my-router --provider openrouter
+ringlet profiles create codex my-router --provider openrouter
 ```
 
 ---
@@ -170,7 +170,7 @@ npm install -g @vibe-kit/grok-cli
 **Create a profile:**
 
 ```bash
-clown profiles create grok my-grok --provider openrouter
+ringlet profiles create grok my-grok --provider openrouter
 ```
 
 ---
@@ -196,7 +196,7 @@ irm https://app.factory.ai/cli/windows | iex
 **Create a profile:**
 
 ```bash
-clown profiles create droid my-droid --provider anthropic
+ringlet profiles create droid my-droid --provider anthropic
 ```
 
 ---
@@ -220,7 +220,7 @@ npm install -g opencode-ai
 **Create a profile:**
 
 ```bash
-clown profiles create opencode my-opencode --provider anthropic
+ringlet profiles create opencode my-opencode --provider anthropic
 ```
 
 ---
@@ -237,7 +237,7 @@ files = ["~/.claude/settings.json"]
 
 Detection runs when:
 
-1. You run `clown agents list`
+1. You run `ringlet agents list`
 2. You create a profile for an agent
 3. The daemon starts
 
@@ -245,7 +245,7 @@ Detection runs when:
     If an agent isn't showing up:
 
     1. Ensure the binary is in your PATH
-    2. Run `clown registry sync --force` to refresh manifests
+    2. Run `ringlet registry sync --force` to refresh manifests
     3. Verify with `which <agent-binary>`
 
 ---
@@ -323,7 +323,7 @@ To add support for a new coding agent:
 
 ### 1. Create the Manifest
 
-Create `~/.config/clown/agents.d/my-agent.toml`:
+Create `~/.config/ringlet/agents.d/my-agent.toml`:
 
 ```toml
 id = "my-agent"
@@ -346,7 +346,7 @@ supported = ["default-model", "advanced-model"]
 
 ### 2. Create the Configuration Script
 
-Create `~/.config/clown/scripts/my-agent.rhai`:
+Create `~/.config/ringlet/scripts/my-agent.rhai`:
 
 ```rhai
 // Generate configuration for my-agent
@@ -371,15 +371,15 @@ let config = #{
 ### 3. Test Detection
 
 ```bash
-clown registry sync --force
-clown agents list
+ringlet registry sync --force
+ringlet agents list
 ```
 
 ### 4. Create a Profile
 
 ```bash
-clown profiles create my-agent test --provider anthropic
-clown profiles run test
+ringlet profiles create my-agent test --provider anthropic
+ringlet profiles run test
 ```
 
 ---
@@ -390,15 +390,15 @@ clown profiles run test
 
 1. Verify the binary is in PATH: `which claude`
 2. Check if detection command works: `claude --version`
-3. Sync registry: `clown registry sync --force`
+3. Sync registry: `ringlet registry sync --force`
 
 ### Wrong version displayed
 
-1. Run `clown registry sync --force`
+1. Run `ringlet registry sync --force`
 2. Check manifest version_flag matches agent's actual flag
 
 ### Profile creation fails
 
 1. Verify agent-provider compatibility
 2. Check if Rhai script exists for the agent
-3. Look at daemon logs: `clown daemon status`
+3. Look at daemon logs: `ringlet daemon status`

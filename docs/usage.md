@@ -18,7 +18,7 @@ Usage tracking captures:
 | Token Tracking | Always enabled for all profiles |
 | Cost Calculation | Only calculated when profile uses "self" provider (direct API keys) |
 | Pricing Source | LiteLLM's `model_prices_and_context_window.json` |
-| Pricing Sync | Downloaded during `clown registry sync` |
+| Pricing Sync | Downloaded during `ringlet registry sync` |
 
 ### Why "self" Provider Only for Costs?
 
@@ -30,48 +30,48 @@ The `self` provider indicates you're using your own API key directly with a prov
 
 ```bash
 # Default: show today's usage
-clown usage
+ringlet usage
 
 # Specify time period
-clown usage --period today
-clown usage --period yesterday
-clown usage --period week
-clown usage --period month
-clown usage --period 7d
-clown usage --period 30d
-clown usage --period all
+ringlet usage --period today
+ringlet usage --period yesterday
+ringlet usage --period week
+ringlet usage --period month
+ringlet usage --period 7d
+ringlet usage --period 30d
+ringlet usage --period all
 
 # Filter by profile
-clown usage --profile my-profile
+ringlet usage --profile my-profile
 
 # Filter by model
-clown usage --model claude-sonnet-4
+ringlet usage --model claude-sonnet-4
 
 # Combine filters
-clown usage --period month --profile work-claude
+ringlet usage --period month --profile work-claude
 ```
 
 ### View Breakdown
 
 ```bash
 # Daily breakdown
-clown usage daily --period week
+ringlet usage daily --period week
 
 # Usage by model
-clown usage models
+ringlet usage models
 
 # Usage by profile
-clown usage profiles
+ringlet usage profiles
 ```
 
 ### Export Usage Data
 
 ```bash
 # Export as JSON
-clown usage export --format json > usage.json
+ringlet usage export --format json > usage.json
 
 # Export as CSV
-clown usage export --format csv --period month > usage.csv
+ringlet usage export --format csv --period month > usage.csv
 ```
 
 ### Import Claude Data
@@ -80,10 +80,10 @@ Import existing usage data from Claude Code's native files:
 
 ```bash
 # Import from default location (~/.claude)
-clown usage import-claude
+ringlet usage import-claude
 
 # Import from custom location
-clown usage import-claude --claude-dir /path/to/.claude
+ringlet usage import-claude --claude-dir /path/to/.claude
 ```
 
 This imports data from:
@@ -172,7 +172,7 @@ The embedded Web UI includes a dedicated Usage page accessible at `http://127.0.
 
 ```bash
 # Start the daemon
-clown daemon start --stay-alive
+ringlet daemon start --stay-alive
 
 # Open in browser
 open http://127.0.0.1:8765
@@ -187,12 +187,12 @@ Navigate to "Usage" in the sidebar to view the usage tracking page.
 Model pricing is downloaded from LiteLLM during registry sync:
 
 ```bash
-clown registry sync
+ringlet registry sync
 ```
 
 This downloads `model_prices_and_context_window.json` to:
 ```
-~/.config/clown/registry/litellm-pricing.json
+~/.config/ringlet/registry/litellm-pricing.json
 ```
 
 ### Pricing Data
@@ -215,7 +215,7 @@ The pricing file includes per-token costs for 200+ models:
 Usage data is stored under the telemetry directory:
 
 ```
-~/.config/clown/telemetry/
+~/.config/ringlet/telemetry/
 ├── sessions.jsonl        # Per-session records with token/cost data
 └── aggregates.json       # Rolled-up stats per profile/model
 ```
@@ -228,10 +228,10 @@ Monitor how many tokens each profile consumes:
 
 ```bash
 # View all profiles
-clown usage profiles
+ringlet usage profiles
 
 # Check specific profile
-clown usage --profile work-claude --period month
+ringlet usage --profile work-claude --period month
 ```
 
 ### Monitor Costs for Direct API Usage
@@ -240,10 +240,10 @@ Track costs when using your own API keys:
 
 ```bash
 # Create profile with self provider
-clown profiles create claude direct-api --provider self
+ringlet profiles create claude direct-api --provider self
 
 # View costs
-clown usage --profile direct-api
+ringlet usage --profile direct-api
 ```
 
 ### Import Existing Claude Data
@@ -252,10 +252,10 @@ Migrate historical usage data from Claude Code:
 
 ```bash
 # Import all available Claude data
-clown usage import-claude
+ringlet usage import-claude
 
 # Verify import
-clown usage --period all
+ringlet usage --period all
 ```
 
 ### Export for Analysis
@@ -264,10 +264,10 @@ Export usage data for external analysis or reporting:
 
 ```bash
 # Export last month's data as CSV
-clown usage export --format csv --period month > monthly-usage.csv
+ringlet usage export --format csv --period month > monthly-usage.csv
 
 # Export all data as JSON for processing
-clown usage export --format json --period all > all-usage.json
+ringlet usage export --format json --period all > all-usage.json
 ```
 
 ## Token Types
@@ -283,21 +283,21 @@ clown usage export --format json --period all > all-usage.json
 
 ### No usage data showing
 
-1. Verify the daemon is running: `clown daemon status`
-2. Check if any profiles have been used: `clown profiles list`
-3. Sync registry to get pricing: `clown registry sync`
+1. Verify the daemon is running: `ringlet daemon status`
+2. Check if any profiles have been used: `ringlet profiles list`
+3. Sync registry to get pricing: `ringlet registry sync`
 
 ### Costs showing as "-" or null
 
 1. Verify the profile uses "self" provider
-2. Check if pricing data is synced: `ls ~/.config/clown/registry/litellm-pricing.json`
+2. Check if pricing data is synced: `ls ~/.config/ringlet/registry/litellm-pricing.json`
 3. Verify the model has pricing in LiteLLM database
 
 ### Import not finding data
 
 1. Verify Claude directory exists: `ls ~/.claude`
 2. Check for stats-cache.json: `ls ~/.claude/stats-cache.json`
-3. Try specifying path explicitly: `clown usage import-claude --claude-dir ~/.claude`
+3. Try specifying path explicitly: `ringlet usage import-claude --claude-dir ~/.claude`
 
 ## See Also
 

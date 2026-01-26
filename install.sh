@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# clown installer script
+# ringlet installer script
 # Usage: curl -fsSL https://raw.githubusercontent.com/neul-labs/ccswitch/main/install.sh | bash
 
-VERSION="${CLOWN_VERSION:-latest}"
+VERSION="${RINGLET_VERSION:-latest}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 FROM_SOURCE="${FROM_SOURCE:-false}"
 LOCAL_BUILD="${LOCAL_BUILD:-false}"
@@ -43,7 +43,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --help|-h)
             cat << EOF
-clown installer
+ringlet installer
 
 Usage: install.sh [OPTIONS]
 
@@ -51,11 +51,11 @@ Options:
     --version, -v VERSION    Install specific version (default: latest)
     --install-dir, -d DIR    Installation directory (default: ~/.local/bin)
     --from-source, -s        Build from source instead of downloading binary
-    --local, -l              Build from current directory (when inside clown repo)
+    --local, -l              Build from current directory (when inside ringlet repo)
     --help, -h               Show this help message
 
 Environment variables:
-    CLOWN_VERSION           Same as --version
+    RINGLET_VERSION           Same as --version
     INSTALL_DIR             Same as --install-dir
     FROM_SOURCE             Set to 'true' for source build
 
@@ -73,7 +73,7 @@ Examples:
     curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPO}/main/install.sh | bash -s -- --from-source
 
     # Build from local clone
-    cd /path/to/clown && ./install.sh --local
+    cd /path/to/ringlet && ./install.sh --local
 EOF
             exit 0
             ;;
@@ -132,11 +132,11 @@ download_binary() {
     local ext="tar.gz"
     [[ "$platform" == "win32-x64" ]] && ext="zip"
 
-    local url="https://github.com/${GITHUB_REPO}/releases/download/v${version}/clown-${platform}-${version}.${ext}"
+    local url="https://github.com/${GITHUB_REPO}/releases/download/v${version}/ringlet-${platform}-${version}.${ext}"
     local tmpdir
     tmpdir="$(mktemp -d)"
 
-    info "Downloading clown v${version} for ${platform}..."
+    info "Downloading ringlet v${version} for ${platform}..."
     debug "URL: $url"
 
     if command -v curl &> /dev/null; then
@@ -167,8 +167,8 @@ download_binary() {
         tar -xzf "${tmpdir}/archive.tar.gz" -C "$install_dir"
     fi
 
-    chmod +x "${install_dir}/clown"
-    chmod +x "${install_dir}/clownd"
+    chmod +x "${install_dir}/ringlet"
+    chmod +x "${install_dir}/ringletd"
 
     rm -rf "$tmpdir"
 }
@@ -208,11 +208,11 @@ build_from_source() {
     info "Installing..."
 
     mkdir -p "$install_dir"
-    cp target/release/clown "$install_dir/"
-    cp target/release/clownd "$install_dir/"
+    cp target/release/ringlet "$install_dir/"
+    cp target/release/ringletd "$install_dir/"
 
-    chmod +x "${install_dir}/clown"
-    chmod +x "${install_dir}/clownd"
+    chmod +x "${install_dir}/ringlet"
+    chmod +x "${install_dir}/ringletd"
 
     rm -rf "$tmpdir"
 }
@@ -234,16 +234,16 @@ build_local() {
     info "Installing..."
 
     mkdir -p "$install_dir"
-    cp target/release/clown "$install_dir/"
-    cp target/release/clownd "$install_dir/"
+    cp target/release/ringlet "$install_dir/"
+    cp target/release/ringletd "$install_dir/"
 
-    chmod +x "${install_dir}/clown"
-    chmod +x "${install_dir}/clownd"
+    chmod +x "${install_dir}/ringlet"
+    chmod +x "${install_dir}/ringletd"
 }
 
-is_clown_repo() {
-    # Check if we're in a clown repository
-    if [[ -f "Cargo.toml" ]] && grep -q 'name = "clown"' Cargo.toml 2>/dev/null; then
+is_ringlet_repo() {
+    # Check if we're in a ringlet repository
+    if [[ -f "Cargo.toml" ]] && grep -q 'name = "ringlet"' Cargo.toml 2>/dev/null; then
         return 0
     fi
     return 1
@@ -252,11 +252,11 @@ is_clown_repo() {
 verify_installation() {
     local install_dir="$1"
 
-    if [[ -x "${install_dir}/clown" ]] && [[ -x "${install_dir}/clownd" ]]; then
+    if [[ -x "${install_dir}/ringlet" ]] && [[ -x "${install_dir}/ringletd" ]]; then
         info "Installation successful!"
 
         local version
-        version="$("${install_dir}/clown" --version 2>/dev/null || echo "unknown")"
+        version="$("${install_dir}/ringlet" --version 2>/dev/null || echo "unknown")"
         info "Installed version: $version"
         return 0
     else
@@ -285,7 +285,7 @@ check_path() {
 main() {
     echo ""
     echo "  ╭─────────────────────────────────╮"
-    echo "  │      clown installer            │"
+    echo "  │      ringlet installer            │"
     echo "  │  CLI orchestrator for coding    │"
     echo "  │           agents                │"
     echo "  ╰─────────────────────────────────╯"
@@ -293,8 +293,8 @@ main() {
 
     # Check for local build mode (explicit flag or auto-detect)
     if [[ "$LOCAL_BUILD" == "true" ]]; then
-        if ! is_clown_repo; then
-            error "Not in a clown repository. Use --local only from within the clown source directory."
+        if ! is_ringlet_repo; then
+            error "Not in a ringlet repository. Use --local only from within the ringlet source directory."
         fi
         info "Local build mode enabled"
         info "Install directory: $INSTALL_DIR"
@@ -302,20 +302,20 @@ main() {
         verify_installation "$INSTALL_DIR"
         check_path "$INSTALL_DIR"
         echo ""
-        info "To get started, run: clown --help"
+        info "To get started, run: ringlet --help"
         echo ""
         return
     fi
 
     # Auto-detect local repository (when running ./install.sh from repo)
-    if is_clown_repo && [[ "$FROM_SOURCE" != "true" ]]; then
-        info "Detected local clown repository"
+    if is_ringlet_repo && [[ "$FROM_SOURCE" != "true" ]]; then
+        info "Detected local ringlet repository"
         info "Install directory: $INSTALL_DIR"
         build_local "$INSTALL_DIR"
         verify_installation "$INSTALL_DIR"
         check_path "$INSTALL_DIR"
         echo ""
-        info "To get started, run: clown --help"
+        info "To get started, run: ringlet --help"
         echo ""
         return
     fi
@@ -360,7 +360,7 @@ main() {
     check_path "$INSTALL_DIR"
 
     echo ""
-    info "To get started, run: clown --help"
+    info "To get started, run: ringlet --help"
     echo ""
 }
 

@@ -22,7 +22,7 @@ When you run a profile, Clown creates an isolated environment where all configur
 ### Create
 
 ```bash
-clown profiles create <agent-id> <alias> --provider <provider-id> [options]
+ringlet profiles create <agent-id> <alias> --provider <provider-id> [options]
 ```
 
 **Options:**
@@ -42,22 +42,22 @@ clown profiles create <agent-id> <alias> --provider <provider-id> [options]
 
 ```bash
 # Basic profile
-clown profiles create claude my-project --provider anthropic
+ringlet profiles create claude my-project --provider anthropic
 
 # With specific model and endpoint
-clown profiles create claude china-work --provider minimax --endpoint china --model MiniMax-M2.1
+ringlet profiles create claude china-work --provider minimax --endpoint china --model MiniMax-M2.1
 
 # With hooks and MCP servers
-clown profiles create claude dev-claude --provider anthropic --hooks auto_format --mcp filesystem,github
+ringlet profiles create claude dev-claude --provider anthropic --hooks auto_format --mcp filesystem,github
 
 # Using a template
-clown profiles create claude quick --provider anthropic --template anthropic-sonnet
+ringlet profiles create claude quick --provider anthropic --template anthropic-sonnet
 ```
 
 ### List
 
 ```bash
-clown profiles list [--agent <agent-id>]
+ringlet profiles list [--agent <agent-id>]
 ```
 
 **Example output:**
@@ -72,7 +72,7 @@ home-minimax       minimax     international  MiniMax-M2.1     2026-01-07T22:45:
 ### Inspect
 
 ```bash
-clown profiles inspect <alias>
+ringlet profiles inspect <alias>
 ```
 
 Shows profile configuration (secrets are redacted):
@@ -92,23 +92,23 @@ API Key: ****...****
 ### Run
 
 ```bash
-clown profiles run <alias> [-- <agent-args>]
+ringlet profiles run <alias> [-- <agent-args>]
 ```
 
 Launches the agent with the profile's isolated environment:
 
 ```bash
 # Basic run
-clown profiles run my-project
+ringlet profiles run my-project
 
 # With additional arguments
-clown profiles run my-project -- /path/to/code --verbose
+ringlet profiles run my-project -- /path/to/code --verbose
 ```
 
 ### Delete
 
 ```bash
-clown profiles delete <alias>
+ringlet profiles delete <alias>
 ```
 
 Removes the profile and runs any cleanup hooks defined in the agent manifest.
@@ -122,7 +122,7 @@ Removes the profile and runs any cleanup hooks defined in the agent manifest.
 For manual usage, export a profile's environment to your shell:
 
 ```bash
-eval "$(clown profiles env <alias>)"
+eval "$(ringlet profiles env <alias>)"
 claude  # Now uses the profile's configuration
 ```
 
@@ -132,13 +132,13 @@ Install quick-access aliases:
 
 ```bash
 # Install alias
-clown aliases install my-project
+ringlet aliases install my-project
 
 # Now you can run:
-my-project  # Equivalent to: clown profiles run my-project
+my-project  # Equivalent to: ringlet profiles run my-project
 
 # Uninstall when done
-clown aliases uninstall my-project
+ringlet aliases uninstall my-project
 ```
 
 ---
@@ -153,14 +153,14 @@ When creating a profile, the model is determined by (highest to lowest priority)
 
 ```bash
 # Uses provider default (MiniMax-M2.1 for minimax)
-clown profiles create claude work --provider minimax
+ringlet profiles create claude work --provider minimax
 
 # Override with explicit model
-clown profiles create claude work --provider minimax --model claude-opus-4
+ringlet profiles create claude work --provider minimax --model claude-opus-4
 ```
 
 !!! tip "Changing Models Later"
-    To change a profile's model, delete and recreate it, or edit the JSON directly at `~/.config/clown/profiles/<alias>.json`.
+    To change a profile's model, delete and recreate it, or edit the JSON directly at `~/.config/ringlet/profiles/<alias>.json`.
 
 ---
 
@@ -205,13 +205,13 @@ Profiles support event-driven hooks for tool usage and agent events:
 
 ```bash
 # Add a hook
-clown hooks add my-project PreToolUse "Bash|Write" "echo Tool: $EVENT"
+ringlet hooks add my-project PreToolUse "Bash|Write" "echo Tool: $EVENT"
 
 # List hooks
-clown hooks list my-project
+ringlet hooks list my-project
 
 # Remove a hook
-clown hooks remove my-project PreToolUse 0
+ringlet hooks remove my-project PreToolUse 0
 ```
 
 See [Hooks Guide](hooks.md) for details.
@@ -222,10 +222,10 @@ Enable intelligent request routing:
 
 ```bash
 # Create profile with proxy
-clown profiles create claude smart-routing --provider anthropic --proxy
+ringlet profiles create claude smart-routing --provider anthropic --proxy
 
 # Configure routing
-clown proxy route add smart-routing cheap-route "tokens < 1000" "minimax/MiniMax-M2.1"
+ringlet proxy route add smart-routing cheap-route "tokens < 1000" "minimax/MiniMax-M2.1"
 ```
 
 See [Proxy Guide](proxy.md) for details.
@@ -235,14 +235,14 @@ See [Proxy Guide](proxy.md) for details.
 Enable Model Context Protocol servers:
 
 ```bash
-clown profiles create claude dev --provider anthropic --mcp filesystem,github
+ringlet profiles create claude dev --provider anthropic --mcp filesystem,github
 ```
 
 ---
 
 ## Profile Schema
 
-Profiles are stored as JSON in `~/.config/clown/profiles/`:
+Profiles are stored as JSON in `~/.config/ringlet/profiles/`:
 
 ```json
 {
@@ -275,23 +275,23 @@ Profiles are stored as JSON in `~/.config/clown/profiles/`:
 
 1. **Use descriptive aliases** - `project-provider-purpose` format is readable
    ```bash
-   clown profiles create claude acme-minimax-dev --provider minimax
+   ringlet profiles create claude acme-minimax-dev --provider minimax
    ```
 
 2. **One profile per project** - Keep settings isolated
    ```bash
-   clown profiles create claude project-a --provider anthropic
-   clown profiles create claude project-b --provider anthropic
+   ringlet profiles create claude project-a --provider anthropic
+   ringlet profiles create claude project-b --provider anthropic
    ```
 
 3. **Use aliases for quick access** - Install shims for frequent profiles
    ```bash
-   clown aliases install project-a
+   ringlet aliases install project-a
    ```
 
 4. **Export for scripts** - Use JSON output for automation
    ```bash
-   clown profiles list --json | jq '.[] | .alias'
+   ringlet profiles list --json | jq '.[] | .alias'
    ```
 
 ---
@@ -300,13 +300,13 @@ Profiles are stored as JSON in `~/.config/clown/profiles/`:
 
 ### Profile won't start
 
-1. Check agent is detected: `clown agents list`
-2. Verify credentials: `clown profiles inspect <alias>`
-3. Check daemon status: `clown daemon status`
+1. Check agent is detected: `ringlet agents list`
+2. Verify credentials: `ringlet profiles inspect <alias>`
+3. Check daemon status: `ringlet daemon status`
 
 ### Wrong model being used
 
-1. Inspect the profile: `clown profiles inspect <alias>`
+1. Inspect the profile: `ringlet profiles inspect <alias>`
 2. Verify model field matches expected
 3. Recreate with explicit `--model` flag if needed
 

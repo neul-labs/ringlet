@@ -8,17 +8,17 @@ Reference for all configuration files used by Clown.
 
 | File | Description |
 |------|-------------|
-| `~/.config/clown/config.toml` | User preferences |
-| `~/.config/clown/profiles/<alias>.json` | Profile definitions |
-| `~/.config/clown/agents.d/*.toml` | Custom agent manifests |
-| `~/.config/clown/providers.d/*.toml` | Custom provider manifests |
-| `~/.config/clown/scripts/*.rhai` | Custom Rhai scripts |
-| `~/.config/clown/registry/` | Cached registry data |
-| `~/.config/clown/telemetry/` | Usage tracking data |
+| `~/.config/ringlet/config.toml` | User preferences |
+| `~/.config/ringlet/profiles/<alias>.json` | Profile definitions |
+| `~/.config/ringlet/agents.d/*.toml` | Custom agent manifests |
+| `~/.config/ringlet/providers.d/*.toml` | Custom provider manifests |
+| `~/.config/ringlet/scripts/*.rhai` | Custom Rhai scripts |
+| `~/.config/ringlet/registry/` | Cached registry data |
+| `~/.config/ringlet/telemetry/` | Usage tracking data |
 
 !!! note "Platform-Specific Paths"
-    - **macOS/Linux**: `~/.config/clown/`
-    - **Windows**: `%APPDATA%\clown\`
+    - **macOS/Linux**: `~/.config/ringlet/`
+    - **Windows**: `%APPDATA%\ringlet\`
 
 ---
 
@@ -278,7 +278,7 @@ default = "MiniMax-M2.1"
 ### Full Layout
 
 ```
-~/.config/clown/
+~/.config/ringlet/
 ├── config.toml               # User preferences
 ├── daemon-endpoint           # Active daemon endpoint
 ├── agents.d/                 # Custom agent manifests
@@ -307,7 +307,7 @@ default = "MiniMax-M2.1"
 │   ├── sessions.jsonl
 │   └── aggregates.json
 └── logs/
-    └── clownd.log
+    └── ringletd.log
 ```
 
 ### Profile Home Structure

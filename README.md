@@ -1,45 +1,45 @@
-# clown
+# ringlet
 
-[![CI](https://github.com/neul-labs/clown/actions/workflows/ci.yml/badge.svg)](https://github.com/neul-labs/clown/actions/workflows/ci.yml)
-[![Crates.io](https://img.shields.io/crates/v/clown.svg)](https://crates.io/crates/clown)
-[![Docs](https://img.shields.io/badge/docs-neullabs.com-blue)](https://docs.neullabs.com/clown)
+[![CI](https://github.com/neul-labs/ringlet/actions/workflows/ci.yml/badge.svg)](https://github.com/neul-labs/ringlet/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/ringlet.svg)](https://crates.io/crates/ringlet)
+[![Docs](https://img.shields.io/badge/docs-neullabs.com-blue)](https://docs.neullabs.com/ringlet)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-2024%20edition-orange.svg)](https://www.rust-lang.org)
 ![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey)
 
 **One CLI to rule all your coding agents.**
 
-Stop juggling configs between Claude Code, Grok CLI, Codex, and others. clown gives you profiles, provider switching, and intelligent routing—so you can focus on shipping code.
+Stop juggling configs between Claude Code, Grok CLI, Codex, and others. ringlet gives you profiles, provider switching, and intelligent routing—so you can focus on shipping code.
 
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/neul-labs/clown/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/neul-labs/ringlet/main/install.sh | sh
 ```
 
 Or build from source:
 
 ```bash
-git clone https://github.com/neul-labs/clown.git
-cd clown && cargo build --release
+git clone https://github.com/neul-labs/ringlet.git
+cd ringlet && cargo build --release
 ```
 
 ## Quick Start
 
 ```bash
 # See what agents you have installed
-clown agents list
+ringlet agents list
 
 # Create a profile with your preferred provider
-clown profiles create claude work --provider anthropic
-clown profiles run work
+ringlet profiles create claude work --provider anthropic
+ringlet profiles run work
 
 # Or use MiniMax for cost-effective Claude-compatible requests
-clown profiles create claude cheap --provider minimax --model MiniMax-M2.1
-clown profiles run cheap
+ringlet profiles create claude cheap --provider minimax --model MiniMax-M2.1
+ringlet profiles run cheap
 ```
 
-## Why clown?
+## Why ringlet?
 
 | Problem | Solution |
 |---------|----------|
@@ -55,11 +55,11 @@ clown profiles run cheap
 
 ```bash
 # Create isolated profiles with different providers
-clown profiles create claude work-anthropic --provider anthropic
-clown profiles create claude work-minimax --provider minimax
+ringlet profiles create claude work-anthropic --provider anthropic
+ringlet profiles create claude work-minimax --provider minimax
 
 # Install as executable aliases
-clown aliases install work-anthropic
+ringlet aliases install work-anthropic
 claude-work-anthropic  # runs with isolated config and credentials
 ```
 
@@ -67,41 +67,41 @@ claude-work-anthropic  # runs with isolated config and credentials
 
 ```bash
 # Enable proxy for smart routing based on context
-clown profiles create claude routed --provider anthropic --proxy
-clown proxy enable routed
+ringlet profiles create claude routed --provider anthropic --proxy
+ringlet proxy enable routed
 
 # Route long-context requests to cost-effective providers
-clown proxy route add routed "long" "tokens > 100000" "minimax/MiniMax-M2.1" --priority 10
-clown proxy route add routed "default" "always" "anthropic/claude-sonnet-4"
+ringlet proxy route add routed "long" "tokens > 100000" "minimax/MiniMax-M2.1" --priority 10
+ringlet proxy route add routed "default" "always" "anthropic/claude-sonnet-4"
 ```
 
 ### Event Hooks
 
 ```bash
 # Add hooks for logging, notifications, or custom workflows
-clown hooks add work PreToolUse "Bash" "echo '$EVENT' >> ~/.clown/audit.log"
-clown hooks add work Notification "*" "notify-send 'Claude' '$MESSAGE'"
+ringlet hooks add work PreToolUse "Bash" "echo '$EVENT' >> ~/.ringlet/audit.log"
+ringlet hooks add work Notification "*" "notify-send 'Claude' '$MESSAGE'"
 ```
 
 ### Usage Tracking
 
 ```bash
 # Track tokens and costs across all profiles
-clown usage
-clown usage --period month --profile work
+ringlet usage
+ringlet usage --period month --profile work
 
 # Import existing Claude usage data
-clown usage import-claude
+ringlet usage import-claude
 ```
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  CLI (clown)                                                │
+│  CLI (ringlet)                                              │
 │  └── Thin client, auto-starts daemon                        │
 ├─────────────────────────────────────────────────────────────┤
-│  Daemon (clownd)                                            │
+│  Daemon (ringletd)                                          │
 │  └── Profiles │ Registry │ Telemetry │ Web UI              │
 ├─────────────────────────────────────────────────────────────┤
 │  Agents                                                     │
@@ -112,38 +112,38 @@ clown usage import-claude
 └─────────────────────────────────────────────────────────────┘
 ```
 
-The daemon starts automatically on first CLI use and exits after idle timeout (or pin with `clown daemon --stay-alive`).
+The daemon starts automatically on first CLI use and exits after idle timeout (or pin with `ringlet daemon --stay-alive`).
 
 ## CLI Reference
 
 ```bash
-clown agents list              # Show installed agents and versions
-clown profiles create          # Create a new profile
-clown profiles list            # List all profiles
-clown profiles run <name>      # Run agent with profile
-clown aliases install <name>   # Create executable alias
-clown proxy status             # Check proxy status
-clown proxy route list <name>  # List routing rules
-clown hooks list <name>        # List profile hooks
-clown usage                    # View usage stats
-clown registry sync            # Update agent manifests
-clown daemon --stay-alive      # Keep daemon running
+ringlet agents list              # Show installed agents and versions
+ringlet profiles create          # Create a new profile
+ringlet profiles list            # List all profiles
+ringlet profiles run <name>      # Run agent with profile
+ringlet aliases install <name>   # Create executable alias
+ringlet proxy status             # Check proxy status
+ringlet proxy route list <name>  # List routing rules
+ringlet hooks list <name>        # List profile hooks
+ringlet usage                    # View usage stats
+ringlet registry sync            # Update agent manifests
+ringlet daemon --stay-alive      # Keep daemon running
 ```
 
 ## Documentation
 
-Full documentation at **[docs.neullabs.com/clown](https://docs.neullabs.com/clown)**
+Full documentation at **[docs.neullabs.com/ringlet](https://docs.neullabs.com/ringlet)**
 
 | Guide | Description |
 |-------|-------------|
-| [Architecture](https://docs.neullabs.com/clown/architecture) | Component overview and data flow |
-| [Agents](https://docs.neullabs.com/clown/agents) | Supported agents and custom manifests |
-| [Providers](https://docs.neullabs.com/clown/providers) | API backends and custom providers |
-| [Profiles](https://docs.neullabs.com/clown/profiles) | Profile lifecycle and workflows |
-| [Hooks](https://docs.neullabs.com/clown/hooks) | Event-driven automation |
-| [Proxy](https://docs.neullabs.com/clown/proxy) | Request routing with ultrallm |
-| [Usage](https://docs.neullabs.com/clown/usage) | Token tracking and analytics |
-| [Scripting](https://docs.neullabs.com/clown/scripting) | Rhai configuration scripting |
+| [Architecture](https://docs.neullabs.com/ringlet/architecture) | Component overview and data flow |
+| [Agents](https://docs.neullabs.com/ringlet/agents) | Supported agents and custom manifests |
+| [Providers](https://docs.neullabs.com/ringlet/providers) | API backends and custom providers |
+| [Profiles](https://docs.neullabs.com/ringlet/profiles) | Profile lifecycle and workflows |
+| [Hooks](https://docs.neullabs.com/ringlet/hooks) | Event-driven automation |
+| [Proxy](https://docs.neullabs.com/ringlet/proxy) | Request routing with ultrallm |
+| [Usage](https://docs.neullabs.com/ringlet/usage) | Token tracking and analytics |
+| [Scripting](https://docs.neullabs.com/ringlet/scripting) | Rhai configuration scripting |
 
 ## Status
 
@@ -161,7 +161,7 @@ Full documentation at **[docs.neullabs.com/clown](https://docs.neullabs.com/clow
 
 ## Contributing
 
-Open an issue for design discussions before implementing major features. See the [contribution guide](https://docs.neullabs.com/clown/contributing) for details.
+Open an issue for design discussions before implementing major features. See the [contribution guide](https://docs.neullabs.com/ringlet/contributing) for details.
 
 ## License
 

@@ -17,7 +17,7 @@ jobs:
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
-          name: clown-win32-x64
+          name: ringlet-win32-x64
           path: artifact
 
       - name: Calculate checksum
@@ -34,9 +34,9 @@ jobs:
           $checksum = "${{ steps.checksum.outputs.sha256 }}"
 
           # Update nuspec
-          $nuspec = Get-Content packaging/chocolatey/clown.nuspec -Raw
+          $nuspec = Get-Content packaging/chocolatey/ringlet.nuspec -Raw
           $nuspec = $nuspec -replace '<version>.*</version>', "<version>$version</version>"
-          Set-Content packaging/chocolatey/clown.nuspec $nuspec
+          Set-Content packaging/chocolatey/ringlet.nuspec $nuspec
 
           # Update install script
           $install = Get-Content packaging/chocolatey/tools/chocolateyInstall.ps1 -Raw
@@ -54,4 +54,4 @@ jobs:
         shell: pwsh
         run: |
           cd packaging/chocolatey
-          choco push clown.${{ inputs.version }}.nupkg --source https://push.chocolatey.org/ --api-key ${{ secrets.CHOCOLATEY_API_KEY }}
+          choco push ringlet.${{ inputs.version }}.nupkg --source https://push.chocolatey.org/ --api-key ${{ secrets.CHOCOLATEY_API_KEY }}

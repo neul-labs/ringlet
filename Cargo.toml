@@ -7,9 +7,9 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT"
 authors = ["Dipankar Sarkar"]
-repository = "https://github.com/neul-labs/clown"
-homepage = "https://github.com/neul-labs/clown"
-documentation = "https://docs.neullabs.com/clown"
+repository = "https://github.com/neul-labs/ringlet"
+homepage = "https://github.com/neul-labs/ringlet"
+documentation = "https://docs.neullabs.com/ringlet"
 keywords = ["cli", "agent", "orchestrator", "coding"]
 categories = ["command-line-utilities", "development-tools"]
 
@@ -85,5 +85,5 @@ rust-embed = { version = "8", features = ["compression"] }
 mime_guess = "2"
 
 # Internal crates
-clown-core = { path = "crates/clown-core", version = "0.1.0" }
-clown-scripting = { path = "crates/clown-scripting", version = "0.1.0" }
+ringlet-core = { path = "crates/ringlet-core", version = "0.1.0" }
+ringlet-scripting = { path = "crates/ringlet-scripting", version = "0.1.0" }

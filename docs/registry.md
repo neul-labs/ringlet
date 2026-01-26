@@ -1,10 +1,10 @@
 # GitHub-based registry
 
-clown distributes agent manifests, profile templates, and curated model catalogs through a GitHub-hosted registry (e.g., `github.com/clown/registry`). The registry keeps official integrations versioned, reviewable, and easy to mirror, while allowing enterprises to point at their own forks when they need custom agents.
+ringlet distributes agent manifests, profile templates, and curated model catalogs through a GitHub-hosted registry (e.g., `github.com/ringlet/registry`). The registry keeps official integrations versioned, reviewable, and easy to mirror, while allowing enterprises to point at their own forks when they need custom agents.
 
 ## Goals
 
-- **Single source of truth** – publish agent CLI manifests, profile templates, and model catalogs in one repository so both the CLI and `clownd` can pull consistent metadata.
+- **Single source of truth** – publish agent CLI manifests, profile templates, and model catalogs in one repository so both the CLI and `ringletd` can pull consistent metadata.
 - **Open, reviewable changes** – use pull requests/issues to vet new agents or templates, making it easy to audit what runs on developer machines.
 - **Extensible distribution** – support multiple channels (stable, beta, nightly) and allow private forks without code changes.
 - **Offline friendly** – cache the registry locally so the CLI can keep working when GitHub is not reachable.
@@ -40,18 +40,18 @@ Key files:
 - `agents/<id>/manifest.toml` – the same manifest format described in `docs/agents.md`, stored so we can update support without releasing a new binary.
 - `providers/<id>.toml` – provider manifests defining API backends (endpoints, auth, models). See `docs/providers.md`.
 - `scripts/<agent-id>.rhai` – Rhai scripts that generate agent-specific configuration. See `docs/scripting.md`.
-- `profiles/<id>/<template>.toml` – parameterized profile definitions (env prompts, default arguments, HOME rewrites). Users can apply them via `clown profiles create <agent> --template <name>`.
+- `profiles/<id>/<template>.toml` – parameterized profile definitions (env prompts, default arguments, HOME rewrites). Users can apply them via `ringlet profiles create <agent> --template <name>`.
 - `models/catalog.json` – describes available AI models (provider, identifier, requirements, default prompt settings) so prompts can be auto-completed.
 
 ## Sync workflow
 
 1. The CLI bakes in a fallback commit hash that guarantees every install can bootstrap even before the first sync runs.
-2. `clown registry sync` (or any command that needs fresh metadata) serializes a `RegistrySyncRequest` and sends it to `clownd` over the `async-nng` request socket, including channel overrides, explicit refs, and flags such as `--offline` or `--force`.
-3. The daemon acquires a per-channel lock, reads `~/.config/clown/registry/registry.lock`, honors overrides like `CLOWN_REGISTRY_URL`/`CLOWN_REGISTRY_CHANNEL`, and skips network work when the cache already satisfies the request (unless `--force` is present).
-4. When online, the daemon downloads `registry.json`, verifies checksums/signatures, fetches any referenced manifests/templates/models not yet cached, and stages the artifacts under `~/.config/clown/registry/commits/<sha>/` before updating the `registry/current` symlink.
+2. `ringlet registry sync` (or any command that needs fresh metadata) serializes a `RegistrySyncRequest` and sends it to `ringletd` over the `async-nng` request socket, including channel overrides, explicit refs, and flags such as `--offline` or `--force`.
+3. The daemon acquires a per-channel lock, reads `~/.config/ringlet/registry/registry.lock`, honors overrides like `CLOWN_REGISTRY_URL`/`CLOWN_REGISTRY_CHANNEL`, and skips network work when the cache already satisfies the request (unless `--force` is present).
+4. When online, the daemon downloads `registry.json`, verifies checksums/signatures, fetches any referenced manifests/templates/models not yet cached, and stages the artifacts under `~/.config/ringlet/registry/commits/<sha>/` before updating the `registry/current` symlink.
 5. Once the new commit is durable, `registry.lock` is rewritten with the resolved commit/channel/timestamp/etag plus a list of cached artifacts, and a `RegistryUpdated` pub/sub event notifies CLIs or UI watchers that data changed.
-6. `clown registry pin <ref>` updates the lock to track a chosen commit/tag without running a sync, while offline requests simply return the currently pinned commit with an explicit `offline=true` indicator so callers know they are using cached data.
-7. `clown export` optionally bundles `registry.lock`, the pinned commit, and the cached `registry/commits/<sha>` tree so `clown import` can recreate the same registry state on another machine with zero network access.
+6. `ringlet registry pin <ref>` updates the lock to track a chosen commit/tag without running a sync, while offline requests simply return the currently pinned commit with an explicit `offline=true` indicator so callers know they are using cached data.
+7. `ringlet export` optionally bundles `registry.lock`, the pinned commit, and the cached `registry/commits/<sha>` tree so `ringlet import` can recreate the same registry state on another machine with zero network access.
 
 ## Profile templates
 
@@ -61,7 +61,7 @@ Profile templates define common setups for a given agent and model (e.g., `claud
 - Default environment variables and CLI args.
 - Optional hooks or setup tasks.
 
-The CLI exposes `clown profiles create claude work-minimax --template minimax` to load those defaults before prompting users. Templates can also specify which optional `env setup` tasks are recommended after creation.
+The CLI exposes `ringlet profiles create claude work-minimax --template minimax` to load those defaults before prompting users. Templates can also specify which optional `env setup` tasks are recommended after creation.
 
 ## Model catalog
 
@@ -86,14 +86,14 @@ Manifests can reference catalog entries to ensure prompts stay up to date even i
 ## Security and verification
 
 - Every registry release is tagged and optionally signed (e.g., GitHub release + Sigstore attestations).
-- `clownd` verifies checksums/signatures before caching manifests/templates so any CLI or UI client reading from the daemon only receives trusted artifacts.
+- `ringletd` verifies checksums/signatures before caching manifests/templates so any CLI or UI client reading from the daemon only receives trusted artifacts.
 - Enterprises can mirror the repository internally and set `CLOWN_REGISTRY_URL` to their GitHub Enterprise or artifact server.
 
 ## Contribution workflow
 
 1. Fork the registry repository on GitHub.
 2. Add or update the relevant manifest/template/model files.
-3. (Future) Run `cargo xtask registry-validate` once the validation utility lands; for now, use `cargo fmt`/`cargo clippy` and JSON/TOML linters to verify schema, and rely on `clown registry lint` (planned) before publishing.
+3. (Future) Run `cargo xtask registry-validate` once the validation utility lands; for now, use `cargo fmt`/`cargo clippy` and JSON/TOML linters to verify schema, and rely on `ringlet registry lint` (planned) before publishing.
 4. Open a pull request; once merged, a CI workflow bumps `registry.json` with new checksums and publishes a release.
 
 ## Future enhancements

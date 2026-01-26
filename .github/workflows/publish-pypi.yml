@@ -25,7 +25,7 @@ jobs:
         run: |
           cd packaging/pypi
           sed -i "s/version = \".*\"/version = \"${{ inputs.version }}\"/" pyproject.toml
-          sed -i "s/__version__ = \".*\"/__version__ = \"${{ inputs.version }}\"/" clown/__init__.py
+          sed -i "s/__version__ = \".*\"/__version__ = \"${{ inputs.version }}\"/" ringlet/__init__.py
 
       - name: Build wheel
         run: |

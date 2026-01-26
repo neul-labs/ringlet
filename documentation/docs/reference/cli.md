@@ -1,13 +1,13 @@
 # CLI Reference
 
-Complete reference for all `clown` commands.
+Complete reference for all `ringlet` commands.
 
 ---
 
 ## Global Options
 
 ```bash
-clown [OPTIONS] <COMMAND>
+ringlet [OPTIONS] <COMMAND>
 ```
 
 | Option | Description |
@@ -28,7 +28,7 @@ Discover and manage AI coding agents.
 List all detected agents.
 
 ```bash
-clown agents list [OPTIONS]
+ringlet agents list [OPTIONS]
 ```
 
 | Option | Description |
@@ -38,7 +38,7 @@ clown agents list [OPTIONS]
 **Example:**
 
 ```bash
-$ clown agents list
+$ ringlet agents list
 ID          Name         Installed   Version    Profiles
 claude      Claude Code  Yes         1.0.0      3
 codex       Codex CLI    Yes         0.5.0      1
@@ -50,13 +50,13 @@ grok        Grok CLI     No          -          0
 Show detailed information about an agent.
 
 ```bash
-clown agents inspect <AGENT_ID>
+ringlet agents inspect <AGENT_ID>
 ```
 
 **Example:**
 
 ```bash
-$ clown agents inspect claude
+$ ringlet agents inspect claude
 ID: claude
 Name: Claude Code
 Binary: claude
@@ -79,7 +79,7 @@ Manage API providers.
 List all available providers.
 
 ```bash
-clown providers list [OPTIONS]
+ringlet providers list [OPTIONS]
 ```
 
 | Option | Description |
@@ -89,7 +89,7 @@ clown providers list [OPTIONS]
 **Example:**
 
 ```bash
-$ clown providers list
+$ ringlet providers list
 ID          Name        Type                 Default Model
 anthropic   Anthropic   anthropic            claude-sonnet-4
 minimax     MiniMax     anthropic-compatible MiniMax-M2.1
@@ -102,13 +102,13 @@ openrouter  OpenRouter  openai-compatible    auto
 Show detailed information about a provider.
 
 ```bash
-clown providers inspect <PROVIDER_ID>
+ringlet providers inspect <PROVIDER_ID>
 ```
 
 **Example:**
 
 ```bash
-$ clown providers inspect minimax
+$ ringlet providers inspect minimax
 ID: minimax
 Name: MiniMax
 Type: anthropic-compatible
@@ -130,7 +130,7 @@ Create, manage, and run profiles.
 Create a new profile.
 
 ```bash
-clown profiles create <AGENT_ID> <ALIAS> [OPTIONS]
+ringlet profiles create <AGENT_ID> <ALIAS> [OPTIONS]
 ```
 
 | Option | Description |
@@ -149,16 +149,16 @@ clown profiles create <AGENT_ID> <ALIAS> [OPTIONS]
 
 ```bash
 # Basic profile
-clown profiles create claude my-project --provider anthropic
+ringlet profiles create claude my-project --provider anthropic
 
 # With specific endpoint and model
-clown profiles create claude china-work --provider minimax --endpoint china --model MiniMax-M2.1
+ringlet profiles create claude china-work --provider minimax --endpoint china --model MiniMax-M2.1
 
 # With hooks and MCP servers
-clown profiles create claude dev --provider anthropic --hooks auto_format --mcp filesystem,github
+ringlet profiles create claude dev --provider anthropic --hooks auto_format --mcp filesystem,github
 
 # With proxy enabled
-clown profiles create claude smart --provider anthropic --proxy
+ringlet profiles create claude smart --provider anthropic --proxy
 ```
 
 ### profiles list
@@ -166,7 +166,7 @@ clown profiles create claude smart --provider anthropic --proxy
 List all profiles.
 
 ```bash
-clown profiles list [OPTIONS]
+ringlet profiles list [OPTIONS]
 ```
 
 | Option | Description |
@@ -177,7 +177,7 @@ clown profiles list [OPTIONS]
 **Example:**
 
 ```bash
-$ clown profiles list
+$ ringlet profiles list
 Alias              Provider    Endpoint       Model            Last Used
 work-anthropic     anthropic   default        claude-sonnet-4  2026-01-08T11:23:51Z
 work-minimax       minimax     international  MiniMax-M2.1     2026-01-08T09:18:12Z
@@ -188,13 +188,13 @@ work-minimax       minimax     international  MiniMax-M2.1     2026-01-08T09:18:
 Show profile details.
 
 ```bash
-clown profiles inspect <ALIAS>
+ringlet profiles inspect <ALIAS>
 ```
 
 **Example:**
 
 ```bash
-$ clown profiles inspect work-minimax
+$ ringlet profiles inspect work-minimax
 Alias: work-minimax
 Agent: claude
 Provider: minimax
@@ -211,7 +211,7 @@ API Key: ****...****
 Run a profile.
 
 ```bash
-clown profiles run <ALIAS> [OPTIONS] [-- <AGENT_ARGS>...]
+ringlet profiles run <ALIAS> [OPTIONS] [-- <AGENT_ARGS>...]
 ```
 
 | Option | Description |
@@ -224,13 +224,13 @@ clown profiles run <ALIAS> [OPTIONS] [-- <AGENT_ARGS>...]
 
 ```bash
 # Basic run (foreground)
-clown profiles run my-project
+ringlet profiles run my-project
 
 # With additional agent arguments
-clown profiles run my-project -- /path/to/code --verbose
+ringlet profiles run my-project -- /path/to/code --verbose
 
 # Run as remote terminal session (accessible via web UI)
-clown profiles run my-project --remote
+ringlet profiles run my-project --remote
 ```
 
 ### profiles delete
@@ -238,7 +238,7 @@ clown profiles run my-project --remote
 Delete a profile.
 
 ```bash
-clown profiles delete <ALIAS>
+ringlet profiles delete <ALIAS>
 ```
 
 ### profiles env
@@ -246,13 +246,13 @@ clown profiles delete <ALIAS>
 Export profile environment variables.
 
 ```bash
-clown profiles env <ALIAS>
+ringlet profiles env <ALIAS>
 ```
 
 **Example:**
 
 ```bash
-eval "$(clown profiles env my-project)"
+eval "$(ringlet profiles env my-project)"
 claude  # Now uses the profile's configuration
 ```
 
@@ -267,13 +267,13 @@ Manage remote terminal sessions. Terminal sessions allow you to run agents in th
 List all terminal sessions.
 
 ```bash
-clown terminal list
+ringlet terminal list
 ```
 
 **Example:**
 
 ```bash
-$ clown terminal list
+$ ringlet terminal list
 SESSION ID                            PROFILE          STATE       CLIENTS
 --------------------------------------------------------------------------------
 46e15057-abbb-42cd-ad0e-52471a76ef9f  my-project       running     1
@@ -284,13 +284,13 @@ SESSION ID                            PROFILE          STATE       CLIENTS
 Show detailed information about a session.
 
 ```bash
-clown terminal info <SESSION_ID>
+ringlet terminal info <SESSION_ID>
 ```
 
 **Example:**
 
 ```bash
-$ clown terminal info 46e15057-abbb-42cd-ad0e-52471a76ef9f
+$ ringlet terminal info 46e15057-abbb-42cd-ad0e-52471a76ef9f
 Session ID: 46e15057-abbb-42cd-ad0e-52471a76ef9f
 Profile: my-project
 State: running
@@ -305,7 +305,7 @@ Created: 2026-01-22T00:22:45Z
 Terminate a terminal session.
 
 ```bash
-clown terminal kill <SESSION_ID>
+ringlet terminal kill <SESSION_ID>
 ```
 
 ### terminal attach
@@ -313,7 +313,7 @@ clown terminal kill <SESSION_ID>
 Attach to a terminal session from the CLI (not yet implemented - use web UI).
 
 ```bash
-clown terminal attach <SESSION_ID>
+ringlet terminal attach <SESSION_ID>
 ```
 
 ---
@@ -327,13 +327,13 @@ Manage shell aliases for quick profile access.
 Install a shell alias for a profile.
 
 ```bash
-clown aliases install <ALIAS>
+ringlet aliases install <ALIAS>
 ```
 
 **Example:**
 
 ```bash
-clown aliases install my-project
+ringlet aliases install my-project
 # Now you can run: my-project
 ```
 
@@ -342,7 +342,7 @@ clown aliases install my-project
 Remove a shell alias.
 
 ```bash
-clown aliases uninstall <ALIAS>
+ringlet aliases uninstall <ALIAS>
 ```
 
 ### aliases list
@@ -350,7 +350,7 @@ clown aliases uninstall <ALIAS>
 List installed aliases.
 
 ```bash
-clown aliases list
+ringlet aliases list
 ```
 
 ---
@@ -364,7 +364,7 @@ Manage proxy instances for request routing.
 Enable proxy for a profile.
 
 ```bash
-clown proxy enable <ALIAS>
+ringlet proxy enable <ALIAS>
 ```
 
 ### proxy disable
@@ -372,7 +372,7 @@ clown proxy enable <ALIAS>
 Disable proxy for a profile.
 
 ```bash
-clown proxy disable <ALIAS>
+ringlet proxy disable <ALIAS>
 ```
 
 ### proxy start
@@ -380,7 +380,7 @@ clown proxy disable <ALIAS>
 Start a proxy instance.
 
 ```bash
-clown proxy start <ALIAS>
+ringlet proxy start <ALIAS>
 ```
 
 ### proxy stop
@@ -388,7 +388,7 @@ clown proxy start <ALIAS>
 Stop a proxy instance.
 
 ```bash
-clown proxy stop <ALIAS>
+ringlet proxy stop <ALIAS>
 ```
 
 ### proxy stop-all
@@ -396,7 +396,7 @@ clown proxy stop <ALIAS>
 Stop all proxy instances.
 
 ```bash
-clown proxy stop-all
+ringlet proxy stop-all
 ```
 
 ### proxy restart
@@ -404,7 +404,7 @@ clown proxy stop-all
 Restart a proxy instance.
 
 ```bash
-clown proxy restart <ALIAS>
+ringlet proxy restart <ALIAS>
 ```
 
 ### proxy status
@@ -412,7 +412,7 @@ clown proxy restart <ALIAS>
 Show proxy status.
 
 ```bash
-clown proxy status [ALIAS]
+ringlet proxy status [ALIAS]
 ```
 
 ### proxy config
@@ -420,7 +420,7 @@ clown proxy status [ALIAS]
 Show proxy configuration.
 
 ```bash
-clown proxy config <ALIAS>
+ringlet proxy config <ALIAS>
 ```
 
 ### proxy logs
@@ -428,7 +428,7 @@ clown proxy config <ALIAS>
 View proxy logs.
 
 ```bash
-clown proxy logs <ALIAS> [OPTIONS]
+ringlet proxy logs <ALIAS> [OPTIONS]
 ```
 
 | Option | Description |
@@ -440,7 +440,7 @@ clown proxy logs <ALIAS> [OPTIONS]
 Add a routing rule.
 
 ```bash
-clown proxy route add <ALIAS> <NAME> <CONDITION> <TARGET> [OPTIONS]
+ringlet proxy route add <ALIAS> <NAME> <CONDITION> <TARGET> [OPTIONS]
 ```
 
 | Option | Description |
@@ -450,8 +450,8 @@ clown proxy route add <ALIAS> <NAME> <CONDITION> <TARGET> [OPTIONS]
 **Examples:**
 
 ```bash
-clown proxy route add work "long-context" "tokens > 100000" "minimax/claude-3-sonnet" --priority 10
-clown proxy route add work "default" "always" "anthropic/claude-sonnet-4"
+ringlet proxy route add work "long-context" "tokens > 100000" "minimax/claude-3-sonnet" --priority 10
+ringlet proxy route add work "default" "always" "anthropic/claude-sonnet-4"
 ```
 
 ### proxy route list
@@ -459,7 +459,7 @@ clown proxy route add work "default" "always" "anthropic/claude-sonnet-4"
 List routing rules.
 
 ```bash
-clown proxy route list <ALIAS>
+ringlet proxy route list <ALIAS>
 ```
 
 ### proxy route remove
@@ -467,7 +467,7 @@ clown proxy route list <ALIAS>
 Remove a routing rule.
 
 ```bash
-clown proxy route remove <ALIAS> <NAME>
+ringlet proxy route remove <ALIAS> <NAME>
 ```
 
 ### proxy alias set
@@ -475,7 +475,7 @@ clown proxy route remove <ALIAS> <NAME>
 Set a model alias.
 
 ```bash
-clown proxy alias set <ALIAS> <FROM_MODEL> <TO_TARGET>
+ringlet proxy alias set <ALIAS> <FROM_MODEL> <TO_TARGET>
 ```
 
 ### proxy alias list
@@ -483,7 +483,7 @@ clown proxy alias set <ALIAS> <FROM_MODEL> <TO_TARGET>
 List model aliases.
 
 ```bash
-clown proxy alias list <ALIAS>
+ringlet proxy alias list <ALIAS>
 ```
 
 ### proxy alias remove
@@ -491,7 +491,7 @@ clown proxy alias list <ALIAS>
 Remove a model alias.
 
 ```bash
-clown proxy alias remove <ALIAS> <FROM_MODEL>
+ringlet proxy alias remove <ALIAS> <FROM_MODEL>
 ```
 
 ---
@@ -505,7 +505,7 @@ Manage profile hooks.
 Add a hook to a profile.
 
 ```bash
-clown hooks add <ALIAS> <EVENT> <MATCHER> <COMMAND>
+ringlet hooks add <ALIAS> <EVENT> <MATCHER> <COMMAND>
 ```
 
 | Parameter | Description |
@@ -518,7 +518,7 @@ clown hooks add <ALIAS> <EVENT> <MATCHER> <COMMAND>
 **Example:**
 
 ```bash
-clown hooks add myprofile PreToolUse "Bash" "echo 'Running: $EVENT' >> /tmp/clown.log"
+ringlet hooks add myprofile PreToolUse "Bash" "echo 'Running: $EVENT' >> /tmp/ringlet.log"
 ```
 
 ### hooks list
@@ -526,7 +526,7 @@ clown hooks add myprofile PreToolUse "Bash" "echo 'Running: $EVENT' >> /tmp/clow
 List hooks for a profile.
 
 ```bash
-clown hooks list <ALIAS>
+ringlet hooks list <ALIAS>
 ```
 
 ### hooks remove
@@ -534,7 +534,7 @@ clown hooks list <ALIAS>
 Remove a hook.
 
 ```bash
-clown hooks remove <ALIAS> <EVENT> <INDEX>
+ringlet hooks remove <ALIAS> <EVENT> <INDEX>
 ```
 
 ### hooks import
@@ -542,7 +542,7 @@ clown hooks remove <ALIAS> <EVENT> <INDEX>
 Import hooks from a file.
 
 ```bash
-clown hooks import <ALIAS> <FILE>
+ringlet hooks import <ALIAS> <FILE>
 ```
 
 ### hooks export
@@ -550,7 +550,7 @@ clown hooks import <ALIAS> <FILE>
 Export hooks to JSON.
 
 ```bash
-clown hooks export <ALIAS>
+ringlet hooks export <ALIAS>
 ```
 
 ---
@@ -564,7 +564,7 @@ Track token usage and costs.
 Show usage summary.
 
 ```bash
-clown usage [OPTIONS]
+ringlet usage [OPTIONS]
 ```
 
 | Option | Description |
@@ -576,7 +576,7 @@ clown usage [OPTIONS]
 **Example:**
 
 ```bash
-$ clown usage --period week
+$ ringlet usage --period week
 Usage Summary (This Week)
 ─────────────────────────
 Total Tokens: 125,000
@@ -591,7 +591,7 @@ Estimated Cost: $1.10
 Show daily breakdown.
 
 ```bash
-clown usage daily [OPTIONS]
+ringlet usage daily [OPTIONS]
 ```
 
 | Option | Description |
@@ -603,7 +603,7 @@ clown usage daily [OPTIONS]
 Show usage by model.
 
 ```bash
-clown usage models
+ringlet usage models
 ```
 
 ### usage profiles
@@ -611,7 +611,7 @@ clown usage models
 Show usage by profile.
 
 ```bash
-clown usage profiles
+ringlet usage profiles
 ```
 
 ### usage export
@@ -619,7 +619,7 @@ clown usage profiles
 Export usage data.
 
 ```bash
-clown usage export [OPTIONS]
+ringlet usage export [OPTIONS]
 ```
 
 | Option | Description |
@@ -632,7 +632,7 @@ clown usage export [OPTIONS]
 Import usage data from Claude Code.
 
 ```bash
-clown usage import-claude [OPTIONS]
+ringlet usage import-claude [OPTIONS]
 ```
 
 | Option | Description |
@@ -650,7 +650,7 @@ Manage the GitHub-based registry.
 Synchronize registry metadata.
 
 ```bash
-clown registry sync [OPTIONS]
+ringlet registry sync [OPTIONS]
 ```
 
 | Option | Description |
@@ -663,7 +663,7 @@ clown registry sync [OPTIONS]
 Show registry status.
 
 ```bash
-clown registry inspect
+ringlet registry inspect
 ```
 
 ### registry pin
@@ -671,7 +671,7 @@ clown registry inspect
 Pin to a specific version.
 
 ```bash
-clown registry pin <REF>
+ringlet registry pin <REF>
 ```
 
 ---
@@ -685,7 +685,7 @@ Manage the background daemon.
 Show daemon status.
 
 ```bash
-clown daemon status
+ringlet daemon status
 ```
 
 ### daemon start
@@ -693,7 +693,7 @@ clown daemon status
 Start the daemon.
 
 ```bash
-clown daemon start [OPTIONS]
+ringlet daemon start [OPTIONS]
 ```
 
 | Option | Description |
@@ -705,7 +705,7 @@ clown daemon start [OPTIONS]
 Stop the daemon.
 
 ```bash
-clown daemon stop
+ringlet daemon stop
 ```
 
 ---
@@ -719,7 +719,7 @@ Manage Rhai configuration scripts.
 Test a configuration script.
 
 ```bash
-clown scripts test <SCRIPT> [OPTIONS]
+ringlet scripts test <SCRIPT> [OPTIONS]
 ```
 
 | Option | Description |
@@ -731,14 +731,14 @@ clown scripts test <SCRIPT> [OPTIONS]
 
 ## export / import
 
-Backup and restore clown configuration.
+Backup and restore ringlet configuration.
 
 ### export
 
 Export configuration.
 
 ```bash
-clown export > backup.json
+ringlet export > backup.json
 ```
 
 ### import
@@ -746,5 +746,5 @@ clown export > backup.json
 Import configuration.
 
 ```bash
-clown import backup.json
+ringlet import backup.json
 ```

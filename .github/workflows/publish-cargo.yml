@@ -20,26 +20,26 @@ jobs:
         run: cargo login ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
       # Publish in dependency order
-      - name: Publish clown-core
-        run: cargo publish -p clown-core --allow-dirty
+      - name: Publish ringlet-core
+        run: cargo publish -p ringlet-core --allow-dirty
         continue-on-error: true # May already be published
 
       - name: Wait for crates.io index
         run: sleep 30
 
-      - name: Publish clown-scripting
-        run: cargo publish -p clown-scripting --allow-dirty
+      - name: Publish ringlet-scripting
+        run: cargo publish -p ringlet-scripting --allow-dirty
         continue-on-error: true
 
       - name: Wait for crates.io index
         run: sleep 30
 
-      - name: Publish clownd
-        run: cargo publish -p clownd --allow-dirty
+      - name: Publish ringletd
+        run: cargo publish -p ringletd --allow-dirty
         continue-on-error: true
 
       - name: Wait for crates.io index
         run: sleep 30
 
-      - name: Publish clown
-        run: cargo publish -p clown --allow-dirty
+      - name: Publish ringlet
+        run: cargo publish -p ringlet --allow-dirty

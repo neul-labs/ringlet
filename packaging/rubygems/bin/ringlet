@@ -1,0 +1,3 @@
+#!/usr/bin/env ruby
+require 'ringlet'
+exec(Clown.ensure_binary('ringlet'), *ARGV)

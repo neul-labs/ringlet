@@ -6,7 +6,7 @@ Deep dive into how Clown is designed and how its components interact.
 
 ## Overview
 
-Clown is a Rust-native workspace built around a central background daemon (`clownd`) that orchestrates CLI coding agents. The daemon owns profile persistence, agent discovery, telemetry collection, and real-time event distribution.
+Clown is a Rust-native workspace built around a central background daemon (`ringletd`) that orchestrates CLI coding agents. The daemon owns profile persistence, agent discovery, telemetry collection, and real-time event distribution.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -15,13 +15,13 @@ Clown is a Rust-native workspace built around a central background daemon (`clow
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                         clown CLI                                │
+│                         ringlet CLI                                │
 │    (Thin client - auto-starts daemon, forwards commands)        │
 └──────────────────────────────┬──────────────────────────────────┘
                                │ async-nng / HTTP
                                ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                        clownd (Daemon)                           │
+│                        ringletd (Daemon)                           │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐             │
 │  │   Profile    │ │    Agent     │ │   Registry   │             │
 │  │   Manager    │ │   Registry   │ │    Client    │             │
@@ -55,7 +55,7 @@ Clown is a Rust-native workspace built around a central background daemon (`clow
 
 ## Core Components
 
-### clown CLI
+### ringlet CLI
 
 A thin client that:
 
@@ -66,7 +66,7 @@ A thin client that:
 
 The CLI never performs stateful operations directly - everything goes through the daemon.
 
-### clownd (Daemon)
+### ringletd (Daemon)
 
 The heart of Clown. Runs as a long-lived background process and owns:
 
@@ -86,7 +86,7 @@ The daemon auto-starts on first CLI use and exits after idle timeout unless pinn
 Handles profile lifecycle:
 
 1. **Creation** - Validates agent+provider pairing, prompts for API key, runs Rhai script
-2. **Storage** - Writes profile JSON to `~/.config/clown/profiles/`
+2. **Storage** - Writes profile JSON to `~/.config/ringlet/profiles/`
 3. **Execution** - Creates isolated environment, injects variables, spawns agent
 4. **Tracking** - Updates `last_used` timestamps
 
@@ -95,7 +95,7 @@ Handles profile lifecycle:
 Loads and manages agent manifests:
 
 - Built-in manifests compiled into binary
-- User manifests from `~/.config/clown/agents.d/`
+- User manifests from `~/.config/ringlet/agents.d/`
 - Registry manifests from GitHub
 
 Detection probes run in parallel to capture versions and paths.
@@ -105,7 +105,7 @@ Detection probes run in parallel to capture versions and paths.
 Manages API backend definitions:
 
 - Built-in providers (Anthropic, MiniMax, OpenAI, OpenRouter)
-- User providers from `~/.config/clown/providers.d/`
+- User providers from `~/.config/ringlet/providers.d/`
 
 Providers define endpoints, authentication, and available models.
 
@@ -123,7 +123,7 @@ Synchronizes GitHub-hosted metadata:
 
 - Downloads manifests, templates, and model catalog
 - Verifies checksums/signatures
-- Caches under `~/.config/clown/registry/`
+- Caches under `~/.config/ringlet/registry/`
 - Downloads LiteLLM pricing for cost calculation
 
 ### Proxy Manager
@@ -163,7 +163,7 @@ CLI                                      Daemon
 
 - **Request/Reply**: Commands serialized via `serde_json`, sent over IPC
 - **Pub/Sub**: Change notifications for watch modes and UI clients
-- **Endpoint**: `/tmp/clownd.sock` (Unix) or `%LOCALAPPDATA%/clown/clownd.ipc` (Windows)
+- **Endpoint**: `/tmp/ringletd.sock` (Unix) or `%LOCALAPPDATA%/ringlet/ringletd.ipc` (Windows)
 
 ### HTTP API
 
@@ -213,7 +213,7 @@ The agent reads configuration from the profile HOME, ensuring:
 ### Profile Run Workflow
 
 ```
-1. User: clown profiles run my-project
+1. User: ringlet profiles run my-project
 
 2. CLI:
    - Connects to daemon (or starts it)
@@ -265,7 +265,7 @@ The agent reads configuration from the profile HOME, ensuring:
 ## Persistence Layout
 
 ```
-~/.config/clown/
+~/.config/ringlet/
 ├── config.toml               # User preferences
 ├── daemon-endpoint           # Active daemon endpoint
 ├── agents.d/                 # Custom agent manifests
@@ -285,7 +285,7 @@ The agent reads configuration from the profile HOME, ensuring:
 │   ├── sessions.jsonl
 │   └── aggregates.json
 └── logs/
-    └── clownd.log
+    └── ringletd.log
 ```
 
 ---
@@ -294,9 +294,9 @@ The agent reads configuration from the profile HOME, ensuring:
 
 | Platform | Config Path | IPC Endpoint |
 |----------|-------------|--------------|
-| macOS | `~/.config/clown/` | `/tmp/clownd.sock` |
-| Linux | `~/.config/clown/` or XDG | `/tmp/clownd.sock` |
-| Windows | `%APPDATA%\clown\` | `%LOCALAPPDATA%\clown\clownd.ipc` |
+| macOS | `~/.config/ringlet/` | `/tmp/ringletd.sock` |
+| Linux | `~/.config/ringlet/` or XDG | `/tmp/ringletd.sock` |
+| Windows | `%APPDATA%\ringlet\` | `%LOCALAPPDATA%\ringlet\ringletd.ipc` |
 
 Clown uses the `dirs` crate to resolve paths and keeps launcher scripts optional.
 

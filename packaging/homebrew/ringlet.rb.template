@@ -1,0 +1,46 @@
+class Clown < Formula
+  desc "CLI orchestrator for coding agents"
+  homepage "https://github.com/neul-labs/ccswitch"
+  version "{{VERSION}}"
+  license "MIT"
+
+  on_macos do
+    on_arm do
+      url "https://github.com/neul-labs/ccswitch/releases/download/v{{VERSION}}/ringlet-darwin-arm64-{{VERSION}}.tar.gz"
+      sha256 "{{SHA256_DARWIN_ARM64}}"
+    end
+    on_intel do
+      url "https://github.com/neul-labs/ccswitch/releases/download/v{{VERSION}}/ringlet-darwin-x64-{{VERSION}}.tar.gz"
+      sha256 "{{SHA256_DARWIN_X64}}"
+    end
+  end
+
+  on_linux do
+    on_arm do
+      url "https://github.com/neul-labs/ccswitch/releases/download/v{{VERSION}}/ringlet-linux-arm64-{{VERSION}}.tar.gz"
+      sha256 "{{SHA256_LINUX_ARM64}}"
+    end
+    on_intel do
+      url "https://github.com/neul-labs/ccswitch/releases/download/v{{VERSION}}/ringlet-linux-x64-{{VERSION}}.tar.gz"
+      sha256 "{{SHA256_LINUX_X64}}"
+    end
+  end
+
+  def install
+    bin.install "ringlet"
+    bin.install "ringletd"
+  end
+
+  def caveats
+    <<~EOS
+      ringlet has been installed. To start using it:
+        ringlet --help
+
+      The daemon (ringletd) will auto-start when needed.
+    EOS
+  end
+
+  test do
+    assert_match version.to_s, shell_output("#{bin}/ringlet --version")
+  end
+end

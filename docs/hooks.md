@@ -25,7 +25,7 @@ Hooks are profile-level configurations that trigger actions when specific events
 ### Add a Hook
 
 ```bash
-clown hooks add <alias> <event> <matcher> <command>
+ringlet hooks add <alias> <event> <matcher> <command>
 ```
 
 **Parameters:**
@@ -38,22 +38,22 @@ clown hooks add <alias> <event> <matcher> <command>
 
 ```bash
 # Log all Bash commands before execution
-clown hooks add myprofile PreToolUse "Bash" "echo 'Running: $EVENT' >> /tmp/clown.log"
+ringlet hooks add myprofile PreToolUse "Bash" "echo 'Running: $EVENT' >> /tmp/ringlet.log"
 
 # Log all tool usage after completion
-clown hooks add myprofile PostToolUse "*" "logger -t clown '$EVENT'"
+ringlet hooks add myprofile PostToolUse "*" "logger -t ringlet '$EVENT'"
 
 # Send notification to webhook on stop
-clown hooks add myprofile Stop "*" "curl -X POST https://hooks.example.com/clown -d '$EVENT'"
+ringlet hooks add myprofile Stop "*" "curl -X POST https://hooks.example.com/ringlet -d '$EVENT'"
 
 # Match multiple tools
-clown hooks add myprofile PreToolUse "Bash|Write|Edit" "echo 'File operation: $EVENT'"
+ringlet hooks add myprofile PreToolUse "Bash|Write|Edit" "echo 'File operation: $EVENT'"
 ```
 
 ### List Hooks
 
 ```bash
-clown hooks list <alias>
+ringlet hooks list <alias>
 ```
 
 **Example output:**
@@ -63,21 +63,21 @@ Hooks for profile 'myprofile':
 
 PreToolUse:
   [0] matcher: "Bash"
-      command: echo 'Running: $EVENT' >> /tmp/clown.log
+      command: echo 'Running: $EVENT' >> /tmp/ringlet.log
 
 PostToolUse:
   [0] matcher: "*"
-      command: logger -t clown '$EVENT'
+      command: logger -t ringlet '$EVENT'
 
 Stop:
   [0] matcher: "*"
-      command: curl -X POST https://hooks.example.com/clown -d '$EVENT'
+      command: curl -X POST https://hooks.example.com/ringlet -d '$EVENT'
 ```
 
 ### Remove a Hook
 
 ```bash
-clown hooks remove <alias> <event> <index>
+ringlet hooks remove <alias> <event> <index>
 ```
 
 **Parameters:**
@@ -89,7 +89,7 @@ clown hooks remove <alias> <event> <index>
 
 ```bash
 # Remove the first PreToolUse hook
-clown hooks remove myprofile PreToolUse 0
+ringlet hooks remove myprofile PreToolUse 0
 ```
 
 ### Import Hooks
@@ -97,13 +97,13 @@ clown hooks remove myprofile PreToolUse 0
 Import hooks configuration from a JSON file:
 
 ```bash
-clown hooks import <alias> <file>
+ringlet hooks import <alias> <file>
 ```
 
 **Example:**
 
 ```bash
-clown hooks import myprofile hooks-config.json
+ringlet hooks import myprofile hooks-config.json
 ```
 
 ### Export Hooks
@@ -111,17 +111,17 @@ clown hooks import myprofile hooks-config.json
 Export current hooks configuration to JSON:
 
 ```bash
-clown hooks export <alias>
+ringlet hooks export <alias>
 ```
 
 **Example:**
 
 ```bash
 # Export to file
-clown hooks export myprofile > hooks-backup.json
+ringlet hooks export myprofile > hooks-backup.json
 
 # View current configuration
-clown hooks export myprofile | jq .
+ringlet hooks export myprofile | jq .
 ```
 
 ## Configuration Format
@@ -148,7 +148,7 @@ Hooks are stored in JSON format with the following structure:
       "hooks": [
         {
           "type": "command",
-          "command": "logger -t clown 'Tool completed'"
+          "command": "logger -t ringlet 'Tool completed'"
         }
       ]
     }
@@ -230,8 +230,8 @@ The `$EVENT` variable in commands contains JSON data about the event:
 Log all tool usage to a file:
 
 ```bash
-clown hooks add work PostToolUse "*" \
-  "echo '[$(date -Iseconds)] $EVENT' >> ~/.clown/audit.log"
+ringlet hooks add work PostToolUse "*" \
+  "echo '[$(date -Iseconds)] $EVENT' >> ~/.ringlet/audit.log"
 ```
 
 ### Slack Notifications
@@ -239,7 +239,7 @@ clown hooks add work PostToolUse "*" \
 Send notifications when agent stops:
 
 ```bash
-clown hooks add work Stop "*" \
+ringlet hooks add work Stop "*" \
   "curl -X POST -H 'Content-type: application/json' \
    --data '{\"text\":\"Agent stopped\"}' \
    $SLACK_WEBHOOK_URL"
@@ -250,7 +250,7 @@ clown hooks add work Stop "*" \
 Block certain operations with pre-tool hooks:
 
 ```bash
-clown hooks add work PreToolUse "Bash" \
+ringlet hooks add work PreToolUse "Bash" \
   "echo '$EVENT' | jq -e '.command | contains(\"rm -rf\") | not' || exit 1"
 ```
 
@@ -259,8 +259,8 @@ clown hooks add work PreToolUse "Bash" \
 Send metrics to monitoring systems:
 
 ```bash
-clown hooks add work PostToolUse "*" \
-  "curl -X POST http://localhost:9091/metrics/job/clown \
+ringlet hooks add work PostToolUse "*" \
+  "curl -X POST http://localhost:9091/metrics/job/ringlet \
    -d 'tool_execution_count{tool=\"'$(echo $EVENT | jq -r .tool)'\"} 1'"
 ```
 
@@ -269,7 +269,7 @@ clown hooks add work PostToolUse "*" \
 Hooks are stored in the profile's metadata:
 
 ```
-~/.config/clown/profiles/{alias}.json
+~/.config/ringlet/profiles/{alias}.json
 ```
 
 The `hooks_config` field in profile metadata contains the full hooks configuration.
@@ -293,7 +293,7 @@ The `hooks_config` field in profile metadata contains the full hooks configurati
 Enable debug logging:
 
 ```bash
-clown --log-level debug profiles run myprofile
+ringlet --log-level debug profiles run myprofile
 ```
 
 ## See Also

@@ -6,7 +6,7 @@ Clown uses [Rhai](https://rhai.rs/), an embedded scripting language for Rust, to
 
 ## Why Rhai?
 
-- **Extensibility**: Add new agents without recompiling clown
+- **Extensibility**: Add new agents without recompiling ringlet
 - **Customization**: Users can override scripts for special cases
 - **Declarative**: Configuration logic is visible and editable
 - **Sandboxed**: Scripts can't access filesystem or network directly
@@ -18,7 +18,7 @@ Clown uses [Rhai](https://rhai.rs/), an embedded scripting language for Rust, to
 
 Scripts are resolved in this order:
 
-1. `~/.config/clown/scripts/<agent-id>.rhai` (user override)
+1. `~/.config/ringlet/scripts/<agent-id>.rhai` (user override)
 2. `registry/scripts/<agent-id>.rhai` (from GitHub registry)
 3. Built-in scripts (compiled into binary)
 
@@ -28,7 +28,7 @@ Scripts are resolved in this order:
 
 ### Input Variables
 
-Scripts receive these variables from clown:
+Scripts receive these variables from ringlet:
 
 ```rhai
 // === Provider Context ===
@@ -304,7 +304,7 @@ config.profiles[profile.alias] = profile_section;
 
 ## User Preferences
 
-Users can configure default preferences in `~/.config/clown/config.toml`:
+Users can configure default preferences in `~/.config/ringlet/config.toml`:
 
 ```toml
 [defaults]
@@ -338,13 +338,13 @@ Override preferences per profile:
 
 ```bash
 # Enable specific hooks
-clown profiles create claude work --provider minimax --hooks auto_format,auto_lint
+ringlet profiles create claude work --provider minimax --hooks auto_format,auto_lint
 
 # Enable MCP servers
-clown profiles create claude work --provider minimax --mcp filesystem,github
+ringlet profiles create claude work --provider minimax --mcp filesystem,github
 
 # Minimal profile (no hooks, no MCP)
-clown profiles create claude minimal --provider anthropic --bare
+ringlet profiles create claude minimal --provider anthropic --bare
 ```
 
 ---
@@ -354,13 +354,13 @@ clown profiles create claude minimal --provider anthropic --bare
 ### 1. Create Script Directory
 
 ```bash
-mkdir -p ~/.config/clown/scripts
+mkdir -p ~/.config/ringlet/scripts
 ```
 
 ### 2. Write Your Script
 
 ```rhai
-// ~/.config/clown/scripts/claude.rhai
+// ~/.config/ringlet/scripts/claude.rhai
 // Custom Claude Code configuration
 
 let settings = #{
@@ -384,21 +384,21 @@ let settings = #{
 Your script will be used automatically:
 
 ```bash
-clown profiles create claude custom --provider minimax
+ringlet profiles create claude custom --provider minimax
 ```
 
 ---
 
 ## Debugging Scripts
 
-Use `clown scripts test` to validate a script:
+Use `ringlet scripts test` to validate a script:
 
 ```bash
 # Test script with mock data
-clown scripts test claude.rhai --provider minimax --alias test
+ringlet scripts test claude.rhai --provider minimax --alias test
 
 # Show generated output without creating profile
-clown profiles create claude test --provider minimax --dry-run
+ringlet profiles create claude test --provider minimax --dry-run
 ```
 
 ---

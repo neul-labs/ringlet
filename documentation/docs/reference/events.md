@@ -333,7 +333,7 @@ Emitted when the daemon begins shutdown.
 const ws = new WebSocket('ws://127.0.0.1:8765/ws');
 
 ws.onopen = () => {
-  console.log('Connected to clown daemon');
+  console.log('Connected to ringlet daemon');
 };
 
 ws.onmessage = (event) => {
@@ -351,7 +351,7 @@ ws.onmessage = (event) => {
 };
 
 ws.onclose = () => {
-  console.log('Disconnected from clown daemon');
+  console.log('Disconnected from ringlet daemon');
   // Implement reconnection logic
 };
 ```

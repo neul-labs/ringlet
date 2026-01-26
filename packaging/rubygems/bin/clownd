@@ -1,3 +1,0 @@
-#!/usr/bin/env ruby
-require 'clown'
-exec(Clown.ensure_binary('clownd'), *ARGV)

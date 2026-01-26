@@ -33,7 +33,7 @@ Clown ships with these providers:
 ### List Providers
 
 ```bash
-clown providers list
+ringlet providers list
 ```
 
 **Output:**
@@ -49,7 +49,7 @@ openrouter  OpenRouter     openai-compatible     auto
 ### Inspect a Provider
 
 ```bash
-clown providers inspect minimax
+ringlet providers inspect minimax
 ```
 
 **Output:**
@@ -74,7 +74,7 @@ Models: MiniMax-M2.1
 Specify a provider when creating a profile:
 
 ```bash
-clown profiles create claude my-project --provider anthropic
+ringlet profiles create claude my-project --provider anthropic
 ```
 
 ### Multi-Region Providers
@@ -83,10 +83,10 @@ Some providers offer multiple endpoints for different regions:
 
 ```bash
 # Use international endpoint (default)
-clown profiles create claude intl-project --provider minimax
+ringlet profiles create claude intl-project --provider minimax
 
 # Use China endpoint
-clown profiles create claude china-project --provider minimax --endpoint china
+ringlet profiles create claude china-project --provider minimax --endpoint china
 ```
 
 ### Same Credentials, Different Profiles
@@ -94,10 +94,10 @@ clown profiles create claude china-project --provider minimax --endpoint china
 When creating multiple profiles with the same provider, Clown offers to reuse credentials:
 
 ```bash
-$ clown profiles create claude project-a --provider minimax
+$ ringlet profiles create claude project-a --provider minimax
 Enter MiniMax API key: ****
 
-$ clown profiles create claude project-b --provider minimax
+$ ringlet profiles create claude project-b --provider minimax
 ? Reuse existing MiniMax credentials? [project-a] Yes
 ✔ Created profile using existing credentials
 ```
@@ -130,10 +130,10 @@ $ clown profiles create claude project-b --provider minimax
 
 ### Create a Provider Manifest
 
-Create a TOML file in `~/.config/clown/providers.d/`:
+Create a TOML file in `~/.config/ringlet/providers.d/`:
 
 ```toml
-# ~/.config/clown/providers.d/my-gateway.toml
+# ~/.config/ringlet/providers.d/my-gateway.toml
 id = "my-gateway"
 name = "Internal API Gateway"
 type = "anthropic-compatible"
@@ -156,10 +156,10 @@ default = "internal-claude-3"
 
 ```bash
 # Sync to detect new provider
-clown registry sync --force
+ringlet registry sync --force
 
 # Create a profile
-clown profiles create claude internal --provider my-gateway
+ringlet profiles create claude internal --provider my-gateway
 ```
 
 ---
@@ -206,7 +206,7 @@ default = "MiniMax-M2.1"
 ### Anthropic Direct
 
 ```bash
-clown profiles create claude my-claude --provider anthropic
+ringlet profiles create claude my-claude --provider anthropic
 ```
 
 Uses:
@@ -217,7 +217,7 @@ Uses:
 ### MiniMax (International)
 
 ```bash
-clown profiles create claude my-minimax --provider minimax
+ringlet profiles create claude my-minimax --provider minimax
 ```
 
 Uses:
@@ -228,7 +228,7 @@ Uses:
 ### MiniMax (China)
 
 ```bash
-clown profiles create claude china-minimax --provider minimax --endpoint china
+ringlet profiles create claude china-minimax --provider minimax --endpoint china
 ```
 
 Uses:
@@ -239,7 +239,7 @@ Uses:
 ### OpenRouter
 
 ```bash
-clown profiles create codex my-codex --provider openrouter
+ringlet profiles create codex my-codex --provider openrouter
 ```
 
 Uses:
@@ -278,8 +278,8 @@ When you create a profile, Clown:
 
 ### Provider Not Found
 
-1. Check if manifest exists: `ls ~/.config/clown/providers.d/`
-2. Sync registry: `clown registry sync --force`
+1. Check if manifest exists: `ls ~/.config/ringlet/providers.d/`
+2. Sync registry: `ringlet registry sync --force`
 3. Verify TOML syntax is valid
 
 ### Authentication Errors
@@ -292,10 +292,10 @@ When you create a profile, Clown:
 
 1. Explicitly specify endpoint: `--endpoint china`
 2. Check provider's default endpoint setting
-3. Inspect profile: `clown profiles inspect <alias>`
+3. Inspect profile: `ringlet profiles inspect <alias>`
 
 ### Model Not Available
 
-1. Check provider's model list: `clown providers inspect <id>`
+1. Check provider's model list: `ringlet providers inspect <id>`
 2. Verify model is supported by both provider and agent
 3. Use `--model` flag to override
