@@ -1,11 +1,12 @@
 [package]
 name = "clown-scripting"
 version.workspace = true
-edition = "2021"
+edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
+documentation.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Rhai scripting engine for clown configuration generation"

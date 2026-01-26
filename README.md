@@ -2,204 +2,167 @@
 
 [![CI](https://github.com/neul-labs/clown/actions/workflows/ci.yml/badge.svg)](https://github.com/neul-labs/clown/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/clown.svg)](https://crates.io/crates/clown)
+[![Docs](https://img.shields.io/badge/docs-neullabs.com-blue)](https://docs.neullabs.com/clown)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-2024%20edition-orange.svg)](https://www.rust-lang.org)
 ![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey)
 
-**A cross-platform orchestrator for CLI-based coding agents.**
+**One CLI to rule all your coding agents.**
 
-- **Unified management** for Claude Code, Grok CLI, Codex, Droid, OpenCode, and more
-- **Provider abstraction** to swap between Anthropic, MiniMax, OpenRouter without config changes
-- **Profile-based workflows** with isolated environments, credentials, and settings
-- **Daemon-backed architecture** for consistent state and future UI integrations
+Stop juggling configs between Claude Code, Grok CLI, Codex, and others. clown gives you profiles, provider switching, and intelligent routing—so you can focus on shipping code.
+
+## Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/neul-labs/clown/main/install.sh | sh
+```
+
+Or build from source:
+
+```bash
+git clone https://github.com/neul-labs/clown.git
+cd clown && cargo build --release
+```
 
 ## Quick Start
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/neul-labs/clown/main/install.sh | sh
+# See what agents you have installed
 clown agents list
-clown profiles create claude my-profile --provider anthropic
-clown profiles run my-profile
+
+# Create a profile with your preferred provider
+clown profiles create claude work --provider anthropic
+clown profiles run work
+
+# Or use MiniMax for cost-effective Claude-compatible requests
+clown profiles create claude cheap --provider minimax --model MiniMax-M2.1
+clown profiles run cheap
+```
+
+## Why clown?
+
+| Problem | Solution |
+|---------|----------|
+| Different config files for each agent | One profile system for all agents |
+| Manual API key management | Secure credential storage per profile |
+| Can't easily switch providers | Swap Anthropic/MiniMax/OpenRouter without touching code |
+| No visibility into usage | Built-in token tracking and cost analytics |
+| Complex proxy setups for routing | Native ultrallm integration with rule-based routing |
+
+## Core Features
+
+### Profile-Based Workflows
+
+```bash
+# Create isolated profiles with different providers
+clown profiles create claude work-anthropic --provider anthropic
+clown profiles create claude work-minimax --provider minimax
+
+# Install as executable aliases
+clown aliases install work-anthropic
+claude-work-anthropic  # runs with isolated config and credentials
+```
+
+### Intelligent Request Routing
+
+```bash
+# Enable proxy for smart routing based on context
+clown profiles create claude routed --provider anthropic --proxy
+clown proxy enable routed
+
+# Route long-context requests to cost-effective providers
+clown proxy route add routed "long" "tokens > 100000" "minimax/MiniMax-M2.1" --priority 10
+clown proxy route add routed "default" "always" "anthropic/claude-sonnet-4"
+```
+
+### Event Hooks
+
+```bash
+# Add hooks for logging, notifications, or custom workflows
+clown hooks add work PreToolUse "Bash" "echo '$EVENT' >> ~/.clown/audit.log"
+clown hooks add work Notification "*" "notify-send 'Claude' '$MESSAGE'"
+```
+
+### Usage Tracking
+
+```bash
+# Track tokens and costs across all profiles
+clown usage
+clown usage --period month --profile work
+
+# Import existing Claude usage data
+clown usage import-claude
 ```
 
 ## Architecture
 
-```mermaid
-flowchart TB
-    subgraph CLI ["CLI Layer"]
-        clown[clown CLI]
-    end
-
-    subgraph Daemon ["Service Layer"]
-        clownd[clownd daemon]
-        profiles[(Profiles)]
-        registry[(Registry)]
-    end
-
-    subgraph Agents ["Agent Layer"]
-        claude[Claude Code]
-        grok[Grok CLI]
-        codex[Codex CLI]
-        droid[Droid]
-        opencode[OpenCode]
-    end
-
-    subgraph Providers ["Provider Layer"]
-        anthropic[Anthropic]
-        minimax[MiniMax]
-        openrouter[OpenRouter]
-        custom[Custom]
-    end
-
-    clown --> clownd
-    clownd --> profiles
-    clownd --> registry
-    clownd --> claude & grok & codex & droid & opencode
-    claude & grok & codex & droid & opencode --> anthropic & minimax & openrouter & custom
+```
+┌─────────────────────────────────────────────────────────────┐
+│  CLI (clown)                                                │
+│  └── Thin client, auto-starts daemon                        │
+├─────────────────────────────────────────────────────────────┤
+│  Daemon (clownd)                                            │
+│  └── Profiles │ Registry │ Telemetry │ Web UI              │
+├─────────────────────────────────────────────────────────────┤
+│  Agents                                                     │
+│  └── Claude Code │ Grok CLI │ Codex │ Droid │ OpenCode     │
+├─────────────────────────────────────────────────────────────┤
+│  Providers                                                  │
+│  └── Anthropic │ MiniMax │ OpenRouter │ Custom             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-The CLI is a thin client that **automatically starts the daemon** on first use. The daemon collects telemetry (profile invocations, session durations, resource consumption) and exposes it via `clown stats`. After an idle timeout the daemon exits unless pinned with `clown daemon --stay-alive`.
+The daemon starts automatically on first CLI use and exits after idle timeout (or pin with `clown daemon --stay-alive`).
 
-## Key Features
+## CLI Reference
 
-### Agent Management
-- **One switchboard for every agent** – track installations of Claude Code, Grok CLI, Codex CLI, Droid, OpenCode without memorizing bespoke flags
-- **Immediate observability** – `clown agents list` shows each installed agent, detected version, last-used timestamp, and profile count
-- **Composable architecture** – extension manifests describe how to detect, configure, and run agents
-
-### Provider Abstraction
-- **Configure once, use anywhere** – set up API backends (Anthropic, MiniMax, OpenRouter) once, bind any agent to any provider
-- **Intelligent routing** – enable per-profile proxy with ultrallm to route requests based on token count, tool usage, or custom rules
-- **GitHub-backed registry** – manifests, templates, and model catalogs live in a public repository
-
-### Developer Experience
-- **Profiles per agent+provider** – create aliases like `claude-work-minimax` or `grok-home-anthropic` pinned to specific credentials
-- **Executable aliases** – `clown aliases install <profile>` creates real commands with isolated homes and env vars
-- **Prompted secrets** – profile creation always asks for model name, API keys, and manifest-required values
-- **Event-driven hooks** – configure PreToolUse, PostToolUse, Notification, and Stop hooks for logging and integration
-- **Rhai scripting** – configuration generation via embedded scripting engine
-
-### Observability
-- **Native usage tracking** – track token usage and costs across all profiles with built-in ccusage-like functionality
-- **Telemetry collection** – profile invocations, session durations, resource consumption
-- **Import from Claude** – import usage data from Claude's native files
-
-## Project Status
-
-| Component | Status |
-|-----------|--------|
-| Daemon (`clownd`) with auto-start and IPC | ✅ Implemented |
-| CLI with full profile lifecycle | ✅ Implemented |
-| Agent detection (Claude, Grok, Codex, Droid, OpenCode) | ✅ Implemented |
-| Provider support (Anthropic, MiniMax, OpenRouter) | ✅ Implemented |
-| Profile hooks (PreToolUse, PostToolUse, etc.) | ✅ Implemented |
-| Proxy integration with ultrallm | ✅ Implemented |
-| Rhai scripting engine | ✅ Implemented |
-| HTTP/WebSocket APIs and Web UI | ✅ Implemented |
-| Native token/cost usage tracking | ✅ Implemented |
-| Plugin SDK for third-party manifests | 🔜 Planned |
-| Cross-device profile sync | 🔜 Planned |
-
-## CLI Preview
-
-```text
-$ clown agents list
-┌────────────┬──────────────┬────────────┬──────────────┐
-│ Agent      │ Version      │ Profiles   │ Default Model│
-├────────────┼──────────────┼────────────┼──────────────┤
-│ claude     │ 0.5.4        │ 3          │ MiniMax-M2.1 │
-│ grok       │ 0.3.2        │ 1          │ grok-3       │
-│ codex      │ 0.11.0       │ 1          │ MiniMax-M2.1 │
-│ droid      │ 1.2.0        │ 0          │ gemini-2.5   │
-│ opencode   │ 1.8.0        │ 2          │ MiniMax-M2.1 │
-└────────────┴──────────────┴────────────┴──────────────┘
-
-$ clown profiles create claude work-sonnet \
-    --provider minimax \
-    --model MiniMax-M2.1
-
-$ clown aliases install work-sonnet
-Installed shim ~/bin/claude-work-sonnet -> claude --settings ~/.claude-profiles/work-sonnet/.claude/settings.json
-
-$ claude-work-sonnet /settings strict.json
-
-$ clown env setup work-sonnet cli-remap
-Executed manual env setup task "cli-remap" for profile work-sonnet
-
-$ clown registry sync
-Fetched registry commit f4a12c3 (stable channel)
-
-# Create profile with proxy for intelligent routing
-$ clown profiles create claude work-proxy --provider anthropic --proxy
-
-# Manage proxy routing rules
-$ clown proxy enable work-proxy
-$ clown proxy route add work-proxy "long-context" "tokens > 100000" "minimax/claude-3-sonnet" --priority 10
-$ clown proxy route add work-proxy "default" "always" "anthropic/claude-sonnet-4"
-$ clown proxy route list work-proxy
-$ clown proxy status
-
-# Add event hooks to a profile
-$ clown hooks add work-sonnet PreToolUse "Bash" "echo 'Running: $EVENT' >> /tmp/clown.log"
-$ clown hooks list work-sonnet
-
-$ clown profiles list --agent claude
-Alias              Provider    Endpoint       Model           Last Used
-work-sonnet        minimax     international  MiniMax-M2.1    2024-05-04T11:23:51Z
-work-sre           minimax     international  MiniMax-M2.1    2024-05-03T09:18:12Z
-
-# View token usage and costs
-$ clown usage
-$ clown usage --period month --profile work-sonnet
-$ clown usage import-claude
+```bash
+clown agents list              # Show installed agents and versions
+clown profiles create          # Create a new profile
+clown profiles list            # List all profiles
+clown profiles run <name>      # Run agent with profile
+clown aliases install <name>   # Create executable alias
+clown proxy status             # Check proxy status
+clown proxy route list <name>  # List routing rules
+clown hooks list <name>        # List profile hooks
+clown usage                    # View usage stats
+clown registry sync            # Update agent manifests
+clown daemon --stay-alive      # Keep daemon running
 ```
-
-## Getting Started
-
-1. **Install via script** (recommended):
-   ```bash
-   curl -fsSL https://raw.githubusercontent.com/neul-labs/clown/main/install.sh | sh
-   ```
-
-2. **Or build from source**:
-   ```bash
-   # Install Rust toolchain
-   rustup install stable
-
-   # Clone and build
-   git clone https://github.com/neul-labs/clown.git
-   cd clown
-   cargo build --release
-
-   # Add to PATH
-   export PATH="$PATH:$(pwd)/target/release"
-   ```
-
-3. **Verify installation**:
-   ```bash
-   clown agents list
-   ```
-
-4. **Create your first profile**:
-   ```bash
-   clown profiles create claude my-profile --provider anthropic
-   clown profiles run my-profile
-   ```
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Architecture](docs/architecture.md) | Component overview, data flow, and service plans |
-| [Agents](docs/agents.md) | Manifests for supported agents and onboarding new ones |
-| [Providers](docs/providers.md) | API backend definitions and custom provider setup |
-| [Profiles](docs/profiles.md) | Profile lifecycle and CLI workflows |
-| [Hooks](docs/hooks.md) | Event-driven hooks for logging and integration |
-| [Proxy](docs/proxy.md) | Intelligent request routing via ultrallm |
-| [Usage](docs/usage.md) | Token/cost tracking and Claude data import |
-| [Scripting](docs/scripting.md) | Rhai scripting guide for configuration |
-| [Registry](docs/registry.md) | GitHub registry layout and sync workflow |
+Full documentation at **[docs.neullabs.com/clown](https://docs.neullabs.com/clown)**
+
+| Guide | Description |
+|-------|-------------|
+| [Architecture](https://docs.neullabs.com/clown/architecture) | Component overview and data flow |
+| [Agents](https://docs.neullabs.com/clown/agents) | Supported agents and custom manifests |
+| [Providers](https://docs.neullabs.com/clown/providers) | API backends and custom providers |
+| [Profiles](https://docs.neullabs.com/clown/profiles) | Profile lifecycle and workflows |
+| [Hooks](https://docs.neullabs.com/clown/hooks) | Event-driven automation |
+| [Proxy](https://docs.neullabs.com/clown/proxy) | Request routing with ultrallm |
+| [Usage](https://docs.neullabs.com/clown/usage) | Token tracking and analytics |
+| [Scripting](https://docs.neullabs.com/clown/scripting) | Rhai configuration scripting |
+
+## Status
+
+| Component | Status |
+|-----------|--------|
+| CLI + Daemon with IPC | ✅ Stable |
+| Agent detection (Claude, Grok, Codex, Droid, OpenCode) | ✅ Stable |
+| Provider support (Anthropic, MiniMax, OpenRouter) | ✅ Stable |
+| Profile hooks and Rhai scripting | ✅ Stable |
+| Proxy routing with ultrallm | ✅ Stable |
+| Web UI and HTTP/WebSocket APIs | ✅ Stable |
+| Token/cost tracking | ✅ Stable |
+| Plugin SDK | 🔜 Planned |
+| Cross-device sync | 🔜 Planned |
 
 ## Contributing
 
-Please open design discussions before implementing major features so that the manifest formats, profile persistence, and service APIs remain consistent. Refer to `docs/` for authoritative requirements, keep changes documented, and accompany new functionality with updates to the relevant guides.
+Open an issue for design discussions before implementing major features. See the [contribution guide](https://docs.neullabs.com/clown/contributing) for details.
+
+## License
+
+MIT - see [LICENSE](LICENSE)

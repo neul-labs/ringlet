@@ -9,6 +9,7 @@ license = "MIT"
 authors = ["Dipankar Sarkar"]
 repository = "https://github.com/neul-labs/clown"
 homepage = "https://github.com/neul-labs/clown"
+documentation = "https://docs.neullabs.com/clown"
 keywords = ["cli", "agent", "orchestrator", "coding"]
 categories = ["command-line-utilities", "development-tools"]
 
