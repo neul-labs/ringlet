@@ -59,6 +59,12 @@ Environment variables:
     INSTALL_DIR             Same as --install-dir
     FROM_SOURCE             Set to 'true' for source build
 
+Fallback behavior:
+    If binary download fails, the installer will automatically try:
+    1. Local build (if running from within the ringlet repo)
+    2. cargo install (installs to ~/.cargo/bin)
+    3. Build from source (clones repo and builds with cargo)
+
 Examples:
     # Install latest version
     curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPO}/main/install.sh | bash
@@ -194,7 +200,7 @@ build_from_source() {
 
     info "Cloning repository..."
 
-    if [[ "$version" == "latest" ]]; then
+    if [[ "$version" == "latest" || "$version" == "main" ]]; then
         git clone --depth 1 "https://github.com/${GITHUB_REPO}.git" "$tmpdir"
     else
         git clone --depth 1 --branch "v${version}" "https://github.com/${GITHUB_REPO}.git" "$tmpdir"
@@ -241,10 +247,36 @@ build_local() {
     chmod +x "${install_dir}/ringletd"
 }
 
+install_via_cargo() {
+    local version="$1"
+
+    info "Installing via cargo..."
+
+    # Check for Rust
+    if ! command -v cargo &> /dev/null; then
+        warn "Rust/Cargo not found. Please install Rust: https://rustup.rs"
+        return 1
+    fi
+
+    info "Running cargo install (this may take a few minutes)..."
+
+    if [[ "$version" == "latest" || "$version" == "main" ]]; then
+        cargo install --git "https://github.com/${GITHUB_REPO}.git" ringlet ringletd
+    else
+        cargo install --git "https://github.com/${GITHUB_REPO}.git" --tag "v${version}" ringlet ringletd
+    fi
+}
+
 is_ringlet_repo() {
     # Check if we're in a ringlet repository
-    if [[ -f "Cargo.toml" ]] && grep -q 'name = "ringlet"' Cargo.toml 2>/dev/null; then
-        return 0
+    # Check for workspace with ringlet crate or repository URL
+    if [[ -f "Cargo.toml" ]]; then
+        if grep -q 'repository.*ringlet' Cargo.toml 2>/dev/null; then
+            return 0
+        fi
+        if [[ -d "crates/ringlet" ]] && grep -q 'name = "ringlet"' crates/ringlet/Cargo.toml 2>/dev/null; then
+            return 0
+        fi
     fi
     return 1
 }
@@ -345,11 +377,34 @@ main() {
 
     # Install
     if [[ "$FROM_SOURCE" == "true" ]]; then
-        build_from_source "$VERSION" "$INSTALL_DIR"
+        # Try local build first if we're in the ringlet repo
+        if is_ringlet_repo; then
+            info "Detected local ringlet repository, building locally..."
+            build_local "$INSTALL_DIR"
+        else
+            build_from_source "$VERSION" "$INSTALL_DIR"
+        fi
     else
         if ! download_binary "$VERSION" "$platform" "$INSTALL_DIR"; then
-            warn "Binary download failed, falling back to source build..."
-            build_from_source "$VERSION" "$INSTALL_DIR"
+            warn "Binary download failed, trying fallback options..."
+
+            # First, try local build if we're in the ringlet repo
+            if is_ringlet_repo; then
+                info "Detected local ringlet repository, building locally..."
+                build_local "$INSTALL_DIR"
+            # Otherwise, try cargo install
+            elif install_via_cargo "$VERSION"; then
+                info "Installed via cargo to ~/.cargo/bin"
+                info "Make sure ~/.cargo/bin is in your PATH"
+                echo ""
+                info "To get started, run: ringlet --help"
+                echo ""
+                return
+            # Last resort: clone and build from source
+            else
+                warn "Cargo install failed, falling back to source build..."
+                build_from_source "$VERSION" "$INSTALL_DIR"
+            fi
         fi
     fi
 

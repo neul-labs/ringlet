@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "channel": "stable",
+  "commit": "c0a34e154c9ed01e5358e49445ec7c88a598dae1",
+    "agents": {
+      "claude": {"path": "agents/claude.toml", "checksum": "e142aa764bf261847730dc8485d3cf2033e2ee0ee725fbde4b679b84f3ade2f0"},
+      "codex": {"path": "agents/codex.toml", "checksum": "5651c5b383f4ef01b009dc6254ecd3a54505fb31b9cc1490ea72fc8289685b69"},
+      "droid": {"path": "agents/droid.toml", "checksum": "24542cbe995b41c24f35c2fbe6b60425283115edd2136baa759e349b1686c2f1"},
+      "grok": {"path": "agents/grok.toml", "checksum": "11bc9895e090bd7e1ff54222b063a531ad1f73f87301bbbc4ed99c0d29d84ef2"},
+      "opencode": {"path": "agents/opencode.toml", "checksum": "ad342bc35c241474189b41c4c5a335749c0a626ac1c73ddedde42b6a460f9875"}
+    },
+    "providers": {
+      "anthropic": {"path": "providers/anthropic.toml", "checksum": "2314f629742340e35bccd6e63e0ce4cd28ff8f0089cea968c83f18b2ea154ec3"},
+      "minimax-openai": {"path": "providers/minimax-openai.toml", "checksum": "7cfd427ded82822cefd51d1b882dadd63ec97aeb966a7fb42c1b20b837d5d756"},
+      "minimax": {"path": "providers/minimax.toml", "checksum": "ce5256e591c3fb16fb401ff8fb9c8c27f8b019feb988715ef2061b5eb6e43f11"},
+      "openai": {"path": "providers/openai.toml", "checksum": "fe75161ea6547291cecc31b2ef0e15364a81b47705768e4d167f6ab57b766de0"},
+      "openrouter": {"path": "providers/openrouter.toml", "checksum": "46b2defec1a622f1a5bb1096d08125794fcaf43a35ba461ae2c6d3043e435e46"},
+      "self": {"path": "providers/self.toml", "checksum": "b452b0538f15d4230540d59bfb35352cd20fa75bed890a8b3e20898d05980ab4"},
+      "zai-openai": {"path": "providers/zai-openai.toml", "checksum": "ad8a61ab987f7eec8c02d3eef7b0129a5eb027c9c6ee5de50eb9704164733b0e"},
+      "zai": {"path": "providers/zai.toml", "checksum": "537c58a3dd3ffab7b6e6b3939bb7cabe7e926d52c00ffb7844085f4552f1e91f"}
+    },
+    "scripts": {
+      "claude": {"path": "scripts/claude.rhai", "checksum": "05824c64d032b3182d70fc259436338750395ffcce309e31459eb59ef8dc8e0d"},
+      "codex": {"path": "scripts/codex.rhai", "checksum": "31819812aef5a65d67a22917021dd09afe9489c3415bd8df7efd18a10842a473"},
+      "droid": {"path": "scripts/droid.rhai", "checksum": "3eeaeca5a030ae25fa776fc76bd2360d17e80bbbfb49fa2164823f852e6f6b8f"},
+      "grok": {"path": "scripts/grok.rhai", "checksum": "202392873468014100b2071bd46c49d873d0f6924c56d385f21920d0e3accf99"},
+      "opencode": {"path": "scripts/opencode.rhai", "checksum": "02c92dd689973e8ff826ed5a8c0434a8535feecff13f10a77983eb67e38b499f"}
+    }}

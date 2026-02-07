@@ -17,7 +17,7 @@ use tracing::{debug, info, warn};
 
 /// Default registry URL.
 const DEFAULT_REGISTRY_URL: &str =
-    "https://raw.githubusercontent.com/ringlet-registry/ringlet-registry/main";
+    "https://raw.githubusercontent.com/neul-labs/ringlet/main/manifests";
 
 /// Registry client for syncing from GitHub.
 pub struct RegistryClient {

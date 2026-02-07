@@ -14,6 +14,8 @@ use std::collections::HashMap;
 use std::process::{Child, Command, Stdio};
 use tracing::{debug, error, info};
 
+use crate::registry_client::RegistryLock;
+
 /// Execution adapter for running agent profiles.
 pub struct ExecutionAdapter {
     paths: RingletPaths,
@@ -67,7 +69,14 @@ impl ExecutionAdapter {
             debug!("Using user override script: {:?}", user_script_path);
             std::fs::read_to_string(&user_script_path)
                 .context("Failed to read user script")?
-        } else if let Some(builtin) = scripts::get(script_name) {
+        }
+        // Try registry cache second
+        else if let Some(registry_script) = self.load_registry_script(script_name)? {
+            debug!("Using registry script: {}", script_name);
+            registry_script
+        }
+        // Fall back to built-in scripts
+        else if let Some(builtin) = scripts::get(script_name) {
             debug!("Using built-in script: {}", script_name);
             builtin.to_string()
         } else {
@@ -77,6 +86,33 @@ impl ExecutionAdapter {
         // Create engine on-demand (not Send+Sync safe to store)
         let engine = ScriptEngine::new();
         engine.run(&script, context)
+    }
+
+    /// Load registry lock file.
+    fn load_registry_lock(&self) -> Result<RegistryLock> {
+        let lock_path = self.paths.registry_lock();
+        if lock_path.exists() {
+            let content = std::fs::read_to_string(&lock_path)?;
+            Ok(serde_json::from_str(&content)?)
+        } else {
+            Ok(RegistryLock::default())
+        }
+    }
+
+    /// Load script from registry cache.
+    fn load_registry_script(&self, script_name: &str) -> Result<Option<String>> {
+        let lock = self.load_registry_lock()?;
+        let commit = lock.commit.as_deref().unwrap_or("latest");
+        let script_path = self.paths.registry_commits_dir()
+            .join(commit)
+            .join("scripts")
+            .join(script_name);
+
+        if script_path.exists() {
+            Ok(Some(std::fs::read_to_string(&script_path)?))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Write generated config files to profile home.
