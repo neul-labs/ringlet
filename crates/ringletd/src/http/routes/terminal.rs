@@ -2,7 +2,7 @@
 
 use crate::http::error::{ApiResponse, HttpError};
 use crate::server::ServerState;
-use crate::terminal::{SessionId, TerminalSessionInfo};
+use crate::terminal::{SandboxConfig, SessionId, TerminalSessionInfo};
 use axum::{
     extract::{Path, State},
     Json,
@@ -28,6 +28,13 @@ pub struct CreateSessionRequest {
     pub rows: u16,
     /// Working directory for the session (defaults to profile's home).
     pub working_dir: Option<String>,
+    /// Disable sandboxing for this session (sandbox enabled by default).
+    #[serde(default)]
+    pub no_sandbox: bool,
+    /// Custom bwrap flags (Linux only).
+    pub bwrap_flags: Option<Vec<String>>,
+    /// Custom sandbox-exec profile (macOS only).
+    pub sandbox_exec_profile: Option<String>,
 }
 
 fn default_cols() -> u16 {
@@ -115,6 +122,13 @@ pub async fn create_session(
         pixel_height: 0,
     };
 
+    // Build sandbox configuration
+    let sandbox_config = SandboxConfig {
+        enabled: !request.no_sandbox,
+        bwrap_flags: request.bwrap_flags,
+        sandbox_exec_profile: request.sandbox_exec_profile,
+    };
+
     let session = state
         .terminal_sessions
         .create_session(
@@ -124,6 +138,7 @@ pub async fn create_session(
             env,
             &working_dir,
             Some(initial_size),
+            sandbox_config,
         )
         .await
         .map_err(|e| HttpError::new(error_codes::EXECUTION_ERROR, e.to_string()))?;
@@ -159,4 +174,100 @@ pub async fn cleanup_sessions(
 ) -> Result<Json<ApiResponse<()>>, HttpError> {
     state.terminal_sessions.cleanup_terminated().await;
     Ok(Json(ApiResponse::ok()))
+}
+
+/// Request to create a shell session (without a profile).
+#[derive(Debug, Deserialize)]
+pub struct CreateShellRequest {
+    /// Shell to use (defaults to $SHELL or /bin/bash).
+    pub shell: Option<String>,
+    /// Initial terminal columns.
+    #[serde(default = "default_cols")]
+    pub cols: u16,
+    /// Initial terminal rows.
+    #[serde(default = "default_rows")]
+    pub rows: u16,
+    /// Working directory for the session (defaults to home dir).
+    pub working_dir: Option<String>,
+    /// Disable sandboxing for this session (sandbox enabled by default).
+    #[serde(default)]
+    pub no_sandbox: bool,
+    /// Custom bwrap flags (Linux only).
+    pub bwrap_flags: Option<Vec<String>>,
+    /// Custom sandbox-exec profile (macOS only).
+    pub sandbox_exec_profile: Option<String>,
+}
+
+/// POST /api/terminal/shell - Create a shell session without a profile.
+pub async fn create_shell_session(
+    State(state): State<Arc<ServerState>>,
+    Json(request): Json<CreateShellRequest>,
+) -> Result<Json<ApiResponse<CreateSessionResponse>>, HttpError> {
+    // Determine shell to use
+    let shell = request
+        .shell
+        .or_else(|| std::env::var("SHELL").ok())
+        .unwrap_or_else(|| "/bin/bash".to_string());
+
+    // Determine working directory
+    let working_dir = request
+        .working_dir
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("/")));
+
+    // Build minimal environment
+    let mut env: HashMap<String, String> = HashMap::new();
+
+    // Copy essential environment variables
+    for key in &["PATH", "LANG", "LC_ALL", "USER", "LOGNAME"] {
+        if let Ok(val) = std::env::var(key) {
+            env.insert(key.to_string(), val);
+        }
+    }
+
+    // Set HOME and SHELL
+    let home_dir = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("/"));
+    env.insert("HOME".to_string(), home_dir.to_string_lossy().to_string());
+    env.insert("SHELL".to_string(), shell.clone());
+    env.insert("TERM".to_string(), "xterm-256color".to_string());
+
+    // Create the session
+    let initial_size = portable_pty::PtySize {
+        rows: request.rows,
+        cols: request.cols,
+        pixel_width: 0,
+        pixel_height: 0,
+    };
+
+    // Build sandbox configuration
+    let sandbox_config = SandboxConfig {
+        enabled: !request.no_sandbox,
+        bwrap_flags: request.bwrap_flags,
+        sandbox_exec_profile: request.sandbox_exec_profile,
+    };
+
+    // Use "shell" as the profile alias for display
+    let session = state
+        .terminal_sessions
+        .create_session(
+            "shell",
+            &shell,
+            &["-l".to_string()], // Login shell
+            env,
+            &working_dir,
+            Some(initial_size),
+            sandbox_config,
+        )
+        .await
+        .map_err(|e| HttpError::new(error_codes::EXECUTION_ERROR, e.to_string()))?;
+
+    let session_id = session.id.clone();
+
+    // Build WebSocket URL (relative)
+    let ws_url = format!("/ws/terminal/{}", session_id);
+
+    Ok(Json(ApiResponse::success(CreateSessionResponse {
+        session_id,
+        ws_url,
+    })))
 }

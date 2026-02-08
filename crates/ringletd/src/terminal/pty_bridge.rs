@@ -3,6 +3,7 @@
 //! portable-pty is synchronous, so we use spawn_blocking and channels
 //! to integrate it with the async Tokio runtime.
 
+use super::sandbox::{prepare_command, SandboxConfig};
 use super::session::{SessionState, TerminalInput, TerminalOutput, TerminalSession};
 use anyhow::{Context, Result};
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
@@ -22,9 +23,14 @@ pub async fn spawn_pty_session(
     working_dir: &Path,
     initial_size: PtySize,
     mut input_rx: mpsc::Receiver<TerminalInput>,
+    sandbox_config: SandboxConfig,
 ) -> Result<()> {
-    let command = command.to_string();
-    let args = args.to_vec();
+    // Prepare command with sandboxing if enabled
+    let sandboxed = prepare_command(command, args, working_dir, &sandbox_config)
+        .context("Failed to prepare sandboxed command")?;
+
+    let command = sandboxed.command;
+    let args = sandboxed.args;
     let working_dir = working_dir.to_path_buf();
     let output_tx = session.output_sender();
 

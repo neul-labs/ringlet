@@ -7,6 +7,7 @@ import TerminalView from '@/components/terminal/TerminalView.vue'
 import TerminalSessionList from '@/components/terminal/TerminalSessionList.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import Modal from '@/components/common/Modal.vue'
+import DirectoryPicker from '@/components/common/DirectoryPicker.vue'
 
 const route = useRoute()
 const terminalStore = useTerminalStore()
@@ -17,7 +18,19 @@ const showNewSessionModal = ref(false)
 const newSessionProfile = ref('')
 const newSessionArgs = ref('')
 const newSessionWorkingDir = ref('')
+const newSessionNoSandbox = ref(false)
 const creating = ref(false)
+
+// Shell session state
+const showShellModal = ref(false)
+const shellType = ref('bash')
+const shellWorkingDir = ref('')
+const shellNoSandbox = ref(false)
+const creatingShell = ref(false)
+
+// Directory picker state
+const showDirPicker = ref(false)
+const dirPickerTarget = ref<'session' | 'shell'>('session')
 
 // Get session ID from route if provided
 const routeSessionId = computed(() => route.params.sessionId as string | undefined)
@@ -49,7 +62,48 @@ function openNewSessionModal() {
   newSessionProfile.value = ''
   newSessionArgs.value = ''
   newSessionWorkingDir.value = ''
+  newSessionNoSandbox.value = false
   showNewSessionModal.value = true
+}
+
+function openShellModal() {
+  shellType.value = 'bash'
+  shellWorkingDir.value = ''
+  shellNoSandbox.value = false
+  showShellModal.value = true
+}
+
+function openDirPicker(target: 'session' | 'shell') {
+  dirPickerTarget.value = target
+  showDirPicker.value = true
+}
+
+function onDirSelect(path: string) {
+  if (dirPickerTarget.value === 'session') {
+    newSessionWorkingDir.value = path
+  } else {
+    shellWorkingDir.value = path
+  }
+  showDirPicker.value = false
+}
+
+async function createShellSession() {
+  creatingShell.value = true
+  const workingDir = shellWorkingDir.value.trim() || undefined
+  const sessionId = await terminalStore.createShellSession(
+    shellType.value,
+    workingDir,
+    80,
+    24,
+    shellNoSandbox.value
+  )
+
+  if (sessionId) {
+    selectedSessionId.value = sessionId
+    showShellModal.value = false
+  }
+
+  creatingShell.value = false
 }
 
 async function createSession() {
@@ -58,7 +112,14 @@ async function createSession() {
   creating.value = true
   const args = newSessionArgs.value ? newSessionArgs.value.split(' ').filter(Boolean) : []
   const workingDir = newSessionWorkingDir.value.trim() || undefined
-  const sessionId = await terminalStore.createSession(newSessionProfile.value, args, 80, 24, workingDir)
+  const sessionId = await terminalStore.createSession(
+    newSessionProfile.value,
+    args,
+    80,
+    24,
+    workingDir,
+    newSessionNoSandbox.value
+  )
 
   if (sessionId) {
     selectedSessionId.value = sessionId
@@ -83,9 +144,14 @@ function handleError(message: string) {
   <div class="terminal-page">
     <div class="page-header">
       <h1 class="page-title">Terminal Sessions</h1>
-      <button class="btn-primary" @click="openNewSessionModal">
-        New Session
-      </button>
+      <div class="header-actions">
+        <button class="btn-secondary" @click="openShellModal">
+          Start Shell
+        </button>
+        <button class="btn-primary" @click="openNewSessionModal">
+          New Session
+        </button>
+      </div>
     </div>
 
     <div class="terminal-layout">
@@ -168,13 +234,35 @@ function handleError(message: string) {
 
       <div class="form-group">
         <label for="workingDir">Working Directory (optional)</label>
-        <input
-          id="workingDir"
-          v-model="newSessionWorkingDir"
-          type="text"
-          class="form-input"
-          placeholder="e.g., /home/user/project"
-        />
+        <div class="input-with-button">
+          <input
+            id="workingDir"
+            v-model="newSessionWorkingDir"
+            type="text"
+            class="form-input"
+            placeholder="e.g., /home/user/project"
+          />
+          <button
+            type="button"
+            class="btn-browse"
+            @click="openDirPicker('session')"
+          >
+            Browse
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            v-model="newSessionNoSandbox"
+          />
+          <span>Disable sandbox</span>
+        </label>
+        <p class="form-help">
+          Sessions are sandboxed by default for security. Only disable if you need full system access.
+        </p>
       </div>
 
       <template #footer>
@@ -190,6 +278,76 @@ function handleError(message: string) {
         </button>
       </template>
     </Modal>
+
+    <!-- Shell Session Modal -->
+    <Modal
+      :open="showShellModal"
+      title="Start Shell"
+      @close="showShellModal = false"
+    >
+      <div class="form-group">
+        <label for="shellType">Shell</label>
+        <select id="shellType" v-model="shellType" class="form-select">
+          <option value="bash">Bash</option>
+          <option value="zsh">Zsh</option>
+          <option value="sh">Sh</option>
+          <option value="fish">Fish</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="shellWorkingDir">Working Directory (optional)</label>
+        <div class="input-with-button">
+          <input
+            id="shellWorkingDir"
+            v-model="shellWorkingDir"
+            type="text"
+            class="form-input"
+            placeholder="e.g., /home/user/project"
+          />
+          <button
+            type="button"
+            class="btn-browse"
+            @click="openDirPicker('shell')"
+          >
+            Browse
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            v-model="shellNoSandbox"
+          />
+          <span>Disable sandbox</span>
+        </label>
+        <p class="form-help">
+          Shell sessions are sandboxed by default for security. Only disable if you need full system access.
+        </p>
+      </div>
+
+      <template #footer>
+        <button class="btn-secondary" @click="showShellModal = false">
+          Cancel
+        </button>
+        <button
+          class="btn-primary"
+          :disabled="creatingShell"
+          @click="createShellSession"
+        >
+          {{ creatingShell ? 'Starting...' : 'Start Shell' }}
+        </button>
+      </template>
+    </Modal>
+
+    <!-- Directory Picker -->
+    <DirectoryPicker
+      :open="showDirPicker"
+      @close="showDirPicker = false"
+      @select="onDirSelect"
+    />
   </div>
 </template>
 
@@ -205,6 +363,11 @@ function handleError(message: string) {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
 }
 
 .page-title {
@@ -393,5 +556,70 @@ function handleError(message: string) {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.input-with-button {
+  display: flex;
+  gap: 8px;
+}
+
+.input-with-button .form-input {
+  flex: 1;
+}
+
+.btn-browse {
+  padding: 10px 16px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-browse:hover {
+  background: #e5e7eb;
+}
+
+.dark .btn-browse {
+  background: #374151;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
+.dark .btn-browse:hover {
+  background: #4b5563;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.dark .checkbox-label {
+  color: #d1d5db;
+}
+
+.form-help {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.dark .form-help {
+  color: #9ca3af;
 }
 </style>

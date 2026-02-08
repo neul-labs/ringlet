@@ -1,6 +1,7 @@
 //! HTTP route handlers.
 
 pub mod agents;
+pub mod fs;
 pub mod hooks;
 pub mod profiles;
 pub mod providers;
@@ -87,4 +88,7 @@ pub fn api_routes() -> Router<Arc<ServerState>> {
             get(terminal::get_session).delete(terminal::terminate_session),
         )
         .route("/terminal/cleanup", post(terminal::cleanup_sessions))
+        .route("/terminal/shell", post(terminal::create_shell_session))
+        // Filesystem
+        .route("/fs/list", get(fs::list_directory))
 }

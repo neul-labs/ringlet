@@ -287,6 +287,9 @@ export interface CreateTerminalSessionRequest {
   cols?: number
   rows?: number
   working_dir?: string
+  no_sandbox?: boolean
+  bwrap_flags?: string[]
+  sandbox_exec_profile?: string
 }
 
 export interface CreateTerminalSessionResponse {
@@ -304,3 +307,27 @@ export type TerminalServerMessage =
   | { type: 'state_changed'; state: string; exit_code: number | null }
   | { type: 'resized'; cols: number; rows: number }
   | { type: 'error'; message: string }
+
+// Shell session types
+export interface CreateShellRequest {
+  shell?: string
+  cols?: number
+  rows?: number
+  working_dir?: string
+  no_sandbox?: boolean
+  bwrap_flags?: string[]
+  sandbox_exec_profile?: string
+}
+
+// Filesystem types
+export interface DirEntry {
+  name: string
+  path: string
+  is_dir: boolean
+}
+
+export interface ListDirResponse {
+  path: string
+  parent: string | null
+  entries: DirEntry[]
+}

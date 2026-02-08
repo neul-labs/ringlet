@@ -1,5 +1,7 @@
 //! Command implementations.
 
+mod init;
+
 use crate::client::DaemonClient;
 use crate::output;
 use crate::{
@@ -13,6 +15,9 @@ use ringlet_core::{HooksConfig, ModelTarget, ProfileCreateRequest, Request, Resp
 /// Execute a command.
 pub async fn execute(command: &Commands, json: bool) -> Result<()> {
     match command {
+        Commands::Init { skip_daemon, no_profile, yes } => {
+            init::run_init(*skip_daemon, *no_profile, *yes, json).await
+        }
         Commands::Agents { command } => execute_agents(command, json).await,
         Commands::Providers { command } => execute_providers(command, json).await,
         Commands::Profiles { command } => execute_profiles(command, json).await,
@@ -220,10 +225,10 @@ async fn execute_profiles(command: &ProfilesCommands, json: bool) -> Result<()> 
                 _ => return Err(anyhow!("Unexpected response")),
             }
         }
-        ProfilesCommands::Run { alias, remote, cols, rows, args } => {
+        ProfilesCommands::Run { alias, remote, cols, rows, no_sandbox, bwrap_flags, args } => {
             if *remote {
                 // Run in remote mode - create a terminal session via HTTP API
-                return execute_remote_run(alias, args, *cols, *rows, json).await;
+                return execute_remote_run(alias, args, *cols, *rows, *no_sandbox, bwrap_flags.as_deref(), json).await;
             }
 
             let response = client.request(&Request::ProfilesRun {
@@ -1006,15 +1011,30 @@ fn handle_success_response(response: Response, json: bool) -> Result<()> {
 const TERMINAL_API_BASE: &str = "http://127.0.0.1:8765";
 
 /// Execute remote run - creates a terminal session via HTTP API.
-async fn execute_remote_run(alias: &str, args: &[String], cols: u16, rows: u16, json: bool) -> Result<()> {
+async fn execute_remote_run(
+    alias: &str,
+    args: &[String],
+    cols: u16,
+    rows: u16,
+    no_sandbox: bool,
+    bwrap_flags: Option<&str>,
+    json: bool,
+) -> Result<()> {
     let url = format!("{}/api/terminal/sessions", TERMINAL_API_BASE);
 
-    let request_body = serde_json::json!({
+    let mut request_body = serde_json::json!({
         "profile_alias": alias,
         "args": args,
         "cols": cols,
         "rows": rows,
+        "no_sandbox": no_sandbox,
     });
+
+    // Add bwrap_flags if provided
+    if let Some(flags) = bwrap_flags {
+        let flags_vec: Vec<String> = flags.split(',').map(|s| s.trim().to_string()).collect();
+        request_body["bwrap_flags"] = serde_json::json!(flags_vec);
+    }
 
     let response: serde_json::Value = ureq::post(&url)
         .set("Content-Type", "application/json")

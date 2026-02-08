@@ -19,6 +19,76 @@ ringlet [OPTIONS] <COMMAND>
 
 ---
 
+## init
+
+Interactive setup wizard for new users.
+
+```bash
+ringlet init [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--skip-daemon` | Skip daemon connection check |
+| `--no-profile` | Skip profile creation |
+| `-y, --yes` | Accept defaults without prompting |
+| `--json` | Output in JSON format |
+
+The init wizard will:
+
+1. Check daemon connectivity
+2. Detect installed agents and their versions
+3. Display available providers
+4. Guide you through creating your first profile
+
+**Example:**
+
+```
+$ ringlet init
+
+Welcome to Ringlet!
+This wizard will help you get started with managing coding agents.
+
+Checking daemon connection... connected.
+
+Detecting installed agents...
+
+Installed agents:
+  [x] Claude Code (1.0.23)
+
+Not installed:
+  [ ] Grok CLI
+  [ ] Codex CLI
+
+Available providers:
+  - self: Agent's Own Auth
+  - anthropic: Anthropic API (requires API key)
+  - minimax: MiniMax API (requires API key)
+  - openrouter: OpenRouter (requires API key)
+
+Would you like to create your first profile? [Y/n] y
+
+--- Create Your First Profile ---
+
+Select an agent: Claude Code (1.0.23)
+Select a provider: self - Agent's Own Auth
+Profile alias: my-project
+
+Profile 'my-project' created successfully!
+
+Run it with: ringlet profiles run my-project
+
+==================================================
+Setup complete!
+
+Next steps:
+  ringlet profiles list        View your profiles
+  ringlet profiles run <alias> Run an agent session
+  ringlet --help               See all available commands
+```
+
+---
+
 ## agents
 
 Discover and manage AI coding agents.
@@ -219,6 +289,22 @@ ringlet profiles run <ALIAS> [OPTIONS] [-- <AGENT_ARGS>...]
 | `--remote` | Run in daemon with PTY (enables web terminal access) |
 | `--cols <N>` | Terminal columns (default: 80, only with --remote) |
 | `--rows <N>` | Terminal rows (default: 24, only with --remote) |
+| `--no-sandbox` | Disable sandboxing (remote sessions are sandboxed by default) |
+| `--bwrap-flags <FLAGS>` | Custom bwrap flags (Linux only, comma-separated) |
+
+**Sandboxing (Remote Sessions):**
+
+Remote terminal sessions are sandboxed by default for security:
+
+- **Linux:** Uses [bwrap (bubblewrap)](https://github.com/containers/bubblewrap)
+- **macOS:** Uses sandbox-exec
+- **Windows:** No sandboxing available
+
+The default sandbox allows:
+
+- Read-only access to system directories (`/usr`, `/bin`, `/lib`, `/etc`)
+- Read-write access to home directory, working directory, and `/tmp`
+- Network access (required for API calls)
 
 **Examples:**
 
@@ -231,6 +317,15 @@ ringlet profiles run my-project -- /path/to/code --verbose
 
 # Run as remote terminal session (accessible via web UI)
 ringlet profiles run my-project --remote
+
+# Remote session without sandbox (full system access)
+ringlet profiles run my-project --remote --no-sandbox
+
+# Remote session with custom bwrap flags (Linux only)
+ringlet profiles run my-project --remote --bwrap-flags="--unshare-net"
+
+# Custom bwrap with multiple flags
+ringlet profiles run my-project --remote --bwrap-flags="--unshare-net,--ro-bind /data /data"
 ```
 
 ### profiles delete
@@ -261,6 +356,9 @@ claude  # Now uses the profile's configuration
 ## terminal
 
 Manage remote terminal sessions. Terminal sessions allow you to run agents in the daemon and access them through the web UI or CLI.
+
+!!! note "Sandboxing"
+    Terminal sessions are sandboxed by default for security. Use `--no-sandbox` when creating sessions via `ringlet profiles run --remote` if you need full system access. See the [Terminal Guide](../guides/terminal.md#security-sandboxing) for details.
 
 ### terminal list
 

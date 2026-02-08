@@ -14,6 +14,8 @@ import type {
   TerminalSessionInfo,
   CreateTerminalSessionRequest,
   CreateTerminalSessionResponse,
+  CreateShellRequest,
+  ListDirResponse,
 } from './types'
 
 class ApiError extends Error {
@@ -219,10 +221,21 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+    createShell: (data: CreateShellRequest) =>
+      request<CreateTerminalSessionResponse>('/terminal/shell', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     terminate: (id: string) =>
       request<void>(`/terminal/sessions/${id}`, { method: 'DELETE' }),
     cleanup: () =>
       request<void>('/terminal/cleanup', { method: 'POST' }),
+  },
+
+  // Filesystem
+  fs: {
+    list: (path?: string) =>
+      request<ListDirResponse>(`/fs/list${path ? `?path=${encodeURIComponent(path)}` : ''}`),
   },
 }
 

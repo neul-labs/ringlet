@@ -1,6 +1,6 @@
 # Quick Start
 
-Create and run your first Clown profile in under 5 minutes.
+Create and run your first ringlet profile in under 2 minutes.
 
 ---
 
@@ -8,60 +8,109 @@ Create and run your first Clown profile in under 5 minutes.
 
 Before starting, ensure you have:
 
-- [x] Clown installed ([Installation guide](installation.md))
+- [x] ringlet installed ([Installation guide](installation.md))
 - [x] An AI coding agent installed (e.g., Claude Code)
-- [x] An API key from your provider
 
 ---
 
-## Step 1: Discover Your Agents
+## Option 1: Interactive Setup (Recommended)
 
-First, see what agents Clown has detected:
+The fastest way to get started is with the interactive wizard:
+
+```bash
+ringlet init
+```
+
+This will:
+
+1. Detect your installed agents
+2. Show available providers
+3. Guide you through creating your first profile
+
+**Example session:**
+
+```
+$ ringlet init
+
+Welcome to Ringlet!
+This wizard will help you get started with managing coding agents.
+
+Checking daemon connection... connected.
+
+Detecting installed agents...
+
+Installed agents:
+  [x] Claude Code (1.0.23)
+
+Not installed:
+  [ ] Grok CLI
+  [ ] Codex CLI
+
+Available providers:
+  - self: Agent's Own Auth
+  - anthropic: Anthropic API (requires API key)
+  - minimax: MiniMax API (requires API key)
+  - openrouter: OpenRouter (requires API key)
+
+Would you like to create your first profile? [Y/n] y
+
+--- Create Your First Profile ---
+
+Select an agent: Claude Code (1.0.23)
+Select a provider: self - Agent's Own Auth
+Profile alias: my-project
+
+Profile 'my-project' created successfully!
+
+Run it with: ringlet profiles run my-project
+
+==================================================
+Setup complete!
+
+Next steps:
+  ringlet profiles list        View your profiles
+  ringlet profiles run <alias> Run an agent session
+  ringlet --help               See all available commands
+```
+
+!!! tip "Using agent's built-in auth"
+    The `self` provider uses the agent's own authentication (e.g., Claude Code's built-in login).
+    No API key needed - just sign in when the agent launches.
+
+---
+
+## Option 2: Manual Setup
+
+If you prefer more control, create profiles manually:
+
+### Step 1: Discover Your Agents
 
 ```bash
 ringlet agents list
 ```
 
-Example output:
-
 ```
 ID          Name         Installed   Version
-claude      Claude Code  Yes         1.0.0
-codex       Codex CLI    Yes         0.5.0
+claude      Claude Code  Yes         1.0.23
+codex       Codex CLI    No          -
 grok        Grok CLI     No          -
 ```
 
-!!! tip "Agent Not Detected?"
-    If your agent isn't showing, ensure it's in your PATH and try:
-    ```bash
-    ringlet registry sync --force
-    ```
-
----
-
-## Step 2: List Available Providers
-
-See what providers are available for your agent:
+### Step 2: List Available Providers
 
 ```bash
 ringlet providers list
 ```
 
-Example output:
-
 ```
 ID          Name        Type                 Default Model
+self        Self        self                 -
 anthropic   Anthropic   anthropic            claude-sonnet-4-20250514
-minimax     MiniMax     anthropic-compatible claude-sonnet-4-20250514
-openai      OpenAI      openai               gpt-4o
+minimax     MiniMax     anthropic-compatible MiniMax-M2.1
 openrouter  OpenRouter  openai-compatible    anthropic/claude-3.5-sonnet
 ```
 
----
-
-## Step 3: Create Your First Profile
-
-Create a profile that binds Claude Code to Anthropic:
+### Step 3: Create Your Profile
 
 ```bash
 ringlet profiles create claude my-project --provider anthropic
@@ -79,7 +128,7 @@ Profile 'my-project' created successfully!
 
 ---
 
-## Step 4: Run Your Profile
+## Run Your Profile
 
 Start your agent with the new profile:
 
@@ -90,7 +139,7 @@ ringlet profiles run my-project
 Claude Code will launch with:
 
 - Isolated configuration (won't affect other profiles)
-- Your Anthropic API key configured
+- Your API key configured (if using a provider)
 - Separate history and settings
 
 ---
@@ -201,9 +250,12 @@ You've now:
 
 | Command | Description |
 |---------|-------------|
+| `ringlet init` | Interactive setup wizard |
 | `ringlet profiles list` | List all profiles |
 | `ringlet profiles run <alias>` | Run a profile |
+| `ringlet profiles run <alias> --remote` | Run in remote mode (Web UI) |
 | `ringlet profiles inspect <alias>` | View profile details |
 | `ringlet usage` | Show today's usage |
 | `ringlet aliases install <alias>` | Create shell alias |
+| `ringlet terminal list` | List active terminal sessions |
 | `ringlet daemon status` | Check daemon status |

@@ -37,7 +37,8 @@ export const useTerminalStore = defineStore('terminal', () => {
     args: string[] = [],
     cols = 80,
     rows = 24,
-    workingDir?: string
+    workingDir?: string,
+    noSandbox = false
   ): Promise<string | null> {
     try {
       const response = await api.terminal.create({
@@ -46,12 +47,37 @@ export const useTerminalStore = defineStore('terminal', () => {
         cols,
         rows,
         working_dir: workingDir,
+        no_sandbox: noSandbox,
       })
       // Refresh the sessions list
       await fetchSessions()
       return response.session_id
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to create session'
+      return null
+    }
+  }
+
+  async function createShellSession(
+    shell = 'bash',
+    workingDir?: string,
+    cols = 80,
+    rows = 24,
+    noSandbox = false
+  ): Promise<string | null> {
+    try {
+      const response = await api.terminal.createShell({
+        shell,
+        cols,
+        rows,
+        working_dir: workingDir,
+        no_sandbox: noSandbox,
+      })
+      // Refresh the sessions list
+      await fetchSessions()
+      return response.session_id
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to create shell session'
       return null
     }
   }
@@ -170,6 +196,7 @@ export const useTerminalStore = defineStore('terminal', () => {
     error,
     fetchSessions,
     createSession,
+    createShellSession,
     terminateSession,
     connectSession,
     disconnectSession,

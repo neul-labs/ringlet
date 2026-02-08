@@ -52,7 +52,7 @@ Open the web UI at `http://127.0.0.1:8765` and select your session from the list
 ### Start a Remote Session
 
 ```bash
-ringlet profiles run <alias> --remote [--cols N] [--rows N]
+ringlet profiles run <alias> --remote [OPTIONS]
 ```
 
 | Option | Description |
@@ -60,15 +60,23 @@ ringlet profiles run <alias> --remote [--cols N] [--rows N]
 | `--remote` | Run in daemon with PTY (enables web access) |
 | `--cols <N>` | Terminal columns (default: 80) |
 | `--rows <N>` | Terminal rows (default: 24) |
+| `--no-sandbox` | Disable sandboxing (sandbox enabled by default) |
+| `--bwrap-flags <FLAGS>` | Custom bwrap flags (Linux only, comma-separated) |
 
 **Examples:**
 
 ```bash
-# Basic remote session
+# Basic remote session (sandboxed by default)
 ringlet profiles run my-project --remote
 
 # With custom terminal size
 ringlet profiles run my-project --remote --cols 120 --rows 40
+
+# Without sandbox (full system access)
+ringlet profiles run my-project --remote --no-sandbox
+
+# With custom sandbox rules (Linux)
+ringlet profiles run my-project --remote --bwrap-flags="--unshare-net"
 
 # Pass additional arguments to the agent
 ringlet profiles run my-project --remote -- --dangerously-skip-permissions
@@ -164,6 +172,98 @@ curl -X POST http://127.0.0.1:8765/api/terminal/sessions \
     "rows": 24
   }'
 ```
+
+---
+
+## Security: Sandboxing
+
+Remote terminal sessions are **sandboxed by default** for security. This isolates the agent process from your system, limiting what files and resources it can access.
+
+### How It Works
+
+```
+┌───────────────────────────────────────────────────────┐
+│                    Host System                         │
+│  ┌─────────────────────────────────────────────────┐  │
+│  │        Sandbox (bwrap / sandbox-exec)            │  │
+│  │  ┌───────────────────────────────────────────┐  │  │
+│  │  │          Agent Process (claude)            │  │  │
+│  │  │                                            │  │  │
+│  │  │  Read-only:  /usr, /bin, /lib, /etc       │  │  │
+│  │  │  Read-write: ~/, working_dir, /tmp        │  │  │
+│  │  │  Network:    allowed (API access)          │  │  │
+│  │  └───────────────────────────────────────────┘  │  │
+│  └─────────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────────┘
+```
+
+### Platform Support
+
+| Platform | Sandbox Tool | Status |
+|----------|--------------|--------|
+| Linux | [bwrap (bubblewrap)](https://github.com/containers/bubblewrap) | ✅ Supported |
+| macOS | sandbox-exec | ✅ Supported |
+| Windows | - | ❌ Not supported |
+
+!!! note "Installing bwrap on Linux"
+    On Ubuntu/Debian: `sudo apt install bubblewrap`
+    On Fedora: `sudo dnf install bubblewrap`
+    On Arch: `sudo pacman -S bubblewrap`
+
+### Default Sandbox Rules
+
+The default sandbox provides practical security:
+
+- **Read-only root filesystem** - System binaries and libraries are protected
+- **Read-write home directory** - Agent configs, caches, and settings work normally
+- **Read-write working directory** - The agent can modify your project files
+- **Read-write /tmp** - Temporary files work as expected
+- **Network access allowed** - API calls to providers work normally
+- **Process isolation** - Separate PID/IPC namespaces (Linux)
+
+### Disabling Sandboxing
+
+If your agent needs full system access (e.g., to install packages or modify system files), you can disable the sandbox.
+
+**CLI:**
+
+```bash
+ringlet profiles run my-project --remote --no-sandbox
+```
+
+**Web UI:**
+
+Check the **"Disable sandbox"** checkbox when creating a new session.
+
+**API:**
+
+```bash
+curl -X POST http://127.0.0.1:8765/api/terminal/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "profile_alias": "my-project",
+    "no_sandbox": true
+  }'
+```
+
+!!! warning "Security Implications"
+    Disabling the sandbox gives the agent full access to your user account. Only disable it when necessary and for trusted profiles.
+
+### Custom Sandbox Rules (Linux)
+
+You can provide custom bwrap flags for advanced use cases:
+
+```bash
+ringlet profiles run my-project --remote --bwrap-flags="--unshare-net,--ro-bind /data /data"
+```
+
+Common custom flags:
+
+| Flag | Effect |
+|------|--------|
+| `--unshare-net` | Disable network access |
+| `--ro-bind /path /path` | Mount path as read-only |
+| `--bind /path /path` | Mount path as read-write |
 
 ---
 

@@ -6,7 +6,9 @@
 
 mod manager;
 mod pty_bridge;
+pub mod sandbox;
 pub mod session;
 
 pub use manager::TerminalSessionManager;
+pub use sandbox::{SandboxConfig, SandboxPlatform};
 pub use session::{SessionId, SessionState, TerminalInput, TerminalOutput, TerminalSession, TerminalSessionInfo};

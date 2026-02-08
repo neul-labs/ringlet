@@ -17,7 +17,25 @@ use tracing_subscriber::EnvFilter;
 
 /// ringlet - CLI orchestrator for coding agents
 #[derive(Parser, Debug)]
-#[command(name = "ringlet", version, about, long_about = None)]
+#[command(
+    name = "ringlet",
+    version,
+    about,
+    long_about = "A CLI orchestrator for managing multiple coding agent profiles with different providers.",
+    after_long_help = r#"GETTING STARTED:
+    ringlet init              Run the interactive setup wizard
+    ringlet agents list       See available coding agents
+    ringlet providers list    See available API providers
+    ringlet profiles create   Create a new profile
+
+WORKFLOW:
+    1. Run 'ringlet init' to detect agents and create your first profile
+    2. Use 'ringlet profiles run <alias>' to start an agent session
+    3. Use 'ringlet usage' to track token usage and costs
+
+For more information, visit: https://github.com/neullabs/ringlet
+"#
+)]
 struct Cli {
     /// Output as JSON instead of tables
     #[arg(long, global = true)]
@@ -33,19 +51,80 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// Initialize ringlet with an interactive setup wizard
+    #[command(
+        after_long_help = r#"DESCRIPTION:
+    The init command guides you through setting up ringlet for first use:
+
+    1. Checks daemon connectivity (starts daemon if needed)
+    2. Detects which coding agents are installed on your system
+    3. Shows available API providers
+    4. Helps create your first profile
+
+EXAMPLES:
+    ringlet init                Run the interactive setup wizard
+    ringlet init --skip-daemon  Skip daemon check
+    ringlet init --no-profile   Skip profile creation
+    ringlet init -y             Use defaults without prompting
+"#
+    )]
+    Init {
+        /// Skip daemon connectivity check
+        #[arg(long)]
+        skip_daemon: bool,
+
+        /// Skip creating an initial profile
+        #[arg(long)]
+        no_profile: bool,
+
+        /// Use defaults without prompting
+        #[arg(long, short = 'y')]
+        yes: bool,
+    },
+
     /// Manage agents
+    #[command(
+        after_long_help = r#"EXAMPLES:
+    ringlet agents list         List all agents and their installation status
+    ringlet agents inspect claude   Show detailed info about an agent
+"#
+    )]
     Agents {
         #[command(subcommand)]
         command: AgentsCommands,
     },
 
     /// Manage providers
+    #[command(
+        after_long_help = r#"EXAMPLES:
+    ringlet providers list          List all available API providers
+    ringlet providers inspect anthropic   Show provider details and endpoints
+"#
+    )]
     Providers {
         #[command(subcommand)]
         command: ProvidersCommands,
     },
 
     /// Manage profiles
+    #[command(
+        after_long_help = r#"EXAMPLES:
+    ringlet profiles create claude work-profile -p anthropic
+        Create a profile using Claude with the Anthropic API
+
+    ringlet profiles create claude local -p self
+        Create a profile using Claude's built-in authentication
+
+    ringlet profiles run work-profile
+        Start an agent session with the specified profile
+
+    ringlet profiles list --agent claude
+        List all profiles for the Claude agent
+
+    ringlet profiles env work-profile
+        Export environment variables for manual shell use
+"#
+    )]
     Profiles {
         #[command(subcommand)]
         command: ProfilesCommands,
@@ -202,6 +281,12 @@ enum ProfilesCommands {
         /// Initial terminal rows (for remote mode)
         #[arg(long, default_value = "24")]
         rows: u16,
+        /// Disable sandboxing (sandbox enabled by default for remote sessions)
+        #[arg(long)]
+        no_sandbox: bool,
+        /// Custom bwrap flags (Linux only, comma-separated)
+        #[arg(long)]
+        bwrap_flags: Option<String>,
         /// Arguments to pass to the agent
         #[arg(trailing_var_arg = true)]
         args: Vec<String>,

@@ -27,16 +27,47 @@ cd ringlet && cargo build --release
 ## Quick Start
 
 ```bash
-# See what agents you have installed
-ringlet agents list
+# Interactive setup wizard - detects agents and creates your first profile
+ringlet init
 
-# Create a profile with your preferred provider
+# Or manually create profiles
 ringlet profiles create claude work --provider anthropic
 ringlet profiles run work
+```
 
-# Or use MiniMax for cost-effective Claude-compatible requests
-ringlet profiles create claude cheap --provider minimax --model MiniMax-M2.1
-ringlet profiles run cheap
+**Example `ringlet init` session:**
+```
+$ ringlet init
+
+Welcome to Ringlet!
+This wizard will help you get started with managing coding agents.
+
+Checking daemon connection... connected.
+
+Detecting installed agents...
+
+Installed agents:
+  [x] Claude Code (1.0.23)
+
+Available providers:
+  - self: Agent's Own Auth
+  - anthropic: Anthropic API (requires API key)
+  - minimax: MiniMax API (requires API key)
+
+Would you like to create your first profile? [Y/n] y
+Select an agent: Claude Code
+Select a provider: self - Agent's Own Auth
+Profile alias: claude-default
+
+Profile 'claude-default' created successfully!
+
+==================================================
+Setup complete!
+
+Next steps:
+  ringlet profiles list        View your profiles
+  ringlet profiles run <alias> Run an agent session
+  ringlet --help               See all available commands
 ```
 
 ## Why ringlet?
@@ -94,15 +125,52 @@ ringlet usage --period month --profile work
 ringlet usage import-claude
 ```
 
+### Remote Terminal Sessions
+
+```bash
+# Run agent in remote mode (accessible via Web UI)
+ringlet profiles run work --remote
+
+# Terminal sessions are sandboxed by default for security
+# Linux: bwrap (bubblewrap)  |  macOS: sandbox-exec
+
+# Disable sandbox if needed
+ringlet profiles run work --remote --no-sandbox
+
+# Custom bwrap flags (Linux only)
+ringlet profiles run work --remote --bwrap-flags="--unshare-net"
+```
+
+**Sandbox Architecture:**
+```
+┌───────────────────────────────────────────────────┐
+│                   Host System                      │
+│  ┌─────────────────────────────────────────────┐  │
+│  │        Sandbox (bwrap / sandbox-exec)        │  │
+│  │  ┌───────────────────────────────────────┐  │  │
+│  │  │        Agent Process (claude)          │  │  │
+│  │  │                                        │  │  │
+│  │  │  Read-only:  /usr, /bin, /lib, /etc   │  │  │
+│  │  │  Read-write: ~/, working_dir, /tmp    │  │  │
+│  │  │  Network:    allowed (API access)      │  │  │
+│  │  └───────────────────────────────────────┘  │  │
+│  └─────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────┘
+```
+
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  CLI (ringlet)                                              │
-│  └── Thin client, auto-starts daemon                        │
+│  └── init │ profiles │ agents │ usage │ terminal           │
 ├─────────────────────────────────────────────────────────────┤
 │  Daemon (ringletd)                                          │
-│  └── Profiles │ Registry │ Telemetry │ Web UI              │
+│  ├── Profiles │ Registry │ Telemetry │ Web UI              │
+│  └── Terminal Manager │ Sandbox │ WebSocket                │
+├─────────────────────────────────────────────────────────────┤
+│  Sandbox Layer (remote sessions)                            │
+│  └── bwrap (Linux) │ sandbox-exec (macOS)                  │
 ├─────────────────────────────────────────────────────────────┤
 │  Agents                                                     │
 │  └── Claude Code │ Grok CLI │ Codex │ Droid │ OpenCode     │
@@ -117,17 +185,32 @@ The daemon starts automatically on first CLI use and exits after idle timeout (o
 ## CLI Reference
 
 ```bash
+# Getting started
+ringlet init                     # Interactive setup wizard
 ringlet agents list              # Show installed agents and versions
+ringlet providers list           # Show available providers
+
+# Profiles
 ringlet profiles create          # Create a new profile
 ringlet profiles list            # List all profiles
 ringlet profiles run <name>      # Run agent with profile
+ringlet profiles run <n> --remote           # Run in remote mode (Web UI)
+ringlet profiles run <n> --remote --no-sandbox  # Disable sandboxing
+
+# Aliases and routing
 ringlet aliases install <name>   # Create executable alias
 ringlet proxy status             # Check proxy status
 ringlet proxy route list <name>  # List routing rules
+
+# Automation and tracking
 ringlet hooks list <name>        # List profile hooks
 ringlet usage                    # View usage stats
+ringlet usage import-claude      # Import Claude usage data
+
+# System
 ringlet registry sync            # Update agent manifests
 ringlet daemon --stay-alive      # Keep daemon running
+ringlet terminal list            # List active terminal sessions
 ```
 
 ## Documentation
@@ -140,6 +223,7 @@ Full documentation at **[docs.neullabs.com/ringlet](https://docs.neullabs.com/ri
 | [Agents](https://docs.neullabs.com/ringlet/agents) | Supported agents and custom manifests |
 | [Providers](https://docs.neullabs.com/ringlet/providers) | API backends and custom providers |
 | [Profiles](https://docs.neullabs.com/ringlet/profiles) | Profile lifecycle and workflows |
+| [Terminal](https://docs.neullabs.com/ringlet/terminal) | Remote sessions and sandboxing |
 | [Hooks](https://docs.neullabs.com/ringlet/hooks) | Event-driven automation |
 | [Proxy](https://docs.neullabs.com/ringlet/proxy) | Request routing with ultrallm |
 | [Usage](https://docs.neullabs.com/ringlet/usage) | Token tracking and analytics |
@@ -150,11 +234,14 @@ Full documentation at **[docs.neullabs.com/ringlet](https://docs.neullabs.com/ri
 | Component | Status |
 |-----------|--------|
 | CLI + Daemon with IPC | ✅ Stable |
+| Interactive setup wizard (`ringlet init`) | ✅ Stable |
 | Agent detection (Claude, Grok, Codex, Droid, OpenCode) | ✅ Stable |
 | Provider support (Anthropic, MiniMax, OpenRouter) | ✅ Stable |
 | Profile hooks and Rhai scripting | ✅ Stable |
 | Proxy routing with ultrallm | ✅ Stable |
 | Web UI and HTTP/WebSocket APIs | ✅ Stable |
+| Remote terminal sessions | ✅ Stable |
+| Sandbox isolation (bwrap/sandbox-exec) | ✅ Stable |
 | Token/cost tracking | ✅ Stable |
 | Plugin SDK | 🔜 Planned |
 | Cross-device sync | 🔜 Planned |

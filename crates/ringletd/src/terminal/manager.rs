@@ -4,8 +4,9 @@
 //! lookup, and cleanup.
 
 use super::pty_bridge::spawn_pty_session;
+use super::sandbox::SandboxConfig;
 use super::session::{SessionId, SessionState, TerminalInput, TerminalOutput, TerminalSession, TerminalSessionInfo};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use portable_pty::PtySize;
 use std::collections::HashMap;
 use std::path::Path;
@@ -53,9 +54,11 @@ impl TerminalSessionManager {
         env: HashMap<String, String>,
         working_dir: &Path,
         initial_size: Option<PtySize>,
+        sandbox_config: SandboxConfig,
     ) -> Result<Arc<TerminalSession>> {
         // Check if there's already an active session for this profile
-        {
+        // Skip this check for shell sessions (allow multiple shells)
+        if profile_alias != "shell" {
             let profile_sessions = self.profile_sessions.read().await;
             if let Some(existing_id) = profile_sessions.get(profile_alias) {
                 let sessions = self.sessions.read().await;
@@ -123,6 +126,7 @@ impl TerminalSessionManager {
                 &working_dir,
                 size,
                 input_rx,
+                sandbox_config,
             )
             .await
             {
