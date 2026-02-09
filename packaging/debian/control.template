@@ -1,0 +1,19 @@
+Package: ringlet
+Version: {{VERSION}}
+Section: devel
+Priority: optional
+Architecture: {{ARCH}}
+Maintainer: {{MAINTAINER}}
+Depends: libc6, libgcc-s1
+Description: CLI orchestrator for coding agents
+ Ringlet is a cross-platform orchestrator for CLI-based coding
+ agents. It provides profile management, usage tracking, and
+ intelligent request routing across multiple AI providers.
+ .
+ Features:
+  - Profile-based workflows for different projects
+  - Support for multiple AI providers (Anthropic, MiniMax, OpenRouter)
+  - Intelligent request routing based on context
+  - Usage tracking and cost analytics
+  - Remote terminal sessions with sandboxing
+Homepage: https://github.com/neul-labs/ccswitch

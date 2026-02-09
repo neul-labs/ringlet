@@ -1,0 +1,22 @@
+#!/bin/sh
+set -e
+
+# Post-installation script for ringlet
+
+case "$1" in
+    configure)
+        # Ensure binaries are executable
+        chmod 755 /usr/bin/ringlet 2>/dev/null || true
+        chmod 755 /usr/bin/ringletd 2>/dev/null || true
+
+        echo ""
+        echo "Ringlet has been installed successfully!"
+        echo ""
+        echo "Get started:"
+        echo "  ringlet init          # Interactive setup wizard"
+        echo "  ringlet --help        # Show all commands"
+        echo ""
+        ;;
+esac
+
+exit 0

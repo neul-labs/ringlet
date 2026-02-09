@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product Id="*"
+             Name="Ringlet"
+             Version="{{VERSION}}"
+             Manufacturer="{{MANUFACTURER}}"
+             Language="1033"
+             Codepage="1252"
+             UpgradeCode="{{UPGRADE_GUID}}">
+
+        <Package Id="*"
+                 InstallerVersion="500"
+                 Compressed="yes"
+                 InstallScope="perMachine"
+                 Description="Ringlet {{VERSION}} - CLI orchestrator for coding agents"
+                 Manufacturer="{{MANUFACTURER}}"
+                 Comments="https://github.com/neul-labs/ccswitch" />
+
+        <!-- Upgrade handling -->
+        <MajorUpgrade DowngradeErrorMessage="A newer version of Ringlet is already installed."
+                      AllowSameVersionUpgrades="yes" />
+
+        <!-- Embed files in MSI -->
+        <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+        <!-- Features -->
+        <Feature Id="ProductFeature" Title="Ringlet" Level="1" Description="Main application">
+            <ComponentGroupRef Id="ProductComponents" />
+            <ComponentRef Id="PathEnvironment" />
+        </Feature>
+
+        <!-- Directory structure -->
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="ProgramFiles64Folder">
+                <Directory Id="INSTALLFOLDER" Name="Ringlet">
+                    <!-- Product components will be installed here -->
+                </Directory>
+            </Directory>
+        </Directory>
+
+        <!-- Main executables -->
+        <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+            <Component Id="RingletExe" Guid="*" Win64="yes">
+                <File Id="ringlet.exe"
+                      Name="ringlet.exe"
+                      Source="ringlet.exe"
+                      KeyPath="yes" />
+            </Component>
+            <Component Id="RingletdExe" Guid="*" Win64="yes">
+                <File Id="ringletd.exe"
+                      Name="ringletd.exe"
+                      Source="ringletd.exe" />
+            </Component>
+        </ComponentGroup>
+
+        <!-- Add to PATH -->
+        <Component Id="PathEnvironment" Directory="INSTALLFOLDER" Guid="*">
+            <Environment Id="PATH"
+                        Name="PATH"
+                        Value="[INSTALLFOLDER]"
+                        Permanent="no"
+                        Part="last"
+                        Action="set"
+                        System="yes" />
+        </Component>
+
+        <!-- UI -->
+        <UIRef Id="WixUI_Minimal" />
+        <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
+
+        <!-- Custom icon for Add/Remove Programs -->
+        <Icon Id="icon.ico" SourceFile="ringlet.ico" />
+        <Property Id="ARPPRODUCTICON" Value="icon.ico" />
+        <Property Id="ARPHELPLINK" Value="https://github.com/neul-labs/ccswitch" />
+        <Property Id="ARPURLINFOABOUT" Value="https://docs.neullabs.com/ringlet" />
+
+    </Product>
+</Wix>

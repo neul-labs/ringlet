@@ -30,3 +30,7 @@ credentials/
 
 # Test artifacts
 *.log
+
+# Release artifacts
+/dist/
+scripts/release/state/

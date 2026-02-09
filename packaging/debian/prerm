@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+
+# Pre-removal script for ringlet
+
+case "$1" in
+    remove|upgrade|deconfigure)
+        # Stop the daemon if running
+        if command -v ringlet >/dev/null 2>&1; then
+            ringlet daemon stop 2>/dev/null || true
+        fi
+        ;;
+esac
+
+exit 0
