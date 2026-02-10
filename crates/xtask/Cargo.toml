@@ -1,0 +1,38 @@
+[package]
+name = "xtask"
+version = "0.1.0"
+edition = "2021"
+description = "Development and release tasks for ringlet"
+publish = false
+
+[dependencies]
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Async runtime
+tokio = { version = "1", features = ["full", "process"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+
+# Error handling
+anyhow = "1"
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json"] }
+
+# Checksums
+sha2 = "0.10"
+hex = "0.4"
+
+# Colors
+console = "0.15"
+
+# Compression
+flate2 = "1"
+tar = "0.4"
+zip = "2"
+
+# Temp files
+tempfile = "3"

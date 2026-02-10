@@ -89,6 +89,29 @@ EOF
     esac
 done
 
+is_wsl() {
+    # Detect WSL1 or WSL2
+    if [[ -f /proc/version ]] && grep -qi "microsoft\|wsl" /proc/version 2>/dev/null; then
+        return 0
+    fi
+    if [[ -n "${WSL_DISTRO_NAME:-}" ]]; then
+        return 0
+    fi
+    return 1
+}
+
+is_wsl2() {
+    # WSL2 specifically (has full Linux kernel)
+    if [[ -f /proc/version ]] && grep -qi "microsoft.*wsl2\|wsl2" /proc/version 2>/dev/null; then
+        return 0
+    fi
+    # WSL2 has /run/WSL directory
+    if [[ -d /run/WSL ]]; then
+        return 0
+    fi
+    return 1
+}
+
 detect_platform() {
     local os arch
 
@@ -314,14 +337,45 @@ check_path() {
     fi
 }
 
+show_success_message() {
+    echo ""
+    info "To get started, run: ringlet --help"
+    echo ""
+
+    # WSL-specific tips
+    if is_wsl; then
+        echo "  ╭─────────────────────────────────────────────────────────╮"
+        echo "  │  WSL Tips:                                              │"
+        echo "  │  - Binaries are installed for use within WSL            │"
+        echo "  │  - Run 'ringlet' from your WSL terminal                 │"
+        echo "  │  - Access Windows files via /mnt/c/...                  │"
+        echo "  ╰─────────────────────────────────────────────────────────╯"
+        echo ""
+    fi
+}
+
 main() {
     echo ""
     echo "  ╭─────────────────────────────────╮"
-    echo "  │      ringlet installer            │"
+    echo "  │      ringlet installer          │"
     echo "  │  CLI orchestrator for coding    │"
     echo "  │           agents                │"
     echo "  ╰─────────────────────────────────╯"
     echo ""
+
+    # Detect and report WSL environment
+    if is_wsl; then
+        if is_wsl2; then
+            info "Detected: WSL2 (Windows Subsystem for Linux 2)"
+            info "Installing Linux binaries for use within WSL2"
+            echo ""
+        else
+            info "Detected: WSL1 (Windows Subsystem for Linux)"
+            info "Installing Linux binaries for use within WSL"
+            warn "WSL2 is recommended for better performance"
+            echo ""
+        fi
+    fi
 
     # Check for local build mode (explicit flag or auto-detect)
     if [[ "$LOCAL_BUILD" == "true" ]]; then
@@ -333,9 +387,7 @@ main() {
         build_local "$INSTALL_DIR"
         verify_installation "$INSTALL_DIR"
         check_path "$INSTALL_DIR"
-        echo ""
-        info "To get started, run: ringlet --help"
-        echo ""
+        show_success_message
         return
     fi
 
@@ -346,9 +398,7 @@ main() {
         build_local "$INSTALL_DIR"
         verify_installation "$INSTALL_DIR"
         check_path "$INSTALL_DIR"
-        echo ""
-        info "To get started, run: ringlet --help"
-        echo ""
+        show_success_message
         return
     fi
 
@@ -396,9 +446,7 @@ main() {
             elif install_via_cargo "$VERSION"; then
                 info "Installed via cargo to ~/.cargo/bin"
                 info "Make sure ~/.cargo/bin is in your PATH"
-                echo ""
-                info "To get started, run: ringlet --help"
-                echo ""
+                show_success_message
                 return
             # Last resort: clone and build from source
             else
@@ -414,9 +462,7 @@ main() {
     # Check PATH
     check_path "$INSTALL_DIR"
 
-    echo ""
-    info "To get started, run: ringlet --help"
-    echo ""
+    show_success_message
 }
 
 main

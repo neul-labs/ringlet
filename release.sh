@@ -220,7 +220,9 @@ run_publish_phase() {
         fi
 
         # Check if publisher is enabled in config
-        if ! parse_toml_bool "publishers.$publisher" "$CONFIG_FILE" 2>/dev/null; then
+        local enabled
+        enabled=$(parse_toml "publishers.$publisher.enabled" "$CONFIG_FILE" 2>/dev/null)
+        if [[ "$enabled" != "true" ]]; then
             log_debug "Skipping $publisher (disabled in config)"
             continue
         fi

@@ -1,5 +1,5 @@
 # Release configuration for ringlet
-# This file configures the release.sh script
+# This file configures the release.sh and cargo xtask commands
 
 [project]
 name = "ringlet"
@@ -19,65 +19,62 @@ macos_universal = true
 # Output directory for built artifacts
 dist_dir = "dist"
 
-[publishers]
-# Enable/disable specific publishers
-cargo = true
-npm = true
-pypi = true
-rubygems = true
-homebrew = true
-chocolatey = true
-debian = true
-arch = true
-dmg = true
-msi = true
-
 [publishers.cargo]
+enabled = true
 # Publish crates in dependency order (with 30s wait between)
 crates = ["ringlet-core", "ringlet-scripting", "ringletd", "ringlet"]
 wait_between = 30
 
 [publishers.npm]
+enabled = true
 # npm uses scoped package: @neul-labs/ringlet
 scope = "@neul-labs"
 package_name = "ringlet"
 
 [publishers.pypi]
+enabled = true
 # PyPI package name
 package_name = "ringlet"
 
 [publishers.rubygems]
+enabled = true
 # RubyGems package name
 package_name = "ringlet"
 
 [publishers.homebrew]
+enabled = true
 # Homebrew tap repository
 tap_repo = "neul-labs/homebrew-ringlet"
 formula_name = "ringlet"
 
 [publishers.chocolatey]
+enabled = true
 # Chocolatey package ID
 package_id = "ringlet"
 
 [publishers.debian]
+enabled = true
 # Debian package metadata
 maintainer = "Neul Labs <hello@neullabs.com>"
 section = "devel"
 priority = "optional"
 
 [publishers.arch]
+enabled = true
 # Arch Linux / AUR
 # Note: AUR submission is manual (git push to AUR repo)
 maintainer = "Neul Labs <hello@neullabs.com>"
 pkgname = "ringlet"
 
 [publishers.msi]
+enabled = true
 # Windows MSI installer
 manufacturer = "Neul Labs"
 # Generate this GUID once and keep it forever for upgrades
 upgrade_guid = "F8A3B9D1-7E4C-4A5F-9B2E-1C6D8E3F4A5B"
 
 [publishers.dmg]
+enabled = true
 # macOS DMG installer
 # Only works on macOS hosts
 volume_name = "Ringlet"
