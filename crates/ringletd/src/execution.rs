@@ -8,6 +8,7 @@
 //! - Tracking processes for telemetry
 
 use anyhow::{anyhow, Context, Result};
+use ringlet_core::rpc::ExecutionContext;
 use ringlet_core::{AgentManifest, RingletPaths, Profile, ProviderManifest};
 use ringlet_scripting::{scripts, AgentContext, PrefsContext, ProfileContext, ProviderContext, ScriptContext, ScriptEngine, ScriptOutput};
 use std::collections::HashMap;
@@ -59,6 +60,57 @@ impl ExecutionAdapter {
 
         // 5. Spawn the agent process
         self.spawn_agent(agent, profile, &env, &script_output.args, args)
+    }
+
+    /// Prepare execution context for CLI-side spawning.
+    /// Does everything run() does except actually spawning the process.
+    pub fn prepare(
+        &self,
+        profile: &Profile,
+        agent: &AgentManifest,
+        provider: &ProviderManifest,
+        api_key: &str,
+        args: &[String],
+        proxy_url: Option<&str>,
+    ) -> Result<ExecutionContext> {
+        // 1. Build script context
+        let context = build_script_context(profile, agent, provider, proxy_url)?;
+
+        // 2. Find and run the Rhai script
+        let script_output = self.run_script(&agent.profile.script, &context)?;
+
+        // 3. Write generated config files (with API key placeholder replacement)
+        self.write_config_files(profile, &script_output, api_key)?;
+
+        // 4. Build environment variables
+        let mut env = self.build_environment(profile, provider, api_key, &script_output)?;
+
+        // Add essential system env vars
+        for key in &["PATH", "TERM", "LANG", "LC_ALL", "USER", "SHELL"] {
+            if let Ok(val) = std::env::var(key) {
+                env.insert(key.to_string(), val);
+            }
+        }
+
+        // 5. Build combined args
+        let mut combined_args = Vec::new();
+        combined_args.extend(profile.args.clone());
+        combined_args.extend(script_output.args.clone());
+        combined_args.extend(args.to_vec());
+
+        // 6. Determine working directory
+        let working_dir = profile
+            .working_dir
+            .clone()
+            .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+
+        Ok(ExecutionContext {
+            binary: agent.binary.clone(),
+            working_dir,
+            env,
+            args: combined_args,
+            alias: profile.alias.clone(),
+        })
     }
 
     /// Run the configuration script.

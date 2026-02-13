@@ -27,6 +27,7 @@ pub enum Request {
     ProfilesList { agent_id: Option<String> },
     ProfilesInspect { alias: String },
     ProfilesRun { alias: String, args: Vec<String> },
+    ProfilesPrepare { alias: String, args: Vec<String> },
     ProfilesDelete { alias: String },
     ProfilesEnv { alias: String },
 
@@ -136,6 +137,9 @@ pub enum Response {
     /// Environment variables for shell export.
     Env(HashMap<String, String>),
 
+    /// Prepared execution context for CLI-side spawning.
+    ExecutionContext(ExecutionContext),
+
     /// Registry status.
     RegistryStatus(RegistryStatus),
 
@@ -159,6 +163,25 @@ pub enum Response {
 
     /// Error response.
     Error { code: i32, message: String },
+}
+
+/// Execution context for CLI-side agent spawning.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecutionContext {
+    /// Agent binary to run.
+    pub binary: String,
+
+    /// Working directory.
+    pub working_dir: PathBuf,
+
+    /// Environment variables to set.
+    pub env: HashMap<String, String>,
+
+    /// Arguments to pass to the agent.
+    pub args: Vec<String>,
+
+    /// Profile alias (for telemetry).
+    pub alias: String,
 }
 
 /// Registry sync status.

@@ -58,10 +58,25 @@ pub async fn create(req: &ProfileCreateRequest, state: &ServerState) -> Response
     };
 
     // Resolve model - use request model, or agent default, or provider default
-    let resolved_model = req.model.clone()
+    // But validate that the model is compatible with the provider's available models
+    let candidate_model = req.model.clone()
         .or(agent_default_model)
         .or_else(|| provider.models.default.clone())
         .unwrap_or_else(|| "default".to_string());
+
+    // If provider has an explicit list of available models, validate compatibility
+    // Fall back to provider's default model if candidate isn't supported
+    let resolved_model = if !provider.models.available.is_empty() {
+        if provider.models.available.contains(&candidate_model) {
+            candidate_model
+        } else {
+            // Candidate model not supported by provider, use provider's default
+            provider.models.default.clone().unwrap_or(candidate_model)
+        }
+    } else {
+        // Provider doesn't restrict models (e.g., self-auth or passthrough)
+        candidate_model
+    };
 
     // Create the profile
     match state.profile_manager.create(req, &source_home, &endpoint, &resolved_model) {
@@ -255,6 +270,105 @@ pub async fn run(alias: &str, args: &[String], state: &ServerState) -> Response 
         Err(e) => Response::error(
             error_codes::EXECUTION_ERROR,
             format!("Failed to run profile: {}", e),
+        ),
+    }
+}
+
+/// Prepare execution context for CLI-side spawning.
+pub async fn prepare(alias: &str, args: &[String], state: &ServerState) -> Response {
+    // Get the profile first
+    let profile = match state.profile_manager.get(alias) {
+        Ok(Some(p)) => p,
+        Ok(None) => {
+            return Response::error(
+                error_codes::PROFILE_NOT_FOUND,
+                format!("Profile not found: {}", alias),
+            );
+        }
+        Err(e) => {
+            return Response::error(
+                error_codes::INTERNAL_ERROR,
+                format!("Failed to read profile: {}", e),
+            );
+        }
+    };
+
+    info!("Preparing profile: {} (agent: {})", alias, profile.agent_id);
+
+    // Get the agent manifest
+    let mut agent_registry = state.agent_registry.lock().await;
+    let agent = match agent_registry.get(&profile.agent_id) {
+        Some(a) => a.clone(),
+        None => {
+            return Response::error(
+                error_codes::AGENT_NOT_FOUND,
+                format!("Agent not found: {}", profile.agent_id),
+            );
+        }
+    };
+    drop(agent_registry);
+
+    // Get the provider manifest
+    let provider = match state.provider_registry.get(&profile.provider_id) {
+        Some(p) => p.clone(),
+        None => {
+            return Response::error(
+                error_codes::PROVIDER_NOT_FOUND,
+                format!("Provider not found: {}", profile.provider_id),
+            );
+        }
+    };
+
+    // Get API key from credential storage (only if provider requires auth)
+    let api_key = if provider.auth.required {
+        match state.profile_manager.get_api_key(alias) {
+            Ok(key) => key,
+            Err(e) => {
+                return Response::error(
+                    error_codes::INTERNAL_ERROR,
+                    format!("Failed to retrieve API key: {}", e),
+                );
+            }
+        }
+    } else {
+        String::new()
+    };
+
+    // Start proxy if enabled for this profile
+    let proxy_url = if let Some(ref proxy_config) = profile.metadata.proxy_config {
+        if proxy_config.enabled {
+            match state.proxy_manager.start(alias, &profile.metadata.home, proxy_config).await {
+                Ok(port) => {
+                    info!("Proxy started for '{}' on port {}", alias, port);
+                    Some(format!("http://127.0.0.1:{}", port))
+                }
+                Err(e) => {
+                    return Response::error(
+                        error_codes::EXECUTION_ERROR,
+                        format!("Failed to start proxy: {}", e),
+                    );
+                }
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    // Prepare the execution context (writes config files, returns env/args)
+    match state.execution_adapter.prepare(&profile, &agent, &provider, &api_key, args, proxy_url.as_deref()) {
+        Ok(context) => {
+            // Mark profile as used
+            if let Err(e) = state.profile_manager.mark_used(alias) {
+                tracing::warn!("Failed to mark profile as used: {}", e);
+            }
+
+            Response::ExecutionContext(context)
+        }
+        Err(e) => Response::error(
+            error_codes::EXECUTION_ERROR,
+            format!("Failed to prepare profile: {}", e),
         ),
     }
 }

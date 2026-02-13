@@ -30,6 +30,7 @@ pub async fn handle_request(request: &Request, state: &ServerState) -> Response 
         Request::ProfilesList { agent_id } => profiles::list(agent_id.as_deref(), state).await,
         Request::ProfilesInspect { alias } => profiles::inspect(alias, state).await,
         Request::ProfilesRun { alias, args } => profiles::run(alias, args, state).await,
+        Request::ProfilesPrepare { alias, args } => profiles::prepare(alias, args, state).await,
         Request::ProfilesDelete { alias } => profiles::delete(alias, state).await,
         Request::ProfilesEnv { alias } => profiles::env(alias, state).await,
 

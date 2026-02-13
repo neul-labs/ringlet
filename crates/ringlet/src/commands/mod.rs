@@ -11,6 +11,7 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use ringlet_core::{HooksConfig, ModelTarget, ProfileCreateRequest, Request, Response, RoutingCondition, RoutingRule, UsagePeriod};
+use std::process::{Command, Stdio};
 
 /// Execute a command.
 pub async fn execute(command: &Commands, json: bool) -> Result<()> {
@@ -231,23 +232,49 @@ async fn execute_profiles(command: &ProfilesCommands, json: bool) -> Result<()> 
                 return execute_remote_run(alias, args, *cols, *rows, *no_sandbox, bwrap_flags.as_deref(), json).await;
             }
 
-            let response = client.request(&Request::ProfilesRun {
+            // Get execution context from daemon (prepares config files, env, etc.)
+            let response = client.request(&Request::ProfilesPrepare {
                 alias: alias.clone(),
                 args: args.clone(),
             })?;
-            match response {
-                Response::Success { message } => {
-                    if !json {
-                        output::success(&message);
-                    }
-                }
-                Response::RunCompleted { exit_code } => {
-                    if json {
-                        println!("{}", serde_json::json!({"exit_code": exit_code}));
-                    }
-                }
+
+            let context = match response {
+                Response::ExecutionContext(ctx) => ctx,
                 Response::Error { message, .. } => return Err(anyhow!(message)),
                 _ => return Err(anyhow!("Unexpected response")),
+            };
+
+            // Spawn the agent directly in CLI process (inherits our TTY)
+            let mut cmd = Command::new(&context.binary);
+            cmd.current_dir(&context.working_dir);
+            cmd.stdin(Stdio::inherit());
+            cmd.stdout(Stdio::inherit());
+            cmd.stderr(Stdio::inherit());
+
+            // Set environment variables
+            for (key, value) in &context.env {
+                cmd.env(key, value);
+            }
+
+            // Add arguments
+            cmd.args(&context.args);
+
+            // Spawn and wait
+            let mut child = cmd.spawn()
+                .map_err(|e| anyhow!("Failed to spawn {}: {}", context.binary, e))?;
+
+            let status = child.wait()
+                .map_err(|e| anyhow!("Failed to wait for process: {}", e))?;
+
+            let exit_code = status.code().unwrap_or(-1);
+
+            if json {
+                println!("{}", serde_json::json!({"exit_code": exit_code}));
+            }
+
+            // Exit with the agent's exit code
+            if exit_code != 0 {
+                std::process::exit(exit_code);
             }
         }
         ProfilesCommands::Delete { alias } => {
