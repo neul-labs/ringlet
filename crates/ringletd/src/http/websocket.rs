@@ -6,7 +6,8 @@ use axum::{
         ws::{Message, WebSocket},
         State, WebSocketUpgrade,
     },
-    response::Response,
+    http::{header, HeaderMap, StatusCode},
+    response::{IntoResponse, Response},
 };
 use chrono::Utc;
 use ringlet_core::{ClientMessage, Event, ServerMessage, VERSION};
@@ -16,12 +17,37 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::{debug, error, info, warn};
 
+/// Allowed origins for WebSocket connections.
+const ALLOWED_ORIGINS: &[&str] = &["http://127.0.0.1", "http://localhost"];
+
+/// Validate the Origin header for WebSocket connections.
+/// Returns true if the origin is allowed or not present (non-browser clients).
+fn validate_origin(headers: &HeaderMap) -> bool {
+    match headers.get(header::ORIGIN) {
+        Some(origin) => {
+            if let Ok(origin_str) = origin.to_str() {
+                ALLOWED_ORIGINS.iter().any(|allowed| origin_str.starts_with(allowed))
+            } else {
+                false
+            }
+        }
+        // No Origin header - allow non-browser clients
+        None => true,
+    }
+}
+
 /// WebSocket upgrade handler.
 pub async fn ws_handler(
+    headers: HeaderMap,
     ws: WebSocketUpgrade,
     State(state): State<Arc<ServerState>>,
-) -> Response {
-    ws.on_upgrade(|socket| handle_socket(socket, state))
+) -> Result<Response, StatusCode> {
+    // Validate Origin header to prevent cross-origin WebSocket hijacking
+    if !validate_origin(&headers) {
+        warn!("WebSocket connection rejected: invalid origin");
+        return Err(StatusCode::FORBIDDEN);
+    }
+    Ok(ws.on_upgrade(|socket| handle_socket(socket, state)))
 }
 
 /// Handle a WebSocket connection.

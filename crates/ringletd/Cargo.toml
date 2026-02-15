@@ -69,6 +69,25 @@ walkdir = { workspace = true }
 # Platform paths
 dirs = { workspace = true }
 
+# Secure credential storage
+keyring = { workspace = true }
+
+# Random number generation
+getrandom = "0.2"
+
+# Cryptographic hashing for checksum verification
+sha2 = "0.10"
+
+# Constant-time comparison for timing attack prevention
+subtle = "2"
+
+# Secure memory zeroing
+zeroize = { version = "1", features = ["zeroize_derive"] }
+
+# Rate limiting
+governor = "0.10"
+tower_governor = { version = "0.8", features = ["axum"] }
+
 # Memory allocator
 mimalloc = { workspace = true }
 

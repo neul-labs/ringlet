@@ -114,6 +114,17 @@ impl HttpError {
     pub fn not_found(message: impl Into<String>) -> Self {
         Self::new(error_codes::PROFILE_NOT_FOUND, message)
     }
+
+    pub fn forbidden(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::FORBIDDEN,
+            body: ApiResponse {
+                success: false,
+                data: None,
+                error: Some(ApiError::new(-32001, message)),
+            },
+        }
+    }
 }
 
 impl IntoResponse for HttpError {

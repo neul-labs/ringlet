@@ -80,8 +80,8 @@ pub struct McpServersPrefs {
     #[serde(default)]
     pub github: bool,
 
-    /// GitHub token for MCP server.
-    pub github_token: Option<String>,
+    // SECURITY: github_token removed - tokens should not be stored in config files.
+    // If GitHub MCP support is needed, implement keychain storage similar to profile API keys.
 
     /// Custom MCP servers.
     #[serde(default)]

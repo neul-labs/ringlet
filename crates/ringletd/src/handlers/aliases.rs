@@ -6,6 +6,54 @@ use ringlet_core::Response;
 use std::path::PathBuf;
 use tracing::info;
 
+/// Install an alias shim script (sync version for internal use).
+/// Returns the path to the installed shim on success, or an error message.
+pub fn install_alias_sync(alias: &str) -> Result<PathBuf, String> {
+    // Determine target directory
+    let target_dir = default_bin_dir()
+        .ok_or_else(|| "Could not determine bin directory".to_string())?;
+
+    // Ensure target directory exists
+    std::fs::create_dir_all(&target_dir)
+        .map_err(|e| format!("Failed to create bin directory: {}", e))?;
+
+    // Generate and write the shim script
+    let shim_path = target_dir.join(alias);
+    let shim_content = generate_shim_script(alias);
+
+    std::fs::write(&shim_path, &shim_content)
+        .map_err(|e| format!("Failed to write shim script: {}", e))?;
+
+    // Make executable on Unix
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&shim_path, std::fs::Permissions::from_mode(0o755))
+            .map_err(|e| format!("Failed to set permissions: {}", e))?;
+    }
+
+    Ok(shim_path)
+}
+
+/// Uninstall an alias shim script (sync version for internal use).
+/// Returns the path that was removed, if found.
+pub fn uninstall_alias_sync(alias: &str) -> Option<PathBuf> {
+    let locations = vec![
+        default_bin_dir(),
+        Some(PathBuf::from("/usr/local/bin")),
+    ];
+
+    for loc in locations.into_iter().flatten() {
+        let shim_path = loc.join(alias);
+        if shim_path.exists() {
+            if std::fs::remove_file(&shim_path).is_ok() {
+                return Some(shim_path);
+            }
+        }
+    }
+    None
+}
+
 /// Install an alias shim script.
 pub async fn install(alias: &str, bin_dir: Option<&PathBuf>, state: &ServerState) -> Response {
     // Verify profile exists
@@ -108,7 +156,7 @@ pub async fn uninstall(alias: &str, state: &ServerState) -> Response {
 }
 
 /// Generate a shell shim script for an alias.
-fn generate_shim_script(alias: &str) -> String {
+pub(crate) fn generate_shim_script(alias: &str) -> String {
     #[cfg(unix)]
     {
         format!(
@@ -137,7 +185,7 @@ ringlet profiles run {} -- %*
 }
 
 /// Get the default bin directory for shim scripts.
-fn default_bin_dir() -> Option<PathBuf> {
+pub(crate) fn default_bin_dir() -> Option<PathBuf> {
     // Try ~/.local/bin first (XDG standard)
     if let Some(home) = ringlet_core::home_dir() {
         let local_bin = home.join(".local/bin");

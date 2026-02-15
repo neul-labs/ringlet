@@ -46,6 +46,7 @@ impl TerminalSessionManager {
     /// Create a new terminal session for a profile.
     ///
     /// Returns the session ID and a handle to the session.
+    /// The `owner_token_hash` is used to verify session ownership on WebSocket connections.
     pub async fn create_session(
         &self,
         profile_alias: &str,
@@ -55,6 +56,7 @@ impl TerminalSessionManager {
         working_dir: &Path,
         initial_size: Option<PtySize>,
         sandbox_config: SandboxConfig,
+        owner_token_hash: String,
     ) -> Result<Arc<TerminalSession>> {
         // Check if there's already an active session for this profile
         // Skip this check for shell sessions (allow multiple shells)
@@ -91,6 +93,7 @@ impl TerminalSessionManager {
             session_id.clone(),
             profile_alias.to_string(),
             working_dir.to_string_lossy().to_string(),
+            owner_token_hash,
             input_tx,
             output_tx,
             size,

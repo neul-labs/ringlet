@@ -236,7 +236,18 @@ impl RegistryClient {
             .into_string()
             .context("Failed to read artifact content")?;
 
-        // TODO: Verify checksum if provided
+        // Verify checksum if provided
+        if let Some(expected) = &info.checksum {
+            use sha2::{Sha256, Digest};
+            let computed = format!("{:x}", Sha256::digest(content.as_bytes()));
+            if &computed != expected {
+                return Err(anyhow!(
+                    "Checksum mismatch for {}: expected {}, got {}",
+                    id, expected, computed
+                ));
+            }
+            debug!("Checksum verified for {}", id);
+        }
 
         let filename = std::path::Path::new(&info.path)
             .file_name()

@@ -8,7 +8,6 @@
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use tracing::warn;
 
 /// Sandbox configuration for a terminal session.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -282,23 +281,12 @@ pub fn prepare_command(
     }
 
     // Try to wrap with platform-specific sandbox
-    let result = match platform {
+    // Fail-closed: if sandboxing is enabled but the tool is unavailable, return error
+    match platform {
         SandboxPlatform::Linux => wrap_with_bwrap(command, args, working_dir, config),
         SandboxPlatform::MacOS => wrap_with_sandbox_exec(command, args, working_dir, config),
-        _ => Ok(SandboxedCommand {
-            command: command.to_string(),
-            args: args.to_vec(),
-        }),
-    };
-
-    // If sandbox tool not available, warn and continue without sandbox
-    match result {
-        Ok(cmd) => Ok(cmd),
-        Err(e) => {
-            warn!(
-                "Sandbox tool not available on {:?}, running without sandbox: {}",
-                platform, e
-            );
+        _ => {
+            // Should not reach here since we check supports_sandboxing() above
             Ok(SandboxedCommand {
                 command: command.to_string(),
                 args: args.to_vec(),

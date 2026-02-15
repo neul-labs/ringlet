@@ -9,6 +9,27 @@ use ringlet_core::{
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tracing::{debug, info};
+use zeroize::Zeroizing;
+
+/// Validate profile alias to prevent path traversal attacks.
+fn validate_alias(alias: &str) -> Result<()> {
+    // Check for path traversal sequences
+    if alias.contains("..") || alias.contains('/') || alias.contains('\\') || alias.contains('\0') {
+        return Err(anyhow!("Invalid alias: path traversal characters not allowed"));
+    }
+
+    // Alias must be non-empty
+    if alias.is_empty() {
+        return Err(anyhow!("Invalid alias: cannot be empty"));
+    }
+
+    // Only allow safe characters: alphanumeric, underscore, hyphen
+    if !alias.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+        return Err(anyhow!("Invalid alias: only alphanumeric characters, underscores, and hyphens allowed"));
+    }
+
+    Ok(())
+}
 
 /// Profile manager.
 pub struct ProfileManager {
@@ -29,6 +50,9 @@ impl ProfileManager {
         provider_endpoint: &str,
         resolved_model: &str,
     ) -> Result<Profile> {
+        // Validate alias to prevent path traversal
+        validate_alias(&request.alias)?;
+
         let profiles_dir = self.paths.profiles_dir();
         let profile_file = profiles_dir.join(format!("{}.json", request.alias));
 
@@ -81,6 +105,7 @@ impl ProfileManager {
                 } else {
                     None
                 },
+                alias_path: None,
             },
         };
 
@@ -125,6 +150,9 @@ impl ProfileManager {
 
     /// Get a profile by alias.
     pub fn get(&self, alias: &str) -> Result<Option<Profile>> {
+        // Validate alias to prevent path traversal
+        validate_alias(alias)?;
+
         let profile_file = self.paths.profiles_dir().join(format!("{}.json", alias));
 
         if !profile_file.exists() {
@@ -138,6 +166,9 @@ impl ProfileManager {
 
     /// Update a profile.
     pub fn update(&self, profile: &Profile) -> Result<()> {
+        // Validate alias to prevent path traversal
+        validate_alias(&profile.alias)?;
+
         let profile_file = self
             .paths
             .profiles_dir()
@@ -156,6 +187,9 @@ impl ProfileManager {
 
     /// Delete a profile.
     pub fn delete(&self, alias: &str) -> Result<()> {
+        // Validate alias to prevent path traversal
+        validate_alias(alias)?;
+
         let profile_file = self.paths.profiles_dir().join(format!("{}.json", alias));
 
         if !profile_file.exists() {
@@ -183,6 +217,9 @@ impl ProfileManager {
 
     /// Update profile metadata after a run.
     pub fn mark_used(&self, alias: &str) -> Result<()> {
+        // Validate alias to prevent path traversal
+        validate_alias(alias)?;
+
         let profile_file = self.paths.profiles_dir().join(format!("{}.json", alias));
 
         if !profile_file.exists() {
@@ -214,12 +251,15 @@ impl ProfileManager {
         );
 
         // Retrieve API key from keychain and add appropriate env vars
+        // Use Zeroizing to ensure the API key is zeroed when it goes out of scope
         let keychain_key = format!("ringlet-{}", alias);
         if let Ok(api_key) = get_credential(&keychain_key) {
+            let api_key = Zeroizing::new(api_key);
             // TODO: These should come from Rhai script based on provider type
             // For now, add common vars
-            env.insert("ANTHROPIC_AUTH_TOKEN".to_string(), api_key.clone());
-            env.insert("OPENAI_API_KEY".to_string(), api_key);
+            env.insert("ANTHROPIC_AUTH_TOKEN".to_string(), api_key.to_string());
+            env.insert("OPENAI_API_KEY".to_string(), api_key.to_string());
+            // api_key is automatically zeroed when it goes out of scope here
         }
 
         Ok(env)
@@ -232,81 +272,39 @@ impl ProfileManager {
         Ok(profile.metadata.home)
     }
 
-    /// Get the API key for a profile.
+    /// Get the API key for a profile (wrapped in Zeroizing for secure memory handling).
     pub fn get_api_key(&self, alias: &str) -> Result<String> {
+        // Validate alias to prevent injection
+        validate_alias(alias)?;
+
         let keychain_key = format!("ringlet-{}", alias);
+        // Note: The caller should wrap the returned String in Zeroizing if holding it
         get_credential(&keychain_key)
     }
 }
 
-/// Store a credential in the keychain.
+/// Store a credential in the system keychain.
 fn store_credential(key: &str, value: &str) -> Result<()> {
-    #[cfg(feature = "keyring")]
-    {
-        let entry = keyring::Entry::new("ringlet", key)?;
-        entry.set_password(value)?;
-        Ok(())
-    }
-
-    #[cfg(not(feature = "keyring"))]
-    {
-        // Fallback: store in a file (not secure, for development only)
-        let creds_dir = get_creds_dir()
-            .ok_or_else(|| anyhow!("Cannot find home directory"))?;
-        std::fs::create_dir_all(&creds_dir)?;
-        let cred_file = creds_dir.join(key);
-        std::fs::write(&cred_file, value)?;
-        // Set permissions to user-only
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(&cred_file, std::fs::Permissions::from_mode(0o600))?;
-        }
-        Ok(())
-    }
+    let entry = keyring::Entry::new("ringlet", key)
+        .context("Failed to access system keychain")?;
+    entry.set_password(value)
+        .context("Failed to store credential in keychain")?;
+    Ok(())
 }
 
-/// Get a credential from the keychain.
+/// Get a credential from the system keychain.
 fn get_credential(key: &str) -> Result<String> {
-    #[cfg(feature = "keyring")]
-    {
-        let entry = keyring::Entry::new("ringlet", key)?;
-        Ok(entry.get_password()?)
-    }
-
-    #[cfg(not(feature = "keyring"))]
-    {
-        // Fallback: read from file
-        let creds_dir = get_creds_dir()
-            .ok_or_else(|| anyhow!("Cannot find home directory"))?;
-        let cred_file = creds_dir.join(key);
-        Ok(std::fs::read_to_string(cred_file)?)
-    }
+    let entry = keyring::Entry::new("ringlet", key)
+        .context("Failed to access system keychain")?;
+    entry.get_password()
+        .context("Failed to retrieve credential from keychain")
 }
 
-/// Delete a credential from the keychain.
+/// Delete a credential from the system keychain.
 fn delete_credential(key: &str) -> Result<()> {
-    #[cfg(feature = "keyring")]
-    {
-        let entry = keyring::Entry::new("ringlet", key)?;
-        entry.delete_credential()?;
-        Ok(())
-    }
-
-    #[cfg(not(feature = "keyring"))]
-    {
-        // Fallback: delete file
-        let creds_dir = get_creds_dir()
-            .ok_or_else(|| anyhow!("Cannot find home directory"))?;
-        let cred_file = creds_dir.join(key);
-        if cred_file.exists() {
-            std::fs::remove_file(cred_file)?;
-        }
-        Ok(())
-    }
-}
-
-/// Get credentials directory path.
-fn get_creds_dir() -> Option<PathBuf> {
-    home_dir().map(|h| h.join(".config/ringlet/credentials"))
+    let entry = keyring::Entry::new("ringlet", key)
+        .context("Failed to access system keychain")?;
+    // Ignore errors if credential doesn't exist
+    let _ = entry.delete_credential();
+    Ok(())
 }

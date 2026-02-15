@@ -183,9 +183,21 @@ impl ExecutionAdapter {
             // Replace ${API_KEY} placeholder in file content
             let resolved_content = content.replace("${API_KEY}", api_key);
 
+            // Check if file contains sensitive data (API key was substituted)
+            let contains_sensitive_data = content.contains("${API_KEY}") && !api_key.is_empty();
+
             // Write file
             std::fs::write(&full_path, &resolved_content)
                 .context(format!("Failed to write file: {:?}", full_path))?;
+
+            // Set restrictive permissions on files containing API keys (Unix only)
+            #[cfg(unix)]
+            if contains_sensitive_data {
+                use std::os::unix::fs::PermissionsExt;
+                std::fs::set_permissions(&full_path, std::fs::Permissions::from_mode(0o600))
+                    .context(format!("Failed to set permissions on: {:?}", full_path))?;
+                debug!("Set 0o600 permissions on sensitive file: {:?}", full_path);
+            }
 
             debug!("Wrote config file: {:?}", full_path);
         }

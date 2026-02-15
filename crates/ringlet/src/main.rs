@@ -256,6 +256,9 @@ enum ProfilesCommands {
         /// Enable proxy routing for this profile
         #[arg(long)]
         proxy: bool,
+        /// Skip automatic alias installation
+        #[arg(long)]
+        no_alias: bool,
     },
     /// List profiles
     List {

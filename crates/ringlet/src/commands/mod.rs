@@ -10,8 +10,22 @@ use crate::{
     RegistryCommands, TerminalCommands, UsageCommands,
 };
 use anyhow::{anyhow, Result};
-use ringlet_core::{HooksConfig, ModelTarget, ProfileCreateRequest, Request, Response, RoutingCondition, RoutingRule, UsagePeriod};
+use ringlet_core::{HooksConfig, ModelTarget, ProfileCreateRequest, Request, Response, RingletPaths, RoutingCondition, RoutingRule, UsagePeriod, UserConfig};
 use std::process::{Command, Stdio};
+
+/// Get the HTTP API base URL from config.
+fn get_http_api_base() -> String {
+    let paths = RingletPaths::default();
+    let config = UserConfig::load(&paths.config_file()).unwrap_or_default();
+    format!("http://127.0.0.1:{}", config.daemon.http_port)
+}
+
+/// Load the HTTP authentication token from file.
+fn load_http_token() -> Option<String> {
+    let config_dir = dirs::config_dir()?.join("ringlet");
+    let token_file = config_dir.join("http_token");
+    std::fs::read_to_string(token_file).ok().map(|s| s.trim().to_string())
+}
 
 /// Execute a command.
 pub async fn execute(command: &Commands, json: bool) -> Result<()> {
@@ -125,6 +139,7 @@ async fn execute_profiles(command: &ProfilesCommands, json: bool) -> Result<()> 
             mcp,
             bare,
             proxy,
+            no_alias,
         } => {
             // Get provider info to check if auth is required
             let provider_response = client.request(&Request::ProvidersInspect { id: provider.clone() })?;
@@ -177,6 +192,7 @@ async fn execute_profiles(command: &ProfilesCommands, json: bool) -> Result<()> 
                 working_dir: None,
                 bare: *bare,
                 proxy: *proxy,
+                no_alias: *no_alias,
             };
 
             let response = client.request(&Request::ProfilesCreate(request))?;
@@ -1034,9 +1050,6 @@ fn handle_success_response(response: Response, json: bool) -> Result<()> {
     }
 }
 
-// Terminal API base URL (uses HTTP server port)
-const TERMINAL_API_BASE: &str = "http://127.0.0.1:8765";
-
 /// Execute remote run - creates a terminal session via HTTP API.
 async fn execute_remote_run(
     alias: &str,
@@ -1047,7 +1060,10 @@ async fn execute_remote_run(
     bwrap_flags: Option<&str>,
     json: bool,
 ) -> Result<()> {
-    let url = format!("{}/api/terminal/sessions", TERMINAL_API_BASE);
+    let api_base = get_http_api_base();
+    let token = load_http_token()
+        .ok_or_else(|| anyhow!("HTTP auth token not found. Is the daemon running?"))?;
+    let url = format!("{}/api/terminal/sessions", api_base);
 
     let mut request_body = serde_json::json!({
         "profile_alias": alias,
@@ -1065,6 +1081,7 @@ async fn execute_remote_run(
 
     let response: serde_json::Value = ureq::post(&url)
         .set("Content-Type", "application/json")
+        .set("Authorization", &format!("Bearer {}", token))
         .send_json(&request_body)
         .map_err(|e| anyhow!("Failed to create terminal session: {}", e))?
         .into_json()
@@ -1081,16 +1098,18 @@ async fn execute_remote_run(
         .as_str()
         .ok_or_else(|| anyhow!("Missing session_id in response"))?;
 
+    // Extract host:port for URLs
+    let ws_base = api_base.replace("http://", "ws://");
     if json {
         println!("{}", serde_json::json!({
             "session_id": session_id,
-            "ws_url": format!("ws://127.0.0.1:8765/ws/terminal/{}", session_id),
-            "web_url": format!("http://127.0.0.1:8765/terminal/{}", session_id),
+            "ws_url": format!("{}/ws/terminal/{}?token={}", ws_base, session_id, token),
+            "web_url": format!("{}/terminal/{}", api_base, session_id),
         }));
     } else {
         println!("Terminal session created:");
         println!("  Session ID: {}", session_id);
-        println!("  Web UI: http://127.0.0.1:8765/terminal/{}", session_id);
+        println!("  Web UI: {}/terminal/{}", api_base, session_id);
         println!("\nTo attach from CLI: ringlet terminal attach {}", session_id);
     }
 
@@ -1099,10 +1118,15 @@ async fn execute_remote_run(
 
 /// Execute terminal commands via HTTP API.
 async fn execute_terminal(command: &TerminalCommands, json: bool) -> Result<()> {
+    let api_base = get_http_api_base();
+    let token = load_http_token()
+        .ok_or_else(|| anyhow!("HTTP auth token not found. Is the daemon running?"))?;
+
     match command {
         TerminalCommands::List => {
-            let url = format!("{}/api/terminal/sessions", TERMINAL_API_BASE);
+            let url = format!("{}/api/terminal/sessions", api_base);
             let response: serde_json::Value = ureq::get(&url)
+                .set("Authorization", &format!("Bearer {}", token))
                 .call()
                 .map_err(|e| anyhow!("Failed to list sessions: {}", e))?
                 .into_json()
@@ -1137,8 +1161,9 @@ async fn execute_terminal(command: &TerminalCommands, json: bool) -> Result<()> 
             }
         }
         TerminalCommands::Info { id } => {
-            let url = format!("{}/api/terminal/sessions/{}", TERMINAL_API_BASE, id);
+            let url = format!("{}/api/terminal/sessions/{}", api_base, id);
             let response: serde_json::Value = ureq::get(&url)
+                .set("Authorization", &format!("Bearer {}", token))
                 .call()
                 .map_err(|e| anyhow!("Failed to get session: {}", e))?
                 .into_json()
@@ -1165,8 +1190,9 @@ async fn execute_terminal(command: &TerminalCommands, json: bool) -> Result<()> 
             }
         }
         TerminalCommands::Kill { id } => {
-            let url = format!("{}/api/terminal/sessions/{}", TERMINAL_API_BASE, id);
+            let url = format!("{}/api/terminal/sessions/{}", api_base, id);
             let response: serde_json::Value = ureq::delete(&url)
+                .set("Authorization", &format!("Bearer {}", token))
                 .call()
                 .map_err(|e| anyhow!("Failed to kill session: {}", e))?
                 .into_json()
@@ -1188,17 +1214,18 @@ async fn execute_terminal(command: &TerminalCommands, json: bool) -> Result<()> 
         TerminalCommands::Attach { id } => {
             // For now, just print the URL - full terminal attach would require
             // more complex terminal handling (crossterm, raw mode, etc.)
+            let ws_base = api_base.replace("http://", "ws://");
             if json {
                 println!("{}", serde_json::json!({
                     "session_id": id,
-                    "ws_url": format!("ws://127.0.0.1:8765/ws/terminal/{}", id),
-                    "web_url": format!("http://127.0.0.1:8765/terminal/{}", id),
+                    "ws_url": format!("{}/ws/terminal/{}?token={}", ws_base, id, token),
+                    "web_url": format!("{}/terminal/{}", api_base, id),
                 }));
             } else {
                 println!("To view this terminal session, open the web UI:");
-                println!("  http://127.0.0.1:8765/terminal/{}", id);
+                println!("  {}/terminal/{}", api_base, id);
                 println!("\nWebSocket URL (for custom clients):");
-                println!("  ws://127.0.0.1:8765/ws/terminal/{}", id);
+                println!("  {}/ws/terminal/{}?token={}", ws_base, id, token);
             }
         }
     }

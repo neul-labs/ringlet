@@ -4,6 +4,7 @@ use crate::server::ServerState;
 use ringlet_core::rpc::error_codes;
 use ringlet_core::{Event, ProfileCreateRequest, Response};
 use tracing::info;
+use zeroize::Zeroizing;
 
 /// Create a new profile.
 pub async fn create(req: &ProfileCreateRequest, state: &ServerState) -> Response {
@@ -80,15 +81,55 @@ pub async fn create(req: &ProfileCreateRequest, state: &ServerState) -> Response
 
     // Create the profile
     match state.profile_manager.create(req, &source_home, &endpoint, &resolved_model) {
-        Ok(profile) => {
+        Ok(mut profile) => {
             info!("Profile '{}' created successfully", profile.alias);
+
+            // Auto-install alias unless --no-alias was specified
+            let alias_installed = if req.no_alias {
+                false
+            } else {
+                match super::aliases::install_alias_sync(&profile.alias) {
+                    Ok(path) => {
+                        info!("Installed alias at {:?}", path);
+                        profile.metadata.alias_path = Some(path);
+                        // Save updated profile with alias path
+                        if let Err(e) = state.profile_manager.update(&profile) {
+                            tracing::warn!("Failed to update profile with alias path: {}", e);
+                        }
+                        true
+                    }
+                    Err(e) => {
+                        // Warn but don't fail - alias installation is optional
+                        tracing::warn!("Failed to install alias for '{}': {}", profile.alias, e);
+                        false
+                    }
+                }
+            };
 
             // Broadcast event
             state.broadcast(Event::ProfileCreated {
                 alias: profile.alias.clone(),
             });
 
-            Response::success(format!("Profile '{}' created successfully", profile.alias))
+            // Build response message
+            let message = if alias_installed {
+                format!(
+                    "Profile '{}' created. Run with: {}",
+                    profile.alias, profile.alias
+                )
+            } else if req.no_alias {
+                format!(
+                    "Profile '{}' created. Run with: ringlet profiles run {}",
+                    profile.alias, profile.alias
+                )
+            } else {
+                format!(
+                    "Profile '{}' created. Run with: ringlet profiles run {}",
+                    profile.alias, profile.alias
+                )
+            };
+
+            Response::success(message)
         }
         Err(e) => Response::error(
             error_codes::INTERNAL_ERROR,
@@ -123,7 +164,7 @@ pub async fn inspect(alias: &str, state: &ServerState) -> Response {
     }
 }
 
-/// Run a profile.
+/// Run a profile (non-blocking for HTTP - returns immediately with PID).
 pub async fn run(alias: &str, args: &[String], state: &ServerState) -> Response {
     // Get the profile first
     let profile = match state.profile_manager.get(alias) {
@@ -225,47 +266,55 @@ pub async fn run(alias: &str, args: &[String], state: &ServerState) -> Response 
                 tracing::warn!("Failed to mark profile as used: {}", e);
             }
 
-            // Wait for the process to complete
+            // Spawn background task to wait for completion and record telemetry
+            let alias_owned = alias.to_string();
+            let profile_agent_id = profile.agent_id.clone();
+            let profile_provider_id = profile.provider_id.clone();
+            let paths = state.paths.clone();
+            let events = state.events.clone();
             let mut child = result.child;
-            match child.wait() {
-                Ok(status) => {
-                    let exit_code = status.code().unwrap_or(-1);
-                    let ended_at = chrono::Utc::now();
-                    let duration = ended_at.signed_duration_since(started_at);
 
-                    info!("Profile '{}' completed with exit code {}", alias, exit_code);
+            tokio::task::spawn_blocking(move || {
+                match child.wait() {
+                    Ok(status) => {
+                        let exit_code = status.code().unwrap_or(-1);
+                        let ended_at = chrono::Utc::now();
+                        let duration = ended_at.signed_duration_since(started_at);
 
-                    // Record session to telemetry
-                    // TODO: Add token/cost tracking once we can capture model usage from agent output
-                    let session = crate::telemetry::Session {
-                        profile: alias.to_string(),
-                        agent_id: profile.agent_id.clone(),
-                        provider_id: profile.provider_id.clone(),
-                        started_at,
-                        ended_at: Some(ended_at),
-                        duration_secs: Some(duration.num_seconds() as u64),
-                        exit_code: Some(exit_code),
-                        model: None,
-                        tokens: None,
-                        cost: None,
-                    };
-                    if let Err(e) = state.telemetry.record_session(&session) {
-                        tracing::warn!("Failed to record session: {}", e);
+                        info!("Profile '{}' completed with exit code {}", alias_owned, exit_code);
+
+                        // Record session to telemetry
+                        let telemetry = crate::telemetry::TelemetryCollector::new(paths);
+                        let session = crate::telemetry::Session {
+                            profile: alias_owned.clone(),
+                            agent_id: profile_agent_id,
+                            provider_id: profile_provider_id,
+                            started_at,
+                            ended_at: Some(ended_at),
+                            duration_secs: Some(duration.num_seconds() as u64),
+                            exit_code: Some(exit_code),
+                            model: None,
+                            tokens: None,
+                            cost: None,
+                        };
+                        if let Err(e) = telemetry.record_session(&session) {
+                            tracing::warn!("Failed to record session: {}", e);
+                        }
+
+                        // Broadcast run completed event
+                        events.broadcast(Event::ProfileRunCompleted {
+                            alias: alias_owned,
+                            exit_code,
+                        });
                     }
-
-                    // Broadcast run completed event
-                    state.broadcast(Event::ProfileRunCompleted {
-                        alias: alias.to_string(),
-                        exit_code,
-                    });
-
-                    Response::RunCompleted { exit_code }
+                    Err(e) => {
+                        tracing::error!("Failed to wait for process: {}", e);
+                    }
                 }
-                Err(e) => Response::error(
-                    error_codes::EXECUTION_ERROR,
-                    format!("Failed to wait for process: {}", e),
-                ),
-            }
+            });
+
+            // Return immediately with the PID
+            Response::RunStarted { pid }
         }
         Err(e) => Response::error(
             error_codes::EXECUTION_ERROR,
@@ -375,8 +424,21 @@ pub async fn prepare(alias: &str, args: &[String], state: &ServerState) -> Respo
 
 /// Delete a profile.
 pub async fn delete(alias: &str, state: &ServerState) -> Response {
+    // First, get the profile to check for alias_path
+    let alias_path = match state.profile_manager.get(alias) {
+        Ok(Some(profile)) => profile.metadata.alias_path.clone(),
+        _ => None,
+    };
+
     match state.profile_manager.delete(alias) {
         Ok(()) => {
+            // Try to remove alias if it was installed
+            if alias_path.is_some() {
+                if let Some(removed) = super::aliases::uninstall_alias_sync(alias) {
+                    info!("Removed alias at {:?}", removed);
+                }
+            }
+
             // Broadcast event
             state.broadcast(Event::ProfileDeleted {
                 alias: alias.to_string(),
@@ -396,10 +458,34 @@ pub async fn delete(alias: &str, state: &ServerState) -> Response {
     }
 }
 
+/// Sensitive environment variable keys that should never be exposed via HTTP.
+const SENSITIVE_ENV_KEYS: &[&str] = &[
+    "ANTHROPIC_AUTH_TOKEN",
+    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
+    "CLAUDE_API_KEY",
+    "API_KEY",
+    "SECRET",
+    "TOKEN",
+    "PASSWORD",
+    "CREDENTIAL",
+];
+
+/// Check if an environment variable key is sensitive.
+fn is_sensitive_key(key: &str) -> bool {
+    let key_upper = key.to_uppercase();
+    SENSITIVE_ENV_KEYS.iter().any(|&sensitive| key_upper.contains(sensitive))
+}
+
 /// Get environment variables for shell export.
+/// NOTE: Sensitive keys (API keys, tokens) are filtered out for security.
 pub async fn env(alias: &str, state: &ServerState) -> Response {
     match state.profile_manager.get_env(alias) {
-        Ok(env) => Response::Env(env),
+        Ok(mut env) => {
+            // Filter out sensitive environment variables to prevent credential leakage
+            env.retain(|key, _| !is_sensitive_key(key));
+            Response::Env(env)
+        }
         Err(e) => {
             let msg = e.to_string();
             if msg.contains("not found") {

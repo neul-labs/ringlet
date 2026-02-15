@@ -116,11 +116,18 @@ impl RingletPaths {
         self.logs_dir().join("ringletd.log")
     }
 
-    /// IPC socket path (platform-specific).
+    /// IPC socket path (platform-specific, per-user isolated).
     pub fn ipc_socket(&self) -> PathBuf {
         #[cfg(unix)]
         {
-            PathBuf::from("/tmp/ringletd.sock")
+            // Prefer XDG_RUNTIME_DIR for per-user isolation
+            if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
+                PathBuf::from(runtime_dir).join("ringletd.sock")
+            } else {
+                // Fallback: use /tmp with UID suffix for isolation
+                let uid = unsafe { libc::getuid() };
+                PathBuf::from(format!("/tmp/ringletd-{}.sock", uid))
+            }
         }
         #[cfg(windows)]
         {

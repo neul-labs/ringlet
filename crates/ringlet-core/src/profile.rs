@@ -73,6 +73,10 @@ pub struct ProfileMetadata {
     /// Proxy configuration for this profile.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub proxy_config: Option<ProfileProxyConfig>,
+
+    /// Path to installed CLI alias shim (if any).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alias_path: Option<PathBuf>,
 }
 
 /// Summary information about a profile for listings.
@@ -143,6 +147,10 @@ pub struct ProfileCreateRequest {
     /// Enable proxy for this profile.
     #[serde(default)]
     pub proxy: bool,
+
+    /// Skip automatic alias installation.
+    #[serde(default)]
+    pub no_alias: bool,
 }
 
 impl Profile {
@@ -183,6 +191,7 @@ impl ProfileMetadata {
             enabled_mcp_servers: Vec::new(),
             hooks_config: None,
             proxy_config: None,
+            alias_path: None,
         }
     }
 
@@ -197,6 +206,7 @@ impl ProfileMetadata {
             enabled_mcp_servers: Vec::new(),
             hooks_config: None,
             proxy_config: Some(ProfileProxyConfig::default()),
+            alias_path: None,
         }
     }
 }

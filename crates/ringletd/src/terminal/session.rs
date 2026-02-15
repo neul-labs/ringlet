@@ -94,6 +94,8 @@ pub struct TerminalSession {
     pub profile_alias: String,
     /// Working directory for the session.
     pub working_dir: String,
+    /// SHA-256 hash of the auth token that created this session (for ownership verification).
+    owner_token_hash: String,
     /// Current session state.
     state: Arc<RwLock<SessionState>>,
     /// When the session was created.
@@ -118,6 +120,7 @@ impl TerminalSession {
         id: SessionId,
         profile_alias: String,
         working_dir: String,
+        owner_token_hash: String,
         input_tx: mpsc::Sender<TerminalInput>,
         output_tx: broadcast::Sender<TerminalOutput>,
         initial_size: PtySize,
@@ -126,6 +129,7 @@ impl TerminalSession {
             id,
             profile_alias,
             working_dir,
+            owner_token_hash,
             state: Arc::new(RwLock::new(SessionState::Starting)),
             created_at: Utc::now(),
             input_tx,
@@ -135,6 +139,11 @@ impl TerminalSession {
             client_count: Arc::new(RwLock::new(0)),
             scrollback: Arc::new(RwLock::new(VecDeque::with_capacity(MAX_SCROLLBACK_SIZE))),
         }
+    }
+
+    /// Verify that the given token hash matches this session's owner.
+    pub fn verify_owner(&self, token_hash: &str) -> bool {
+        self.owner_token_hash == token_hash
     }
 
     /// Append data to the scrollback buffer.

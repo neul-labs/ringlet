@@ -53,3 +53,6 @@ mimalloc = { workspace = true }
 
 # HTTP client for terminal API
 ureq = { version = "2", features = ["json"] }
+
+# Platform paths for token file
+dirs = { workspace = true }

@@ -285,6 +285,7 @@ async fn create_first_profile(
         working_dir: None,
         bare: false,
         proxy: false,
+        no_alias: false, // Auto-install alias for init-created profiles
     };
 
     let response = client.request(&Request::ProfilesCreate(request))?;

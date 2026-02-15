@@ -113,10 +113,25 @@ async fn main() -> Result<()> {
     // Get HTTP port from config
     let http_port = config.daemon.http_port;
 
+    // Generate and save HTTP authentication token
+    let http_token = match http::generate_token() {
+        Ok(token) => token,
+        Err(e) => {
+            error!("Failed to generate HTTP auth token: {}", e);
+            return Err(e.into());
+        }
+    };
+    if let Err(e) = http::save_token(&http_token) {
+        error!("Failed to save HTTP auth token: {}", e);
+        // Continue anyway - auth will still work for this session
+    } else {
+        info!("HTTP auth token saved to {:?}", http::token_file_path());
+    }
+
     // Start HTTP server in background task
     let http_state = state.clone();
     let http_handle = tokio::spawn(async move {
-        http::run_http_server(http_state, http_port, http_shutdown_rx).await;
+        http::run_http_server(http_state, http_port, http_token, http_shutdown_rx).await;
     });
 
     // Run the IPC server (blocks until shutdown)

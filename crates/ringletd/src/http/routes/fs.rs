@@ -36,25 +36,49 @@ pub struct ListDirResponse {
     pub entries: Vec<DirEntry>,
 }
 
+/// Validate that a path is within allowed boundaries.
+/// Returns the canonicalized path if valid.
+fn validate_path(path: &PathBuf) -> Result<PathBuf, HttpError> {
+    // Canonicalize to resolve symlinks and .. components
+    let canonical = path.canonicalize().map_err(|e| {
+        HttpError::not_found(format!("Path not found: {} ({})", path.display(), e))
+    })?;
+
+    // Get allowed root directories
+    let home = dirs::home_dir();
+    let tmp = Some(PathBuf::from("/tmp"));
+
+    // Check if path is within allowed directories
+    let is_allowed = [home.as_ref(), tmp.as_ref()]
+        .iter()
+        .filter_map(|d| d.as_ref())
+        .any(|allowed| canonical.starts_with(allowed));
+
+    if !is_allowed {
+        return Err(HttpError::forbidden(format!(
+            "Access denied: {} is outside allowed directories",
+            path.display()
+        )));
+    }
+
+    Ok(canonical)
+}
+
 /// GET /api/fs/list - List directory contents.
 pub async fn list_directory(
     State(_state): State<Arc<ServerState>>,
     Query(query): Query<ListDirQuery>,
 ) -> Result<Json<ApiResponse<ListDirResponse>>, HttpError> {
     // Determine path to list
-    let path = query
+    let requested_path = query
         .path
         .map(PathBuf::from)
         .unwrap_or_else(|| dirs::home_dir().unwrap_or_else(|| PathBuf::from("/")));
 
-    // Validate path exists and is a directory
-    if !path.exists() {
-        return Err(HttpError::not_found(format!(
-            "Path not found: {}",
-            path.display()
-        )));
-    }
+    // Validate and canonicalize path (prevents path traversal)
+    let path = validate_path(&requested_path)?;
 
+    // Validate path is a directory
     if !path.is_dir() {
         return Err(HttpError::new(
             ringlet_core::rpc::error_codes::INTERNAL_ERROR,

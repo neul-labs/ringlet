@@ -1,16 +1,72 @@
 //! Terminal session HTTP handlers.
 
+use crate::http::auth::AuthenticatedTokenHash;
 use crate::http::error::{ApiResponse, HttpError};
 use crate::server::ServerState;
 use crate::terminal::{SandboxConfig, SessionId, TerminalSessionInfo};
 use axum::{
     extract::{Path, State},
-    Json,
+    Extension, Json,
 };
 use ringlet_core::rpc::error_codes;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Arc;
+
+/// Whitelist of allowed shells to prevent command injection.
+const ALLOWED_SHELLS: &[&str] = &[
+    "/bin/bash",
+    "/bin/sh",
+    "/bin/zsh",
+    "/bin/fish",
+    "/usr/bin/bash",
+    "/usr/bin/sh",
+    "/usr/bin/zsh",
+    "/usr/bin/fish",
+];
+
+/// Validate shell is in the whitelist.
+fn validate_shell(shell: &str) -> Result<(), HttpError> {
+    if ALLOWED_SHELLS.contains(&shell) {
+        Ok(())
+    } else {
+        Err(HttpError::new(
+            error_codes::INTERNAL_ERROR,
+            format!("Shell '{}' not in allowed whitelist", shell),
+        ))
+    }
+}
+
+/// Validate that a working directory path is within allowed boundaries.
+fn validate_working_dir(path: &PathBuf) -> Result<PathBuf, HttpError> {
+    // Canonicalize to resolve symlinks and .. components
+    let canonical = path.canonicalize().map_err(|e| {
+        HttpError::new(
+            error_codes::INTERNAL_ERROR,
+            format!("Invalid working directory: {}", e),
+        )
+    })?;
+
+    // Get allowed root directories
+    let home = dirs::home_dir();
+    let tmp = Some(PathBuf::from("/tmp"));
+
+    // Check if path is within allowed directories
+    let is_allowed = [home.as_ref(), tmp.as_ref()]
+        .iter()
+        .filter_map(|d| d.as_ref())
+        .any(|allowed| canonical.starts_with(allowed));
+
+    if !is_allowed {
+        return Err(HttpError::forbidden(format!(
+            "Access denied: working directory '{}' is outside allowed directories",
+            path.display()
+        )));
+    }
+
+    Ok(canonical)
+}
 
 /// Request to create a new terminal session.
 #[derive(Debug, Deserialize)]
@@ -80,6 +136,7 @@ pub async fn get_session(
 /// POST /api/terminal/sessions - Create a new terminal session.
 pub async fn create_session(
     State(state): State<Arc<ServerState>>,
+    Extension(token_hash): Extension<AuthenticatedTokenHash>,
     Json(request): Json<CreateSessionRequest>,
 ) -> Result<Json<ApiResponse<CreateSessionResponse>>, HttpError> {
     // Get the profile
@@ -109,10 +166,12 @@ pub async fn create_session(
     );
 
     // Use provided working directory or fall back to profile's home
-    let working_dir = request
-        .working_dir
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| profile.metadata.home.clone());
+    // Validate the path to prevent path traversal attacks
+    let working_dir = if let Some(dir) = &request.working_dir {
+        validate_working_dir(&PathBuf::from(dir))?
+    } else {
+        profile.metadata.home.clone()
+    };
 
     // Create the session
     let initial_size = portable_pty::PtySize {
@@ -139,6 +198,7 @@ pub async fn create_session(
             &working_dir,
             Some(initial_size),
             sandbox_config,
+            token_hash.0,
         )
         .await
         .map_err(|e| HttpError::new(error_codes::EXECUTION_ERROR, e.to_string()))?;
@@ -201,19 +261,24 @@ pub struct CreateShellRequest {
 /// POST /api/terminal/shell - Create a shell session without a profile.
 pub async fn create_shell_session(
     State(state): State<Arc<ServerState>>,
+    Extension(token_hash): Extension<AuthenticatedTokenHash>,
     Json(request): Json<CreateShellRequest>,
 ) -> Result<Json<ApiResponse<CreateSessionResponse>>, HttpError> {
-    // Determine shell to use
+    // Determine shell to use and validate against whitelist
     let shell = request
         .shell
         .or_else(|| std::env::var("SHELL").ok())
         .unwrap_or_else(|| "/bin/bash".to_string());
 
-    // Determine working directory
-    let working_dir = request
-        .working_dir
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("/")));
+    // Validate shell is in allowed whitelist to prevent command injection
+    validate_shell(&shell)?;
+
+    // Determine working directory and validate path
+    let working_dir = if let Some(dir) = &request.working_dir {
+        validate_working_dir(&PathBuf::from(dir))?
+    } else {
+        dirs::home_dir().unwrap_or_else(|| PathBuf::from("/"))
+    };
 
     // Build minimal environment
     let mut env: HashMap<String, String> = HashMap::new();
@@ -257,6 +322,7 @@ pub async fn create_shell_session(
             &working_dir,
             Some(initial_size),
             sandbox_config,
+            token_hash.0,
         )
         .await
         .map_err(|e| HttpError::new(error_codes::EXECUTION_ERROR, e.to_string()))?;
