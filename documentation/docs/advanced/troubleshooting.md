@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Common issues and their solutions when working with Clown.
+Common issues and their solutions when working with Ringlet.
 
 ---
 
@@ -408,7 +408,7 @@ ringlet daemon start --stay-alive
 
 4. Use environment variable to override URL:
    ```bash
-   export CLOWN_REGISTRY_URL=<alternative-url>
+   export RINGLET_REGISTRY_URL=<alternative-url>
    ```
 
 ### Custom Manifest Not Loaded
@@ -518,10 +518,10 @@ If you're still stuck:
    ```
 
 3. **Report issues:**
-   [https://github.com/neul-labs/ccswitch/issues](https://github.com/neul-labs/ccswitch/issues)
+   [https://github.com/neul-labs/ringlet/issues](https://github.com/neul-labs/ringlet/issues)
 
 4. **Include in bug reports:**
-   - Clown version (`ringlet --version`)
+   - Ringlet version (`ringlet --version`)
    - OS and version
    - Agent and provider being used
    - Relevant log output

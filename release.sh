@@ -121,26 +121,16 @@ check_dependencies() {
 
 update_cargo_version() {
     local version="$1"
-    local cargo_toml="$SCRIPT_DIR/Cargo.toml"
 
-    log_step "Updating Cargo.toml version to $version..."
+    log_step "Updating version to $version..."
 
     if is_dry_run; then
-        log_debug "[DRY-RUN] Would update version in $cargo_toml"
+        log_debug "[DRY-RUN] Would run: scripts/bump-version.sh $version"
         return
     fi
 
-    # Update workspace version
-    sed -i "s/^version = \".*\"/version = \"$version\"/" "$cargo_toml"
-
-    # Verify the change
-    local new_version
-    new_version=$(grep '^version = ' "$cargo_toml" | head -1 | cut -d'"' -f2)
-    if [[ "$new_version" != "$version" ]]; then
-        die "Failed to update version in Cargo.toml"
-    fi
-
-    log_success "Updated Cargo.toml to version $version"
+    "$SCRIPT_DIR/scripts/bump-version.sh" "$version"
+    log_success "Updated all version files to $version"
 }
 
 run_build_phase() {

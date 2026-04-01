@@ -2,13 +2,13 @@
 set -euo pipefail
 
 # ringlet installer script
-# Usage: curl -fsSL https://raw.githubusercontent.com/neul-labs/ccswitch/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/neul-labs/ringlet/main/install.sh | bash
 
 VERSION="${RINGLET_VERSION:-latest}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 FROM_SOURCE="${FROM_SOURCE:-false}"
 LOCAL_BUILD="${LOCAL_BUILD:-false}"
-GITHUB_REPO="neul-labs/ccswitch"
+GITHUB_REPO="neul-labs/ringlet"
 
 # Colors for output
 RED='\033[0;31m'

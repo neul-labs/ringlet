@@ -137,3 +137,108 @@ pub async fn list_directory(
         entries,
     })))
 }
+
+#[derive(Debug, Deserialize)]
+pub struct PathCompleteQuery {
+    /// Path prefix to complete.
+    pub prefix: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PathCompletion {
+    /// Full path to the entry.
+    pub path: String,
+    /// Entry name (filename only).
+    pub name: String,
+    /// Whether this is a directory.
+    pub is_dir: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PathCompleteResponse {
+    pub completions: Vec<PathCompletion>,
+}
+
+/// GET /api/fs/complete - Path autocompletion for directories.
+pub async fn path_complete(
+    State(_state): State<Arc<ServerState>>,
+    Query(query): Query<PathCompleteQuery>,
+) -> Result<Json<ApiResponse<PathCompleteResponse>>, HttpError> {
+    let prefix = &query.prefix;
+
+    // Split into parent dir and partial name
+    let prefix_path = PathBuf::from(prefix);
+    let (parent_dir, partial) = if prefix.ends_with('/') || prefix.ends_with(std::path::MAIN_SEPARATOR) {
+        (prefix_path.clone(), String::new())
+    } else {
+        let parent = prefix_path.parent().unwrap_or(&PathBuf::from("/")).to_path_buf();
+        let partial = prefix_path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
+        (parent, partial)
+    };
+
+    // Validate parent directory
+    let parent = validate_path(&parent_dir)?;
+
+    if !parent.is_dir() {
+        return Ok(Json(ApiResponse::success(PathCompleteResponse {
+            completions: Vec::new(),
+        })));
+    }
+
+    let read_dir = std::fs::read_dir(&parent).map_err(|e| {
+        HttpError::internal(format!("Failed to read directory: {}", e))
+    })?;
+
+    let partial_lower = partial.to_lowercase();
+    let mut completions = Vec::new();
+
+    for entry in read_dir {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+
+        let file_type = match entry.file_type() {
+            Ok(ft) => ft,
+            Err(_) => continue,
+        };
+
+        // Only return directories
+        if !file_type.is_dir() {
+            continue;
+        }
+
+        let name = entry.file_name().to_string_lossy().to_string();
+
+        // Skip hidden directories
+        if name.starts_with('.') {
+            continue;
+        }
+
+        // Filter by partial match (case-insensitive)
+        if !partial_lower.is_empty() && !name.to_lowercase().starts_with(&partial_lower) {
+            continue;
+        }
+
+        let entry_path = entry.path();
+        completions.push(PathCompletion {
+            path: entry_path.to_string_lossy().to_string(),
+            name,
+            is_dir: true,
+        });
+
+        if completions.len() >= 20 {
+            break;
+        }
+    }
+
+    // Sort alphabetically
+    completions.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+
+    Ok(Json(ApiResponse::success(PathCompleteResponse {
+        completions,
+    })))
+}

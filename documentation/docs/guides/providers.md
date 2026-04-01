@@ -17,7 +17,7 @@ A provider specifies:
 
 ## Built-in Providers
 
-Clown ships with these providers:
+Ringlet ships with these providers:
 
 | ID | Name | Type | Endpoint |
 |----|------|------|----------|
@@ -91,7 +91,7 @@ ringlet profiles create claude china-project --provider minimax --endpoint china
 
 ### Same Credentials, Different Profiles
 
-When creating multiple profiles with the same provider, Clown offers to reuse credentials:
+When creating multiple profiles with the same provider, Ringlet offers to reuse credentials:
 
 ```bash
 $ ringlet profiles create claude project-a --provider minimax
@@ -251,7 +251,7 @@ Uses:
 
 ## How Providers Work Internally
 
-When you create a profile, Clown:
+When you create a profile, Ringlet:
 
 1. **Reads provider manifest** - Gets endpoint, auth requirements, models
 2. **Prompts for API key** - Stores securely in system keychain

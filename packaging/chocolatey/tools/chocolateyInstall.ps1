@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $packageName = 'ringlet'
 $version = '0.1.0'
-$url = "https://github.com/neul-labs/ccswitch/releases/download/v$version/ringlet-win32-x64-$version.zip"
+$url = "https://github.com/neul-labs/ringlet/releases/download/v$version/ringlet-win32-x64-$version.zip"
 
 $toolsDir = "$(Split-Path -Parent $MyInvocation.MyCommand.Definition)"
 $installDir = Join-Path $toolsDir 'bin'

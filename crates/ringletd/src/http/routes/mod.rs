@@ -2,6 +2,7 @@
 
 pub mod agents;
 pub mod fs;
+pub mod git;
 pub mod hooks;
 pub mod profiles;
 pub mod providers;
@@ -91,4 +92,7 @@ pub fn api_routes() -> Router<Arc<ServerState>> {
         .route("/terminal/shell", post(terminal::create_shell_session))
         // Filesystem
         .route("/fs/list", get(fs::list_directory))
+        .route("/fs/complete", get(fs::path_complete))
+        // Git
+        .route("/git/info", get(git::git_info))
 }

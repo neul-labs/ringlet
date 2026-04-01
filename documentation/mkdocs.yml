@@ -1,8 +1,8 @@
-site_name: Clown Documentation
+site_name: Ringlet Documentation
 site_description: CLI orchestrator for coding agents - manage multiple AI coding assistants with isolated profiles
-site_url: https://neul-labs.github.io/ccswitch/
-repo_url: https://github.com/neul-labs/ccswitch
-repo_name: neul-labs/ccswitch
+site_url: https://neul-labs.github.io/ringlet/
+repo_url: https://github.com/neul-labs/ringlet
+repo_name: neul-labs/ringlet
 edit_uri: edit/main/documentation/docs/
 
 theme:
@@ -94,7 +94,7 @@ plugins:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/neul-labs/ccswitch
+      link: https://github.com/neul-labs/ringlet
   generator: false
 
 extra_css:

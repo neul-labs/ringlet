@@ -3,6 +3,8 @@ import { ref, computed } from 'vue'
 import type { Event, ServerMessage, ClientMessage } from '@/api/types'
 import { useProfilesStore } from './profiles'
 import { useProxyStore } from './proxy'
+import { isTauri } from '@/api/config'
+import { tauriWsConnect, type TauriWsHandle } from '@/api/tauri-bridge'
 
 export const useWebSocketStore = defineStore('websocket', () => {
   const connected = ref(false)
@@ -10,11 +12,53 @@ export const useWebSocketStore = defineStore('websocket', () => {
   const version = ref<string | null>(null)
 
   let socket: WebSocket | null = null
+  let tauriWs: TauriWsHandle | null = null
   let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
 
   const recentEvents = computed(() => events.value.slice(-50))
 
   function connect() {
+    if (isTauri()) {
+      connectTauri()
+    } else {
+      connectBrowser()
+    }
+  }
+
+  async function connectTauri() {
+    if (tauriWs) return
+
+    try {
+      tauriWs = await tauriWsConnect(
+        '/ws',
+        (data: string) => {
+          try {
+            const msg: ServerMessage = JSON.parse(data)
+            handleMessage(msg)
+          } catch {
+            console.error('Failed to parse WebSocket message:', data)
+          }
+        },
+        null,
+        () => {
+          connected.value = false
+          tauriWs = null
+          // Reconnect after 3 seconds
+          reconnectTimeout = setTimeout(connect, 3000)
+        }
+      )
+
+      connected.value = true
+      // Subscribe to all events
+      send({ type: 'subscribe', topics: ['*'] })
+    } catch (e) {
+      console.error('Tauri WebSocket connection failed:', e)
+      // Retry after 3 seconds
+      reconnectTimeout = setTimeout(connect, 3000)
+    }
+  }
+
+  function connectBrowser() {
     if (socket?.readyState === WebSocket.OPEN) return
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -54,14 +98,21 @@ export const useWebSocketStore = defineStore('websocket', () => {
       clearTimeout(reconnectTimeout)
       reconnectTimeout = null
     }
+    if (tauriWs) {
+      tauriWs.close()
+      tauriWs = null
+    }
     socket?.close()
     socket = null
     connected.value = false
   }
 
   function send(msg: ClientMessage) {
-    if (socket?.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify(msg))
+    const json = JSON.stringify(msg)
+    if (tauriWs) {
+      tauriWs.send(json)
+    } else if (socket?.readyState === WebSocket.OPEN) {
+      socket.send(json)
     }
   }
 

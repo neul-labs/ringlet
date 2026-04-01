@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for your interest in contributing to Clown! This guide will help you get started.
+Thank you for your interest in contributing to Ringlet! This guide will help you get started.
 
 ---
 
@@ -15,7 +15,7 @@ Before creating a bug report, check existing issues to avoid duplicates.
 - Clear, descriptive title
 - Steps to reproduce
 - Expected vs actual behavior
-- Environment details (OS, Rust version, Clown version)
+- Environment details (OS, Rust version, Ringlet version)
 - Relevant logs or error messages
 
 ```bash
@@ -48,15 +48,15 @@ Feature suggestions are welcome! Open an issue with:
 
 ### Prerequisites
 
-- Rust 1.75 or later
+- Rust 1.85 or later (2024 edition)
 - Cargo
 - Git
 
 ### Clone and Build
 
 ```bash
-git clone https://github.com/neul-labs/ccswitch.git
-cd ccswitch
+git clone https://github.com/neul-labs/ringlet.git
+cd ringlet
 cargo build
 ```
 

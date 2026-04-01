@@ -1,22 +1,22 @@
 # Getting Started
 
-Welcome to Clown! This section will help you get up and running quickly.
+Welcome to Ringlet! This section will help you get up and running quickly.
 
 ---
 
 ## Overview
 
-Clown helps you manage multiple AI coding agents with different configurations. Here's what you'll learn:
+Ringlet helps you manage multiple AI coding agents with different configurations. Here's what you'll learn:
 
-1. **[Installation](installation.md)** - Install Clown on your system
+1. **[Installation](installation.md)** - Install Ringlet on your system
 2. **[Quick Start](quickstart.md)** - Create and run your first profile
-3. **[Key Concepts](concepts.md)** - Understand how Clown works
+3. **[Key Concepts](concepts.md)** - Understand how Ringlet works
 
 ---
 
 ## Prerequisites
 
-Before installing Clown, ensure you have:
+Before installing Ringlet, ensure you have:
 
 - **An AI coding agent** installed (Claude Code, Codex CLI, etc.)
 - **An API key** from your provider (Anthropic, OpenAI, etc.)
@@ -29,8 +29,8 @@ Before installing Clown, ensure you have:
 If you want to dive right in:
 
 ```bash
-# 1. Install Clown
-curl -fsSL https://raw.githubusercontent.com/neul-labs/ccswitch/main/install.sh | bash
+# 1. Install Ringlet
+curl -fsSL https://raw.githubusercontent.com/neul-labs/ringlet/main/install.sh | bash
 
 # 2. Create a profile
 ringlet profiles create claude my-project --provider anthropic
@@ -53,7 +53,7 @@ That's it! Your agent will start with its own isolated configuration.
 
     Detailed installation instructions for all platforms and methods.
 
-    [:octicons-arrow-right-24: Install Clown](installation.md)
+    [:octicons-arrow-right-24: Install Ringlet](installation.md)
 
 -   :material-rocket-launch:{ .lg .middle } **Quick Start**
 

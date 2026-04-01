@@ -4,7 +4,7 @@ Gem::Specification.new do |s|
   s.summary     = 'CLI orchestrator for coding agents'
   s.description = 'ringlet is a cross-platform orchestrator for CLI-based coding agents'
   s.authors     = ['Dipankar Sarkar']
-  s.homepage    = 'https://github.com/neul-labs/ccswitch'
+  s.homepage    = 'https://github.com/neul-labs/ringlet'
   s.license     = 'MIT'
 
   s.files       = Dir['lib/**/*', 'bin/*', 'README.md']
@@ -15,8 +15,8 @@ Gem::Specification.new do |s|
 
   s.metadata = {
     'homepage_uri' => s.homepage,
-    'source_code_uri' => 'https://github.com/neul-labs/ccswitch',
-    'changelog_uri' => 'https://github.com/neul-labs/ccswitch/releases'
+    'source_code_uri' => 'https://github.com/neul-labs/ringlet',
+    'changelog_uri' => 'https://github.com/neul-labs/ringlet/releases'
   }
 
   s.post_install_message = <<~MSG

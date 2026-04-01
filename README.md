@@ -158,10 +158,24 @@ ringlet profiles run work --remote --bwrap-flags="--unshare-net"
 └───────────────────────────────────────────────────┘
 ```
 
+### Workspace UI
+
+The Web UI provides a workspace-centric view for managing projects:
+
+- **Workspace Grid** — Browse and open project folders with git status at a glance
+- **Git Integration** — See branch, status, and recent commits per workspace
+- **Run-from-Folder** — Launch agent sessions directly from a workspace directory
+
+### Desktop App
+
+A native desktop application built with Tauri wraps the Web UI for a standalone experience — no browser tab needed.
+
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
+│  Desktop App (Tauri) — optional native wrapper              │
+├─────────────────────────────────────────────────────────────┤
 │  CLI (ringlet)                                              │
 │  └── init │ profiles │ agents │ usage │ terminal           │
 ├─────────────────────────────────────────────────────────────┤
@@ -240,6 +254,8 @@ Full documentation at **[docs.neullabs.com/ringlet](https://docs.neullabs.com/ri
 | Profile hooks and Rhai scripting | ✅ Stable |
 | Proxy routing with ultrallm | ✅ Stable |
 | Web UI and HTTP/WebSocket APIs | ✅ Stable |
+| Workspace UI (grid, git info, run-from-folder) | 🆕 New |
+| Desktop App (Tauri) | 🆕 New |
 | Remote terminal sessions | ✅ Stable |
 | Sandbox isolation (bwrap/sandbox-exec) | ✅ Stable |
 | Token/cost tracking | ✅ Stable |

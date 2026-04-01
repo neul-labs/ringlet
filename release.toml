@@ -4,8 +4,8 @@
 [project]
 name = "ringlet"
 binaries = ["ringlet", "ringletd"]
-repository = "neul-labs/ccswitch"
-homepage = "https://github.com/neul-labs/ccswitch"
+repository = "neul-labs/ringlet"
+homepage = "https://github.com/neul-labs/ringlet"
 description = "CLI orchestrator for coding agents"
 license = "MIT"
 

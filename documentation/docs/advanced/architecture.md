@@ -1,12 +1,12 @@
 # System Architecture
 
-Deep dive into how Clown is designed and how its components interact.
+Deep dive into how Ringlet is designed and how its components interact.
 
 ---
 
 ## Overview
 
-Clown is a Rust-native workspace built around a central background daemon (`ringletd`) that orchestrates CLI coding agents. The daemon owns profile persistence, agent discovery, telemetry collection, and real-time event distribution.
+Ringlet is a Rust-native workspace built around a central background daemon (`ringletd`) that orchestrates CLI coding agents. The daemon owns profile persistence, agent discovery, telemetry collection, and real-time event distribution.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -68,7 +68,7 @@ The CLI never performs stateful operations directly - everything goes through th
 
 ### ringletd (Daemon)
 
-The heart of Clown. Runs as a long-lived background process and owns:
+The heart of Ringlet. Runs as a long-lived background process and owns:
 
 | Responsibility | Description |
 |----------------|-------------|
@@ -179,7 +179,7 @@ For UI integrations that can't speak NNG:
 
 ### Home Wrapper Strategy
 
-When a profile runs, Clown creates an isolated environment:
+When a profile runs, Ringlet creates an isolated environment:
 
 ```
 Real HOME: /home/user
@@ -298,7 +298,7 @@ The agent reads configuration from the profile HOME, ensuring:
 | Linux | `~/.config/ringlet/` or XDG | `/tmp/ringletd.sock` |
 | Windows | `%APPDATA%\ringlet\` | `%LOCALAPPDATA%\ringlet\ringletd.ipc` |
 
-Clown uses the `dirs` crate to resolve paths and keeps launcher scripts optional.
+Ringlet uses the `dirs` crate to resolve paths and keeps launcher scripts optional.
 
 ---
 

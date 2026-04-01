@@ -1,17 +1,17 @@
 # Installation
 
-This guide covers all the ways to install Clown on your system.
+This guide covers all the ways to install Ringlet on your system.
 
 ---
 
 ## Quick Install (Recommended)
 
-The easiest way to install Clown is using our install script:
+The easiest way to install Ringlet is using our install script:
 
 === "Linux/macOS"
 
     ```bash
-    curl -fsSL https://raw.githubusercontent.com/neul-labs/ccswitch/main/install.sh | bash
+    curl -fsSL https://raw.githubusercontent.com/neul-labs/ringlet/main/install.sh | bash
     ```
 
 This will:
@@ -31,10 +31,10 @@ Download the latest release directly:
 
 | Platform | Architecture | Download |
 |----------|--------------|----------|
-| Linux | x86_64 | [ringlet-linux-x64](https://github.com/neul-labs/ccswitch/releases/latest) |
-| Linux | arm64 | [ringlet-linux-arm64](https://github.com/neul-labs/ccswitch/releases/latest) |
-| macOS | x86_64 | [ringlet-darwin-x64](https://github.com/neul-labs/ccswitch/releases/latest) |
-| macOS | Apple Silicon | [ringlet-darwin-arm64](https://github.com/neul-labs/ccswitch/releases/latest) |
+| Linux | x86_64 | [ringlet-linux-x64](https://github.com/neul-labs/ringlet/releases/latest) |
+| Linux | arm64 | [ringlet-linux-arm64](https://github.com/neul-labs/ringlet/releases/latest) |
+| macOS | x86_64 | [ringlet-darwin-x64](https://github.com/neul-labs/ringlet/releases/latest) |
+| macOS | Apple Silicon | [ringlet-darwin-arm64](https://github.com/neul-labs/ringlet/releases/latest) |
 
 After downloading:
 
@@ -55,11 +55,11 @@ Build from source using Cargo:
 
 ```bash
 # Install from git
-cargo install --git https://github.com/neul-labs/ccswitch ringlet
+cargo install --git https://github.com/neul-labs/ringlet ringlet
 
 # Or clone and build
-git clone https://github.com/neul-labs/ccswitch
-cd ccswitch
+git clone https://github.com/neul-labs/ringlet
+cd ringlet
 cargo build --release
 cp target/release/ringlet target/release/ringletd ~/.local/bin/
 ```
@@ -67,7 +67,7 @@ cp target/release/ringlet target/release/ringletd ~/.local/bin/
 !!! note "Requirements"
     Building from source requires:
 
-    - Rust 1.75 or later
+    - Rust 1.85 or later (2024 edition)
     - A C compiler (for native dependencies)
 
 ### Local Build
@@ -75,7 +75,7 @@ cp target/release/ringlet target/release/ringletd ~/.local/bin/
 If you have the repository cloned, you can build and install directly:
 
 ```bash
-cd /path/to/ccswitch
+cd /path/to/ringlet
 ./install.sh --local
 ```
 
@@ -138,7 +138,7 @@ If `ringlet` is not found after installation, add it to your PATH:
 
 ## Installing Agents
 
-Clown works with these coding agents:
+Ringlet works with these coding agents:
 
 ### Claude Code
 
@@ -168,13 +168,13 @@ codex --version
 ```
 
 !!! tip "Agent Detection"
-    Clown automatically detects installed agents. Run `ringlet agents list` to see what's available.
+    Ringlet automatically detects installed agents. Run `ringlet agents list` to see what's available.
 
 ---
 
 ## Uninstalling
 
-To remove Clown:
+To remove Ringlet:
 
 ```bash
 # Stop the daemon
@@ -191,7 +191,7 @@ rm -rf ~/.config/ringlet
 
 ## Next Steps
 
-Now that Clown is installed:
+Now that Ringlet is installed:
 
 1. [:octicons-arrow-right-24: Follow the Quick Start](quickstart.md) to create your first profile
-2. [:octicons-arrow-right-24: Learn the Key Concepts](concepts.md) to understand how Clown works
+2. [:octicons-arrow-right-24: Learn the Key Concepts](concepts.md) to understand how Ringlet works

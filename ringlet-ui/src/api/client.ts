@@ -16,7 +16,11 @@ import type {
   CreateTerminalSessionResponse,
   CreateShellRequest,
   ListDirResponse,
+  PathCompleteResponse,
+  GitInfo,
 } from './types'
+import { isTauri, getBaseUrl, getAuthToken } from './config'
+import { tauriApiRequest } from './tauri-bridge'
 
 class ApiError extends Error {
   constructor(
@@ -28,16 +32,38 @@ class ApiError extends Error {
   }
 }
 
-const BASE_URL = '/api'
-
 async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
+  // In Tauri mode, proxy through IPC to the Rust backend
+  if (isTauri()) {
+    const method = options.method || 'GET'
+    const body = options.body ? JSON.parse(options.body as string) : undefined
+    const response = await tauriApiRequest<ApiResponse<T>>(method, endpoint, body)
+
+    if (!response.success || response.error) {
+      throw new ApiError(response.error?.code ?? 0, response.error?.message ?? 'Unknown error')
+    }
+
+    return response.data as T
+  }
+
+  // Browser mode: direct fetch with configurable base URL
+  const baseUrl = getBaseUrl()
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  const authToken = getAuthToken()
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`
+  }
+
+  const response = await fetch(`${baseUrl}${endpoint}`, {
     headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
+      ...headers,
+      ...(options.headers as Record<string, string>),
     },
     ...options,
   })
@@ -236,6 +262,14 @@ export const api = {
   fs: {
     list: (path?: string) =>
       request<ListDirResponse>(`/fs/list${path ? `?path=${encodeURIComponent(path)}` : ''}`),
+    complete: (prefix: string) =>
+      request<PathCompleteResponse>(`/fs/complete?prefix=${encodeURIComponent(prefix)}`),
+  },
+
+  // Git
+  git: {
+    info: (path: string) =>
+      request<GitInfo>(`/git/info?path=${encodeURIComponent(path)}`),
   },
 }
 

@@ -1,12 +1,12 @@
-# Clown
+# Ringlet
 
 **CLI orchestrator for coding agents** - manage multiple AI coding assistants with isolated profiles, seamless provider switching, and unified usage tracking.
 
 ---
 
-## What is Clown?
+## What is Ringlet?
 
-Clown is a command-line tool that helps you manage multiple AI coding agents (like Claude Code, Codex CLI, Grok CLI) with different API providers and configurations. It provides:
+Ringlet is a command-line tool that helps you manage multiple AI coding agents (like Claude Code, Codex CLI, Grok CLI) with different API providers and configurations. It provides:
 
 - **Profile Isolation** - Each profile gets its own isolated environment, preventing configuration conflicts
 - **Provider Abstraction** - Switch between Anthropic, MiniMax, OpenAI, and other providers without reconfiguring your agent
@@ -20,20 +20,20 @@ Clown is a command-line tool that helps you manage multiple AI coding agents (li
 === "Linux/macOS"
 
     ```bash
-    curl -fsSL https://raw.githubusercontent.com/neul-labs/ccswitch/main/install.sh | bash
+    curl -fsSL https://raw.githubusercontent.com/neul-labs/ringlet/main/install.sh | bash
     ```
 
 === "From Source"
 
     ```bash
-    cargo install --git https://github.com/neul-labs/ccswitch ringlet
+    cargo install --git https://github.com/neul-labs/ringlet ringlet
     ```
 
 === "Local Build"
 
     ```bash
-    git clone https://github.com/neul-labs/ccswitch
-    cd ccswitch
+    git clone https://github.com/neul-labs/ringlet
+    cd ringlet
     ./install.sh --local
     ```
 
@@ -130,7 +130,7 @@ ringlet usage
 
 ## Architecture Overview
 
-Clown uses a daemon-first architecture where a background service manages all state:
+Ringlet uses a daemon-first architecture where a background service manages all state:
 
 ```
 ┌─────────┐     ┌─────────┐     ┌──────────────┐
@@ -153,11 +153,11 @@ Clown uses a daemon-first architecture where a background service manages all st
 ## Getting Help
 
 - **Documentation**: You're reading it!
-- **GitHub Issues**: [Report bugs or request features](https://github.com/neul-labs/ccswitch/issues)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/neul-labs/ringlet/issues)
 - **CLI Help**: Run `ringlet --help` or `ringlet <command> --help`
 
 ---
 
 ## License
 
-Clown is open source software licensed under the MIT License.
+Ringlet is open source software licensed under the MIT License.

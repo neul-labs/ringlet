@@ -4,7 +4,7 @@ pkgver={{VERSION}}
 pkgrel=1
 pkgdesc="CLI orchestrator for coding agents"
 arch=('x86_64' 'aarch64')
-url="https://github.com/neul-labs/ccswitch"
+url="https://github.com/neul-labs/ringlet"
 license=('MIT')
 depends=('gcc-libs')
 optdepends=(
@@ -14,8 +14,8 @@ optdepends=(
 provides=('ringlet' 'ringletd')
 conflicts=('ringlet-git' 'ringlet-bin')
 
-source_x86_64=("https://github.com/neul-labs/ccswitch/releases/download/v${pkgver}/ringlet-linux-x64-${pkgver}.tar.gz")
-source_aarch64=("https://github.com/neul-labs/ccswitch/releases/download/v${pkgver}/ringlet-linux-arm64-${pkgver}.tar.gz")
+source_x86_64=("https://github.com/neul-labs/ringlet/releases/download/v${pkgver}/ringlet-linux-x64-${pkgver}.tar.gz")
+source_aarch64=("https://github.com/neul-labs/ringlet/releases/download/v${pkgver}/ringlet-linux-arm64-${pkgver}.tar.gz")
 
 sha256sums_x86_64=('{{SHA256_X64}}')
 sha256sums_aarch64=('{{SHA256_ARM64}}')

@@ -1,27 +1,27 @@
-class Clown < Formula
+class Ringlet < Formula
   desc "CLI orchestrator for coding agents"
-  homepage "https://github.com/neul-labs/ccswitch"
+  homepage "https://github.com/neul-labs/ringlet"
   version "{{VERSION}}"
   license "MIT"
 
   on_macos do
     on_arm do
-      url "https://github.com/neul-labs/ccswitch/releases/download/v{{VERSION}}/ringlet-darwin-arm64-{{VERSION}}.tar.gz"
+      url "https://github.com/neul-labs/ringlet/releases/download/v{{VERSION}}/ringlet-darwin-arm64-{{VERSION}}.tar.gz"
       sha256 "{{SHA256_DARWIN_ARM64}}"
     end
     on_intel do
-      url "https://github.com/neul-labs/ccswitch/releases/download/v{{VERSION}}/ringlet-darwin-x64-{{VERSION}}.tar.gz"
+      url "https://github.com/neul-labs/ringlet/releases/download/v{{VERSION}}/ringlet-darwin-x64-{{VERSION}}.tar.gz"
       sha256 "{{SHA256_DARWIN_X64}}"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/neul-labs/ccswitch/releases/download/v{{VERSION}}/ringlet-linux-arm64-{{VERSION}}.tar.gz"
+      url "https://github.com/neul-labs/ringlet/releases/download/v{{VERSION}}/ringlet-linux-arm64-{{VERSION}}.tar.gz"
       sha256 "{{SHA256_LINUX_ARM64}}"
     end
     on_intel do
-      url "https://github.com/neul-labs/ccswitch/releases/download/v{{VERSION}}/ringlet-linux-x64-{{VERSION}}.tar.gz"
+      url "https://github.com/neul-labs/ringlet/releases/download/v{{VERSION}}/ringlet-linux-x64-{{VERSION}}.tar.gz"
       sha256 "{{SHA256_LINUX_X64}}"
     end
   end

@@ -1,6 +1,6 @@
 # Registry Management
 
-Clown distributes agent manifests, profile templates, and model catalogs through a GitHub-hosted registry. This guide covers how to work with the registry system.
+Ringlet distributes agent manifests, profile templates, and model catalogs through a GitHub-hosted registry. This guide covers how to work with the registry system.
 
 ---
 
@@ -251,7 +251,7 @@ The registry supports multiple channels:
 
 ```bash
 # Use environment variable
-export CLOWN_REGISTRY_CHANNEL=beta
+export RINGLET_REGISTRY_CHANNEL=beta
 ringlet registry sync
 ```
 
@@ -265,10 +265,10 @@ Enterprises can host their own registry:
 
 1. Fork the registry repository
 2. Host on GitHub Enterprise or artifact server
-3. Configure Clown to use your registry:
+3. Configure Ringlet to use your registry:
 
 ```bash
-export CLOWN_REGISTRY_URL=https://github.example.com/org/ringlet-registry
+export RINGLET_REGISTRY_URL=https://github.example.com/org/ringlet-registry
 ringlet registry sync
 ```
 

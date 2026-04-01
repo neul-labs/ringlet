@@ -116,7 +116,7 @@ jobs:
 
           ### Quick Install (Linux/macOS)
           \`\`\`bash
-          curl -fsSL https://raw.githubusercontent.com/neul-labs/ccswitch/main/install.sh | bash
+          curl -fsSL https://raw.githubusercontent.com/neul-labs/ringlet/main/install.sh | bash
           \`\`\`
 
           ### Package Managers

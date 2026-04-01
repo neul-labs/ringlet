@@ -1,6 +1,6 @@
-# Contributing to Clown
+# Contributing to Ringlet
 
-Thank you for your interest in contributing to Clown! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to Ringlet! This document provides guidelines and instructions for contributing.
 
 ## Code of Conduct
 
@@ -15,7 +15,7 @@ Before creating a bug report, please check existing issues to avoid duplicates. 
 - A clear and descriptive title
 - Steps to reproduce the issue
 - Expected behavior vs actual behavior
-- Your environment (OS, Rust version, Clown version)
+- Your environment (OS, Rust version, Ringlet version)
 - Any relevant logs or error messages
 
 ### Suggesting Features

@@ -93,7 +93,7 @@ async function installFromGitHub() {
   }
 
   const ext = process.platform === 'win32' ? 'zip' : 'tar.gz';
-  const url = `https://github.com/neul-labs/ccswitch/releases/download/v${version}/clown-${artifactName}-${version}.${ext}`;
+  const url = `https://github.com/neul-labs/ringlet/releases/download/v${version}/ringlet-${artifactName}-${version}.${ext}`;
 
   const binDir = path.join(__dirname, 'bin');
   const tmpDir = path.join(__dirname, 'tmp');

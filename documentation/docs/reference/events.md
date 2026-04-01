@@ -1,6 +1,6 @@
 # WebSocket Events Reference
 
-The Clown daemon publishes real-time events over WebSocket connections, enabling live updates in UI clients and CLI watch modes.
+The Ringlet daemon publishes real-time events over WebSocket connections, enabling live updates in UI clients and CLI watch modes.
 
 ---
 

@@ -84,6 +84,15 @@ futures-util = "0.3"
 rust-embed = { version = "8", features = ["compression"] }
 mime_guess = "2"
 
+# WebSocket client (for Tauri app proxy)
+tokio-tungstenite = "0.24"
+
+# URL parsing
+url = "2"
+
+# Binary discovery
+which = "7"
+
 # Internal crates
 ringlet-core = { path = "crates/ringlet-core", version = "0.1.0" }
 ringlet-scripting = { path = "crates/ringlet-scripting", version = "0.1.0" }

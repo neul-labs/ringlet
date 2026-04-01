@@ -331,3 +331,44 @@ export interface ListDirResponse {
   parent: string | null
   entries: DirEntry[]
 }
+
+// Path completion types
+export interface PathCompletion {
+  path: string
+  name: string
+  is_dir: boolean
+}
+
+export interface PathCompleteResponse {
+  completions: PathCompletion[]
+}
+
+// Git types
+export interface GitCommitInfo {
+  hash: string
+  message: string
+  author: string
+  date: string
+}
+
+export interface GitInfo {
+  is_repo: boolean
+  branch: string | null
+  dirty: boolean
+  remote_url: string | null
+  commits: GitCommitInfo[]
+}
+
+// Workspace types
+export interface RecentWorkspace {
+  path: string
+  last_opened: string
+  open_count: number
+}
+
+export interface WorkspaceBookmark {
+  path: string
+  name: string
+  pinned: boolean
+  added_at: string
+}

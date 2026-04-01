@@ -1,6 +1,6 @@
 # Profile Management
 
-Profiles are the heart of Clown. Each profile binds an agent to a specific provider, model, and credentials with complete isolation.
+Profiles are the heart of Ringlet. Each profile binds an agent to a specific provider, model, and credentials with complete isolation.
 
 ---
 
@@ -13,7 +13,7 @@ A profile contains:
 - **Credentials** - API key stored securely in your system keychain
 - **Configuration** - Model selection, arguments, hooks, and more
 
-When you run a profile, Clown creates an isolated environment where all configuration is separate from other profiles.
+When you run a profile, Ringlet creates an isolated environment where all configuration is separate from other profiles.
 
 ---
 
@@ -168,7 +168,7 @@ ringlet profiles create claude work --provider minimax --model claude-opus-4
 
 ### How It Works
 
-Clown uses the **home-wrapper** strategy for isolation:
+Ringlet uses the **home-wrapper** strategy for isolation:
 
 ```
 ~/.claude-profiles/my-project/
@@ -182,7 +182,7 @@ Clown uses the **home-wrapper** strategy for isolation:
 
 When running a profile:
 
-1. Clown sets `HOME` to the profile directory
+1. Ringlet sets `HOME` to the profile directory
 2. Agent reads/writes config relative to this new HOME
 3. Each profile has completely separate state
 

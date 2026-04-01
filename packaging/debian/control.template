@@ -16,4 +16,4 @@ Description: CLI orchestrator for coding agents
   - Intelligent request routing based on context
   - Usage tracking and cost analytics
   - Remote terminal sessions with sandboxing
-Homepage: https://github.com/neul-labs/ccswitch
+Homepage: https://github.com/neul-labs/ringlet

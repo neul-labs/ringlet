@@ -12,7 +12,7 @@ from pathlib import Path
 
 __version__ = "0.1.0"
 
-GITHUB_REPO = "neul-labs/ccswitch"
+GITHUB_REPO = "neul-labs/ringlet"
 
 
 def get_platform_suffix():

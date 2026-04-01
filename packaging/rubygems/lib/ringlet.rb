@@ -5,9 +5,9 @@ require 'tempfile'
 require 'rubygems/package'
 require 'zlib'
 
-module Clown
+module Ringlet
   VERSION = '0.1.0'
-  GITHUB_REPO = 'neul-labs/ccswitch'
+  GITHUB_REPO = 'neul-labs/ringlet'
 
   class << self
     def binary_dir

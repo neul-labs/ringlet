@@ -1,6 +1,6 @@
 # HTTP API Reference
 
-The Clown daemon exposes an HTTP API on `http://127.0.0.1:8765` for UI integrations and external tools.
+The Ringlet daemon exposes an HTTP API on `http://127.0.0.1:8765` for UI integrations and external tools.
 
 ---
 

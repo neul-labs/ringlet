@@ -1,6 +1,6 @@
 # Configuration Reference
 
-Reference for all configuration files used by Clown.
+Reference for all configuration files used by Ringlet.
 
 ---
 
@@ -174,7 +174,7 @@ Profile definition stored as JSON.
 
 ### agents.d/<agent-id>.toml
 
-Define how Clown interacts with an agent.
+Define how Ringlet interacts with an agent.
 
 ```toml
 id = "claude"
@@ -312,7 +312,7 @@ default = "MiniMax-M2.1"
 
 ### Profile Home Structure
 
-When a profile runs, Clown creates an isolated home:
+When a profile runs, Ringlet creates an isolated home:
 
 ```
 ~/.claude-profiles/my-project/
@@ -335,10 +335,10 @@ When a profile runs, Clown creates an isolated home:
 
 | Variable | Description |
 |----------|-------------|
-| `CLOWN_CONFIG_DIR` | Override config directory |
-| `CLOWN_DAEMON_ENDPOINT` | Override daemon endpoint |
-| `CLOWN_REGISTRY_URL` | Override registry URL |
-| `CLOWN_REGISTRY_CHANNEL` | Override registry channel |
+| `RINGLET_CONFIG_DIR` | Override config directory |
+| `RINGLET_DAEMON_ENDPOINT` | Override daemon endpoint |
+| `RINGLET_REGISTRY_URL` | Override registry URL |
+| `RINGLET_REGISTRY_CHANNEL` | Override registry channel |
 
 ### Runtime Variables
 

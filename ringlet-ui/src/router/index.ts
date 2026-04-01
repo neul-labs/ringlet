@@ -5,6 +5,16 @@ const router = createRouter({
   routes: [
     {
       path: '/',
+      name: 'workspaces',
+      component: () => import('@/views/WorkspacesView.vue'),
+    },
+    {
+      path: '/workspace',
+      name: 'workspace',
+      component: () => import('@/views/WorkspaceDetailView.vue'),
+    },
+    {
+      path: '/dashboard',
       name: 'dashboard',
       component: () => import('@/views/DashboardView.vue'),
     },
@@ -52,6 +62,16 @@ const router = createRouter({
       path: '/terminal/:sessionId',
       name: 'terminal-session',
       component: () => import('@/views/TerminalView.vue'),
+    },
+    {
+      path: '/connect',
+      name: 'connect',
+      component: () => import('@/views/ConnectionView.vue'),
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('@/views/SettingsView.vue'),
     },
   ],
 })

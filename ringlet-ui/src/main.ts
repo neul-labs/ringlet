@@ -3,6 +3,9 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import './styles/main.css'
+import { initApiConfig } from './api/config'
+
+initApiConfig()
 
 const app = createApp(App)
 

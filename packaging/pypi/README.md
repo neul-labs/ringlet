@@ -1,17 +1,17 @@
-# clown-cli
+# ringlet-cli
 
 CLI orchestrator for coding agents.
 
 ## Installation
 
 ```bash
-pip install clown-cli
+pip install ringlet-cli
 ```
 
 ## Usage
 
 ```bash
-clown --help
+ringlet --help
 ```
 
 ## Features
@@ -24,4 +24,4 @@ clown --help
 
 ## More Information
 
-For full documentation, visit: https://github.com/neul-labs/ccswitch
+For full documentation, visit: https://github.com/neul-labs/ringlet

@@ -5,11 +5,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/neul-labs/ccswitch.git"
+    "url": "https://github.com/neul-labs/ringlet.git"
   },
-  "homepage": "https://github.com/neul-labs/ccswitch",
+  "homepage": "https://github.com/neul-labs/ringlet",
   "bugs": {
-    "url": "https://github.com/neul-labs/ccswitch/issues"
+    "url": "https://github.com/neul-labs/ringlet/issues"
   },
   "keywords": [
     "cli",

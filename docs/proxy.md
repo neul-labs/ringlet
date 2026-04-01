@@ -4,7 +4,7 @@ The proxy feature enables intelligent request routing from agents to multiple LL
 
 ## Overview
 
-Clown integrates with [ultrallm](https://github.com/starbaser/ultrallm), a high-performance Rust-based LLM proxy that supports 25+ providers and multiple routing strategies. The proxy runs as a separate process managed by the ringlet daemon.
+Ringlet integrates with [ultrallm](https://github.com/starbaser/ultrallm), a high-performance Rust-based LLM proxy that supports 25+ providers and multiple routing strategies. The proxy runs as a separate process managed by the ringlet daemon.
 
 ### Key Benefits
 
@@ -39,7 +39,7 @@ Each profile's agent runs with `baseUrl` pointing to its local proxy instance.
 
 ## Prerequisites
 
-The ultrallm binary must be available. Clown looks for it in:
+The ultrallm binary must be available. Ringlet looks for it in:
 
 1. `~/.cache/ringlet/binaries/ultrallm`
 2. `~/.local/bin/ultrallm`
@@ -159,7 +159,7 @@ ringlet proxy alias remove <alias> <from-model>
 
 When you run a profile with proxy enabled:
 
-1. Clown checks if the proxy is already running
+1. Ringlet checks if the proxy is already running
 2. If not, it starts a new ultrallm instance
 3. The agent's configuration is updated with the proxy URL
 4. The agent starts and routes requests through the proxy
@@ -263,7 +263,7 @@ The proxy configuration is stored in `proxy_config` within profile metadata:
 
 ### Generated ultrallm Config
 
-Clown generates `~/.claude-profiles/{alias}/.ultrallm/config.yaml`:
+Ringlet generates `~/.claude-profiles/{alias}/.ultrallm/config.yaml`:
 
 ```yaml
 server:

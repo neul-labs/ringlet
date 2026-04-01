@@ -1,6 +1,6 @@
 # Scripting with Rhai
 
-Clown uses [Rhai](https://rhai.rs/), an embedded scripting language for Rust, to generate agent-specific configuration files. Each agent has a `.rhai` script that receives context about the provider, profile, and user preferences, then outputs the required configuration.
+Ringlet uses [Rhai](https://rhai.rs/), an embedded scripting language for Rust, to generate agent-specific configuration files. Each agent has a `.rhai` script that receives context about the provider, profile, and user preferences, then outputs the required configuration.
 
 ---
 
@@ -100,7 +100,7 @@ Scripts must return a map with these keys:
 
 ## Built-in Functions
 
-Clown exposes these functions to Rhai scripts:
+Ringlet exposes these functions to Rhai scripts:
 
 ```rhai
 // Encode a map as pretty-printed JSON
@@ -259,7 +259,7 @@ if mcp_config.keys().len() > 0 {
 let provider_section = #{
     "name": provider.name + " Chat Completions API",
     "base_url": provider.endpoint,
-    "env_key": "CLOWN_API_KEY",
+    "env_key": "RINGLET_API_KEY",
     "wire_api": "chat",
     "requires_openai_auth": false
 };
@@ -281,7 +281,7 @@ config.profiles[profile.alias] = profile_section;
         ".codex/config.toml": toml::encode(config)
     },
     "env": #{
-        "CLOWN_API_KEY": provider.api_key
+        "RINGLET_API_KEY": provider.api_key
     }
 }
 ```

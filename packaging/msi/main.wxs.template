@@ -14,7 +14,7 @@
                  InstallScope="perMachine"
                  Description="Ringlet {{VERSION}} - CLI orchestrator for coding agents"
                  Manufacturer="{{MANUFACTURER}}"
-                 Comments="https://github.com/neul-labs/ccswitch" />
+                 Comments="https://github.com/neul-labs/ringlet" />
 
         <!-- Upgrade handling -->
         <MajorUpgrade DowngradeErrorMessage="A newer version of Ringlet is already installed."
@@ -71,7 +71,7 @@
         <!-- Custom icon for Add/Remove Programs -->
         <Icon Id="icon.ico" SourceFile="ringlet.ico" />
         <Property Id="ARPPRODUCTICON" Value="icon.ico" />
-        <Property Id="ARPHELPLINK" Value="https://github.com/neul-labs/ccswitch" />
+        <Property Id="ARPHELPLINK" Value="https://github.com/neul-labs/ringlet" />
         <Property Id="ARPURLINFOABOUT" Value="https://docs.neullabs.com/ringlet" />
 
     </Product>

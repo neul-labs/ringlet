@@ -6,7 +6,10 @@
 node_modules/
 
 # Build output
-clown-ui/dist/
+ringlet-ui/dist/
+
+# MkDocs built site
+documentation/site/
 
 # IDE
 .idea/

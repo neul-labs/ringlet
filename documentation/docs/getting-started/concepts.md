@@ -1,12 +1,12 @@
 # Key Concepts
 
-Understanding how Clown works will help you get the most out of it.
+Understanding how Ringlet works will help you get the most out of it.
 
 ---
 
 ## The Big Picture
 
-Clown solves a common problem: managing multiple AI coding agents with different configurations. Instead of manually switching API keys and config files, Clown lets you:
+Ringlet solves a common problem: managing multiple AI coding agents with different configurations. Instead of manually switching API keys and config files, Ringlet lets you:
 
 1. **Define profiles** that bind agents to providers
 2. **Isolate configurations** so profiles don't interfere
@@ -26,7 +26,7 @@ An **agent** is an AI coding assistant CLI tool like:
 - **Grok CLI** - xAI's coding agent
 - **OpenCode** - Open-source alternative
 
-Clown detects installed agents automatically and knows how to configure them.
+Ringlet detects installed agents automatically and knows how to configure them.
 
 ```bash
 # See what agents are available
@@ -80,7 +80,7 @@ ringlet profiles create claude my-profile --provider anthropic
 
 ### The Home Wrapper Strategy
 
-When you run a profile, Clown creates an isolated environment:
+When you run a profile, Ringlet creates an isolated environment:
 
 ```
 ~/.claude-profiles/my-profile/
@@ -109,7 +109,7 @@ The agent runs with `HOME` set to this directory, so:
 
 ## The Daemon
 
-Clown uses a background daemon (`ringletd`) that:
+Ringlet uses a background daemon (`ringletd`) that:
 
 - **Manages profiles** - Stores and retrieves profile data
 - **Tracks usage** - Monitors token consumption and costs
@@ -137,7 +137,7 @@ ringlet daemon start --stay-alive
 
 ## The Registry
 
-Clown uses a GitHub-based registry to store:
+Ringlet uses a GitHub-based registry to store:
 
 - **Agent manifests** - How to configure each agent
 - **Provider definitions** - API endpoints and auth

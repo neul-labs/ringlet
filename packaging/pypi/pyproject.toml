@@ -26,9 +26,9 @@ keywords = ["cli", "agent", "orchestrator", "coding"]
 requires-python = ">=3.8"
 
 [project.urls]
-Homepage = "https://github.com/neul-labs/ccswitch"
-Repository = "https://github.com/neul-labs/ccswitch"
-Issues = "https://github.com/neul-labs/ccswitch/issues"
+Homepage = "https://github.com/neul-labs/ringlet"
+Repository = "https://github.com/neul-labs/ringlet"
+Issues = "https://github.com/neul-labs/ringlet/issues"
 
 [project.scripts]
 ringlet = "ringlet:main"

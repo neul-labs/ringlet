@@ -3,6 +3,8 @@ import { ref, onMounted, computed } from 'vue'
 import Modal from './Modal.vue'
 import { api } from '@/api/client'
 import type { DirEntry } from '@/api/types'
+import { isTauri } from '@/api/config'
+import { invoke } from '@tauri-apps/api/core'
 
 const props = defineProps<{
   open: boolean
@@ -19,6 +21,7 @@ const parentPath = ref<string | null>(null)
 const entries = ref<DirEntry[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
+const useNativeDialog = ref(isTauri())
 
 const directories = computed(() => entries.value.filter(e => e.is_dir))
 
@@ -53,8 +56,23 @@ function selectCurrent() {
   emit('close')
 }
 
-onMounted(() => {
-  loadDirectory(props.initialPath)
+onMounted(async () => {
+  if (useNativeDialog.value) {
+    // In Tauri mode, open native OS directory picker
+    try {
+      const result = await invoke<string | null>('pick_directory')
+      if (result) {
+        emit('select', result)
+      }
+      emit('close')
+    } catch {
+      // Fall back to web directory picker if native dialog fails
+      useNativeDialog.value = false
+      loadDirectory(props.initialPath)
+    }
+  } else {
+    loadDirectory(props.initialPath)
+  }
 })
 </script>
 

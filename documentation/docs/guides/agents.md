@@ -1,6 +1,6 @@
 # Working with Agents
 
-Agents are the AI coding assistants that Clown manages. This guide covers how to discover, configure, and add new agents.
+Agents are the AI coding assistants that Ringlet manages. This guide covers how to discover, configure, and add new agents.
 
 ---
 
@@ -14,7 +14,7 @@ An agent is a CLI coding tool like:
 - **Droid CLI** - Factory.ai's engineering tool
 - **OpenCode** - Open-source alternative
 
-Each agent has a manifest that tells Clown:
+Each agent has a manifest that tells Ringlet:
 
 - How to detect if it's installed
 - How to isolate profiles
@@ -227,7 +227,7 @@ ringlet profiles create opencode my-opencode --provider anthropic
 
 ## How Agent Detection Works
 
-Clown detects agents using commands defined in their manifests:
+Ringlet detects agents using commands defined in their manifests:
 
 ```toml
 [detect]
@@ -274,7 +274,7 @@ This ensures:
 
 ## Agent Manifest Structure
 
-Agent manifests define how Clown works with each tool:
+Agent manifests define how Ringlet works with each tool:
 
 ```toml
 id = "claude"
