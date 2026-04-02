@@ -54,7 +54,7 @@ arch=('x86_64' 'aarch64')
 url="https://github.com/${REPOSITORY}"
 license=('MIT')
 depends=('gcc-libs')
-provides=('ringlet' 'ringletd')
+provides=('ringlet')
 conflicts=('ringlet-git')
 
 source_x86_64=("https://github.com/${REPOSITORY}/releases/download/v\${pkgver}/${PROJECT_NAME}-linux-x64-\${pkgver}.tar.gz")
@@ -65,7 +65,7 @@ sha256sums_aarch64=('${arm64_sha256}')
 
 package() {
     install -Dm755 ringlet "\$pkgdir/usr/bin/ringlet"
-    install -Dm755 ringletd "\$pkgdir/usr/bin/ringletd"
+    ln -sf ringlet "\$pkgdir/usr/bin/ringletd"
 }
 EOF
     fi

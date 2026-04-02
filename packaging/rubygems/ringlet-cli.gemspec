@@ -8,7 +8,7 @@ Gem::Specification.new do |s|
   s.license     = 'MIT'
 
   s.files       = Dir['lib/**/*', 'bin/*', 'README.md']
-  s.executables = ['ringlet', 'ringletd']
+  s.executables = ['ringlet']
   s.require_paths = ['lib']
 
   s.required_ruby_version = '>= 2.7.0'

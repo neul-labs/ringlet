@@ -11,7 +11,7 @@ optdepends=(
     'bubblewrap: Sandbox support for terminal sessions'
     'docker: Cross-platform builds and containerized workflows'
 )
-provides=('ringlet' 'ringletd')
+provides=('ringlet')
 conflicts=('ringlet-git' 'ringlet-bin')
 
 source_x86_64=("https://github.com/neul-labs/ringlet/releases/download/v${pkgver}/ringlet-linux-x64-${pkgver}.tar.gz")
@@ -25,7 +25,7 @@ package() {
 
     # Install binaries
     install -Dm755 ringlet "$pkgdir/usr/bin/ringlet"
-    install -Dm755 ringletd "$pkgdir/usr/bin/ringletd"
+    ln -sf ringlet "$pkgdir/usr/bin/ringletd"  # backward compat symlink
 
     # Install license
     install -Dm644 /dev/stdin "$pkgdir/usr/share/licenses/$pkgname/LICENSE" << 'EOF'

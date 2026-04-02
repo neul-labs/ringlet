@@ -51,6 +51,7 @@ Feature suggestions are welcome! Open an issue with:
 - Rust 1.85 or later (2024 edition)
 - Cargo
 - Git
+- Node.js (for frontend development)
 
 ### Clone and Build
 
@@ -90,24 +91,22 @@ cargo fmt --check
 ```
 ringlet/
 ├── crates/
-│   ├── ringlet/           # CLI binary
-│   ├── ringletd/          # Background daemon
-│   ├── ringlet-core/      # Core types and utilities
+│   ├── ringlet/           # Unified binary (CLI + daemon + desktop app)
+│   ├── ringlet-core/      # Shared types and utilities
 │   └── ringlet-scripting/ # Rhai scripting engine
-├── docs/                # Developer documentation
-├── documentation/       # User-facing MkDocs site
-├── manifests/           # Built-in agent/provider manifests
-└── scripts/             # Built-in Rhai scripts
+├── documentation/         # MkDocs user documentation
+├── ringlet-ui/            # Vue 3 + TypeScript frontend
+├── packaging/             # Platform-specific packaging
+└── scripts/               # Build and release scripts
 ```
 
 ### Key Crates
 
 | Crate | Description |
 |-------|-------------|
-| `ringlet` | CLI binary - thin client for daemon |
-| `ringletd` | Background daemon - core orchestration |
-| `ringlet-core` | Shared types, serialization, filesystem |
-| `ringlet-scripting` | Rhai script engine and built-ins |
+| `ringlet` | Unified binary — CLI client, background daemon, and desktop app |
+| `ringlet-core` | Shared types, serialization, filesystem utilities |
+| `ringlet-scripting` | Rhai script engine and built-in functions |
 
 ---
 
@@ -228,49 +227,21 @@ default = "model-a"
 
 ---
 
-## Testing
+## Frontend Development
 
-### Unit Tests
-
-Add tests in the same file:
-
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_feature() {
-        // Test implementation
-    }
-}
-```
-
-### Integration Tests
-
-Add to `tests/` directory:
-
-```rust
-#[test]
-fn test_profile_creation() {
-    // Integration test
-}
-```
-
-### Manual Testing
+The web UI is a Vue 3 + TypeScript SPA in `ringlet-ui/`:
 
 ```bash
-# Build and test
-cargo build
-./target/debug/ringlet agents list
-./target/debug/ringlet providers list
+cd ringlet-ui
+npm install
+npm run dev
 ```
+
+The dev server proxies API requests to the daemon at `127.0.0.1:8765`.
 
 ---
 
-## Documentation
-
-### User Documentation
+## User Documentation
 
 User-facing docs use MkDocs in `documentation/`:
 
@@ -279,18 +250,6 @@ cd documentation
 pip install -r requirements.txt
 mkdocs serve
 # Open http://127.0.0.1:8000
-```
-
-### Developer Documentation
-
-Developer docs are in `docs/` as Markdown.
-
-### API Documentation
-
-Generate Rust docs:
-
-```bash
-cargo doc --open
 ```
 
 ---

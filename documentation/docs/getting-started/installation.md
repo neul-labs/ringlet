@@ -43,10 +43,10 @@ After downloading:
 tar -xzf ringlet-*.tar.gz
 
 # Move to PATH
-mv ringlet ringletd ~/.local/bin/
+mv ringlet ~/.local/bin/
 
 # Make executable
-chmod +x ~/.local/bin/ringlet ~/.local/bin/ringletd
+chmod +x ~/.local/bin/ringlet
 ```
 
 ### From Source
@@ -61,7 +61,7 @@ cargo install --git https://github.com/neul-labs/ringlet ringlet
 git clone https://github.com/neul-labs/ringlet
 cd ringlet
 cargo build --release
-cp target/release/ringlet target/release/ringletd ~/.local/bin/
+cp target/release/ringlet ~/.local/bin/
 ```
 
 !!! note "Requirements"
@@ -181,7 +181,7 @@ To remove Ringlet:
 ringlet daemon stop
 
 # Remove binaries
-rm ~/.local/bin/ringlet ~/.local/bin/ringletd
+rm ~/.local/bin/ringlet
 
 # Remove configuration (optional)
 rm -rf ~/.config/ringlet

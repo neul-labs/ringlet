@@ -104,6 +104,7 @@ EOF
             </Component>
             <Component Id="RingletdExe" Guid="*">
                 <File Id="ringletd.exe" Source="ringletd.exe" />
+                <!-- ringletd.exe is a copy of ringlet.exe for backward compat -->
             </Component>
         </ComponentGroup>
 

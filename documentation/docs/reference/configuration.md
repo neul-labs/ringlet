@@ -307,7 +307,7 @@ default = "MiniMax-M2.1"
 │   ├── sessions.jsonl
 │   └── aggregates.json
 └── logs/
-    └── ringletd.log
+    └── daemon.log
 ```
 
 ### Profile Home Structure

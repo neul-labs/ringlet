@@ -20,9 +20,8 @@ Install-ChocolateyZipPackage @packageArgs
 
 # Add binaries to PATH
 $ringletPath = Join-Path $installDir 'ringlet.exe'
-$daemonPath = Join-Path $installDir 'ringletd.exe'
-
+# ringletd.exe points to the same binary for backward compatibility
 Install-BinFile -Name 'ringlet' -Path $ringletPath
-Install-BinFile -Name 'ringletd' -Path $daemonPath
+Install-BinFile -Name 'ringletd' -Path $ringletPath
 
 Write-Host "ringlet has been installed. Run 'ringlet --help' to get started."

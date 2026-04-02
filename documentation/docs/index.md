@@ -1,17 +1,17 @@
 # Ringlet
 
-**CLI orchestrator for coding agents** - manage multiple AI coding assistants with isolated profiles, seamless provider switching, and unified usage tracking.
+**Manage every coding agent from one CLI** — isolated profiles, provider switching, cost control, and security built in.
 
 ---
 
 ## What is Ringlet?
 
-Ringlet is a command-line tool that helps you manage multiple AI coding agents (like Claude Code, Codex CLI, Grok CLI) with different API providers and configurations. It provides:
+Ringlet gives you a single interface for all your AI coding agents. Instead of juggling separate configs, credentials, and billing across Claude Code, Codex, Grok, and others, Ringlet lets you:
 
-- **Profile Isolation** - Each profile gets its own isolated environment, preventing configuration conflicts
-- **Provider Abstraction** - Switch between Anthropic, MiniMax, OpenAI, and other providers without reconfiguring your agent
-- **Usage Tracking** - Monitor token usage and costs across all your profiles in one place
-- **Intelligent Routing** - Route requests to different providers based on cost, latency, or custom rules
+- **Create isolated profiles** that bind an agent to a provider with its own credentials and history
+- **Switch providers** without reconfiguring your agent — move from Anthropic to MiniMax in one command
+- **Track usage and costs** across every profile in one place
+- **Route requests intelligently** to optimize for cost or performance
 
 ---
 
@@ -23,18 +23,18 @@ Ringlet is a command-line tool that helps you manage multiple AI coding agents (
     curl -fsSL https://raw.githubusercontent.com/neul-labs/ringlet/main/install.sh | bash
     ```
 
-=== "From Source"
+=== "Cargo"
 
     ```bash
-    cargo install --git https://github.com/neul-labs/ringlet ringlet
+    cargo install ringlet
     ```
 
-=== "Local Build"
+=== "From Source"
 
     ```bash
     git clone https://github.com/neul-labs/ringlet
     cd ringlet
-    ./install.sh --local
+    cargo build --release
     ```
 
 ---
@@ -43,27 +43,27 @@ Ringlet is a command-line tool that helps you manage multiple AI coding agents (
 
 <div class="grid cards" markdown>
 
--   :material-account-switch:{ .lg .middle } **Profile Management**
+-   :material-account-switch:{ .lg .middle } **Profile Isolation**
 
     ---
 
-    Create isolated profiles that bind agents to providers. Switch between configurations instantly.
+    Every profile gets its own HOME, credentials, config, and history. No cross-contamination between projects.
 
-    [:octicons-arrow-right-24: Learn more](guides/profiles.md)
+    [:octicons-arrow-right-24: Profiles guide](guides/profiles.md)
 
--   :material-api:{ .lg .middle } **Multi-Provider Support**
-
-    ---
-
-    Use Anthropic, MiniMax, OpenAI, OpenRouter, or add custom providers. Each agent works with compatible APIs.
-
-    [:octicons-arrow-right-24: Providers](guides/providers.md)
-
--   :material-chart-line:{ .lg .middle } **Usage Tracking**
+-   :material-api:{ .lg .middle } **Provider Switching**
 
     ---
 
-    Track tokens, costs, and sessions across all profiles. Import existing Claude data and export for analysis.
+    Bind any agent to Anthropic, MiniMax, OpenAI, OpenRouter, or your own gateway. Swap providers without touching agent config.
+
+    [:octicons-arrow-right-24: Providers guide](guides/providers.md)
+
+-   :material-chart-line:{ .lg .middle } **Usage Analytics**
+
+    ---
+
+    Track tokens, costs, and sessions across all profiles. Import Claude data. Export for reporting.
 
     [:octicons-arrow-right-24: Usage guide](guides/usage.md)
 
@@ -71,25 +71,41 @@ Ringlet is a command-line tool that helps you manage multiple AI coding agents (
 
     ---
 
-    Route requests based on token count, tool usage, or custom rules. Optimize for cost or performance.
+    Route requests to different providers based on token count, tool usage, or custom rules. Optimize for cost or performance.
 
     [:octicons-arrow-right-24: Proxy guide](guides/proxy.md)
+
+-   :material-shield-lock:{ .lg .middle } **Security**
+
+    ---
+
+    Keychain credential storage, sandboxed remote sessions, bearer-token auth, localhost-only daemon.
+
+    [:octicons-arrow-right-24: Security](security.md)
 
 -   :material-hook:{ .lg .middle } **Event Hooks**
 
     ---
 
-    Execute commands or webhooks on tool usage, notifications, or agent events. Build custom workflows.
+    Trigger shell commands or webhooks on tool use, notifications, or agent events. Build audit logs and custom workflows.
 
     [:octicons-arrow-right-24: Hooks guide](guides/hooks.md)
 
--   :material-script:{ .lg .middle } **Extensible Scripting**
+-   :material-monitor-dashboard:{ .lg .middle } **Web Dashboard**
 
     ---
 
-    Customize agent configuration with Rhai scripts. Add new agents without recompiling.
+    Manage profiles, view usage, and launch terminal sessions from a visual UI.
 
-    [:octicons-arrow-right-24: Scripting guide](guides/scripting.md)
+    [:octicons-arrow-right-24: Terminal guide](guides/terminal.md)
+
+-   :material-map-marker-path:{ .lg .middle } **Roadmap**
+
+    ---
+
+    See what's coming: Plugin SDK, team features, enterprise SSO, and more.
+
+    [:octicons-arrow-right-24: Roadmap](roadmap.md)
 
 </div>
 
@@ -100,14 +116,12 @@ Ringlet is a command-line tool that helps you manage multiple AI coding agents (
 Create your first profile in under a minute:
 
 ```bash
-# List available agents
-ringlet agents list
+# Interactive setup — detects agents, creates first profile
+ringlet init
 
-# Create a profile binding Claude Code to Anthropic
-ringlet profiles create claude my-claude --provider anthropic
-
-# Run your profile
-ringlet profiles run my-claude
+# Or manually
+ringlet profiles create claude my-project --provider anthropic
+ringlet profiles run my-project
 
 # Check your usage
 ringlet usage
@@ -119,34 +133,13 @@ ringlet usage
 
 ## Supported Agents
 
-| Agent | Description | Provider Compatibility |
-|-------|-------------|----------------------|
-| **Claude Code** | Anthropic's agentic IDE | Anthropic, MiniMax |
-| **Codex CLI** | OpenAI-based coding agent | OpenAI, OpenRouter |
-| **Grok CLI** | xAI's coding assistant | OpenAI-compatible |
-| **OpenCode** | Open-source coding agent | Multiple providers |
-
----
-
-## Architecture Overview
-
-Ringlet uses a daemon-first architecture where a background service manages all state:
-
-```
-┌─────────┐     ┌─────────┐     ┌──────────────┐
-│  CLI    │────▶│ ringletd  │────▶│  Agent       │
-│         │     │ daemon  │     │  (isolated)  │
-└─────────┘     └────┬────┘     └──────────────┘
-                     │
-              ┌──────┴──────┐
-              │             │
-        ┌─────▼────┐  ┌─────▼────┐
-        │ Profiles │  │  Usage   │
-        │  Store   │  │ Tracking │
-        └──────────┘  └──────────┘
-```
-
-[:octicons-arrow-right-24: Architecture details](advanced/architecture.md)
+| Agent | Compatible Providers |
+|-------|---------------------|
+| **Claude Code** | Anthropic, MiniMax |
+| **Codex CLI** | OpenAI, OpenRouter |
+| **Grok CLI** | OpenAI-compatible |
+| **Droid CLI** | Anthropic, MiniMax |
+| **OpenCode** | Anthropic, MiniMax |
 
 ---
 

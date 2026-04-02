@@ -16,7 +16,7 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # Version files
 CARGO_TOML="$ROOT_DIR/Cargo.toml"
 PACKAGE_JSON="$ROOT_DIR/ringlet-ui/package.json"
-TAURI_CONF="$ROOT_DIR/crates/ringlet-app/tauri.conf.json"
+TAURI_CONF="$ROOT_DIR/crates/ringlet/tauri.conf.json"
 
 # Colors
 RED='\033[0;31m'
@@ -51,7 +51,7 @@ Options:
 Files updated:
     Cargo.toml                          [workspace.package] version + dependency versions
     ringlet-ui/package.json             "version" field
-    crates/ringlet-app/tauri.conf.json  "version" field
+    crates/ringlet/tauri.conf.json      "version" field
 
 Examples:
     scripts/bump-version.sh 0.2.0             # Set explicit version

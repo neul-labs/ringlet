@@ -21,7 +21,7 @@ Remote terminal sessions allow you to:
 ### 1. Start the Daemon
 
 ```bash
-ringlet daemon start --stay-alive
+ringlet daemon --stay-alive
 ```
 
 ### 2. Create a Remote Session
@@ -342,7 +342,7 @@ See the [HTTP API Reference](../reference/api.md#terminal-sessions) for complete
 Check the daemon logs for errors:
 
 ```bash
-tail -f ~/.config/ringlet/ringletd.log
+tail -f ~/.config/ringlet/logs/daemon.log
 ```
 
 Common causes:

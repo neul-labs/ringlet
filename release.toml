@@ -3,7 +3,7 @@
 
 [project]
 name = "ringlet"
-binaries = ["ringlet", "ringletd"]
+binaries = ["ringlet"]
 repository = "neul-labs/ringlet"
 homepage = "https://github.com/neul-labs/ringlet"
 description = "CLI orchestrator for coding agents"
@@ -22,7 +22,7 @@ dist_dir = "dist"
 [publishers.cargo]
 enabled = true
 # Publish crates in dependency order (with 30s wait between)
-crates = ["ringlet-core", "ringlet-scripting", "ringletd", "ringlet"]
+crates = ["ringlet-core", "ringlet-scripting", "ringlet"]
 wait_between = 30
 
 [publishers.npm]

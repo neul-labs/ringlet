@@ -34,12 +34,5 @@ jobs:
       - name: Wait for crates.io index
         run: sleep 30
 
-      - name: Publish ringletd
-        run: cargo publish -p ringletd --allow-dirty
-        continue-on-error: true
-
-      - name: Wait for crates.io index
-        run: sleep 30
-
       - name: Publish ringlet
         run: cargo publish -p ringlet --allow-dirty

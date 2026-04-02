@@ -32,7 +32,6 @@ Issues = "https://github.com/neul-labs/ringlet/issues"
 
 [project.scripts]
 ringlet = "ringlet:main"
-ringletd = "ringlet:main_daemon"
 
 [tool.hatch.build.targets.wheel]
 packages = ["ringlet"]

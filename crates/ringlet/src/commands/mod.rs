@@ -42,11 +42,18 @@ pub async fn execute(command: &Commands, json: bool) -> Result<()> {
         Commands::Usage { command, period, profile, model } => {
             execute_usage(command.as_ref(), period, profile.as_deref(), model.as_deref(), json).await
         }
-        Commands::Daemon { command } => execute_daemon(command, json).await,
+        Commands::Daemon { command, stay_alive, socket, foreground, daemon_log_level } => {
+            execute_daemon(command, *stay_alive, socket.clone(), *foreground, daemon_log_level, json).await
+        }
         Commands::Env { command } => execute_env(command, json).await,
         Commands::Hooks { command } => execute_hooks(command, json).await,
         Commands::Proxy { command } => execute_proxy(command, json).await,
         Commands::Terminal { command } => execute_terminal(command, json).await,
+        #[cfg(feature = "gui")]
+        Commands::Gui { standalone, remote, port, token } => {
+            crate::gui::launch_gui(*standalone, remote.clone(), *port, token.clone());
+            Ok(())
+        }
     }
 }
 
@@ -608,25 +615,26 @@ fn handle_usage_response(response: Response, json: bool) -> Result<()> {
     }
 }
 
-async fn execute_daemon(command: &DaemonCommands, json: bool) -> Result<()> {
+async fn execute_daemon(
+    command: &Option<DaemonCommands>,
+    stay_alive: bool,
+    socket: Option<std::path::PathBuf>,
+    foreground: bool,
+    daemon_log_level: &str,
+    json: bool,
+) -> Result<()> {
     match command {
-        DaemonCommands::Start { stay_alive } => {
-            // Start daemon in foreground by exec'ing ringletd
-            let ringletd = std::env::current_exe()?
-                .parent()
-                .ok_or_else(|| anyhow!("Cannot find parent directory"))?
-                .join("ringletd");
-
-            let mut cmd = std::process::Command::new(&ringletd);
-            cmd.arg("--foreground");
-            if *stay_alive {
-                cmd.arg("--stay-alive");
-            }
-
-            let status = cmd.status()?;
-            std::process::exit(status.code().unwrap_or(1));
+        None => {
+            // No subcommand: run daemon in-process
+            crate::daemon::run_daemon(crate::daemon::DaemonArgs {
+                stay_alive,
+                socket,
+                foreground,
+                log_level: daemon_log_level.to_string(),
+            })
+            .await
         }
-        DaemonCommands::Stop => {
+        Some(DaemonCommands::Stop) => {
             match DaemonClient::connect() {
                 Ok(client) => {
                     client.shutdown()?;
@@ -644,8 +652,9 @@ async fn execute_daemon(command: &DaemonCommands, json: bool) -> Result<()> {
                     }
                 }
             }
+            Ok(())
         }
-        DaemonCommands::Status => {
+        Some(DaemonCommands::Status) => {
             match DaemonClient::connect() {
                 Ok(client) => {
                     if client.ping() {
@@ -670,10 +679,9 @@ async fn execute_daemon(command: &DaemonCommands, json: bool) -> Result<()> {
                     }
                 }
             }
+            Ok(())
         }
     }
-
-    Ok(())
 }
 
 async fn execute_env(command: &EnvCommands, json: bool) -> Result<()> {

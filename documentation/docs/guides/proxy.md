@@ -355,7 +355,7 @@ http://127.0.0.1:{port}/health
 
 1. Verify ultrallm binary is installed and executable
 2. Check if port is already in use
-3. Review daemon logs: `ringlet --log-level debug daemon start`
+3. Review daemon logs: `ringlet --log-level debug daemon`
 
 ### Connection refused
 

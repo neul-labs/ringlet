@@ -197,7 +197,9 @@ download_binary() {
     fi
 
     chmod +x "${install_dir}/ringlet"
-    chmod +x "${install_dir}/ringletd"
+
+    # Create ringletd symlink for backward compatibility
+    ln -sf "${install_dir}/ringlet" "${install_dir}/ringletd"
 
     rm -rf "$tmpdir"
 }
@@ -238,10 +240,11 @@ build_from_source() {
 
     mkdir -p "$install_dir"
     cp target/release/ringlet "$install_dir/"
-    cp target/release/ringletd "$install_dir/"
 
     chmod +x "${install_dir}/ringlet"
-    chmod +x "${install_dir}/ringletd"
+
+    # Create ringletd symlink for backward compatibility
+    ln -sf "${install_dir}/ringlet" "${install_dir}/ringletd"
 
     rm -rf "$tmpdir"
 }
@@ -264,10 +267,11 @@ build_local() {
 
     mkdir -p "$install_dir"
     cp target/release/ringlet "$install_dir/"
-    cp target/release/ringletd "$install_dir/"
 
     chmod +x "${install_dir}/ringlet"
-    chmod +x "${install_dir}/ringletd"
+
+    # Create ringletd symlink for backward compatibility
+    ln -sf "${install_dir}/ringlet" "${install_dir}/ringletd"
 }
 
 install_via_cargo() {
@@ -284,9 +288,9 @@ install_via_cargo() {
     info "Running cargo install (this may take a few minutes)..."
 
     if [[ "$version" == "latest" || "$version" == "main" ]]; then
-        cargo install --git "https://github.com/${GITHUB_REPO}.git" ringlet ringletd
+        cargo install --git "https://github.com/${GITHUB_REPO}.git" ringlet
     else
-        cargo install --git "https://github.com/${GITHUB_REPO}.git" --tag "v${version}" ringlet ringletd
+        cargo install --git "https://github.com/${GITHUB_REPO}.git" --tag "v${version}" ringlet
     fi
 }
 
@@ -307,7 +311,7 @@ is_ringlet_repo() {
 verify_installation() {
     local install_dir="$1"
 
-    if [[ -x "${install_dir}/ringlet" ]] && [[ -x "${install_dir}/ringletd" ]]; then
+    if [[ -x "${install_dir}/ringlet" ]]; then
         info "Installation successful!"
 
         local version

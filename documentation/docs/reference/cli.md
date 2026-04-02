@@ -786,12 +786,12 @@ Show daemon status.
 ringlet daemon status
 ```
 
-### daemon start
+### daemon [OPTIONS]
 
 Start the daemon.
 
 ```bash
-ringlet daemon start [OPTIONS]
+ringlet daemon [OPTIONS]
 ```
 
 | Option | Description |

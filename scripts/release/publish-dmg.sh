@@ -87,10 +87,8 @@ publish_dmg() {
         --window-pos 200 120 \
         --window-size 600 400 \
         --icon-size 100 \
-        --icon "ringlet" 150 190 \
-        --icon "ringletd" 350 190 \
+        --icon "ringlet" 250 190 \
         --hide-extension "ringlet" \
-        --hide-extension "ringletd" \
         "${extra_args[@]}" \
         "$dmg_path" \
         "$staging_dir" 2>&1 || {

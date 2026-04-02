@@ -1,12 +1,12 @@
-# System Architecture
+# Architecture
 
-Deep dive into how Ringlet is designed and how its components interact.
+How Ringlet is designed and how its components work together.
 
 ---
 
 ## Overview
 
-Ringlet is a Rust-native workspace built around a central background daemon (`ringletd`) that orchestrates CLI coding agents. The daemon owns profile persistence, agent discovery, telemetry collection, and real-time event distribution.
+Ringlet is a single binary (`ringlet`) that contains both the CLI client and a background daemon. The daemon manages all persistent state — profiles, agent discovery, usage tracking, and real-time events. The CLI communicates with the daemon over IPC.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -15,21 +15,25 @@ Ringlet is a Rust-native workspace built around a central background daemon (`ri
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                         ringlet CLI                                │
-│    (Thin client - auto-starts daemon, forwards commands)        │
+│                      ringlet CLI                                 │
+│    (Thin client — auto-starts daemon, forwards commands)         │
 └──────────────────────────────┬──────────────────────────────────┘
-                               │ async-nng / HTTP
+                               │ IPC / HTTP
                                ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                        ringletd (Daemon)                           │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐             │
-│  │   Profile    │ │    Agent     │ │   Registry   │             │
-│  │   Manager    │ │   Registry   │ │    Client    │             │
-│  └──────────────┘ └──────────────┘ └──────────────┘             │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐             │
-│  │    Proxy     │ │    Usage     │ │   Scripting  │             │
-│  │   Manager    │ │   Tracking   │ │    Engine    │             │
-│  └──────────────┘ └──────────────┘ └──────────────┘             │
+│                      ringlet daemon                              │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐            │
+│  │   Profile    │ │    Agent     │ │   Registry   │            │
+│  │   Manager    │ │   Registry   │ │    Client    │            │
+│  └──────────────┘ └──────────────┘ └──────────────┘            │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐            │
+│  │    Proxy     │ │    Usage     │ │   Scripting  │            │
+│  │   Manager    │ │   Tracking   │ │    Engine    │            │
+│  └──────────────┘ └──────────────┘ └──────────────┘            │
+│  ┌──────────────┐ ┌──────────────┐                             │
+│  │  Terminal    │ │   HTTP/WS    │                             │
+│  │   Manager    │ │   Server     │                             │
+│  └──────────────┘ └──────────────┘                             │
 └──────────────────────────────┬──────────────────────────────────┘
                                │
           ┌────────────────────┼────────────────────┐
@@ -44,70 +48,78 @@ Ringlet is a Rust-native workspace built around a central background daemon (`ri
 
 ## Design Goals
 
-- **Single entry point** - Detect any supported CLI coding agent installed on the system
-- **Profile isolation** - Each profile has completely separate configuration and state
-- **Multi-provider support** - Run the same agent against different API backends
-- **Centralized orchestration** - Daemon ensures single source of truth
-- **Usage tracking** - Monitor token consumption and costs across all profiles
-- **Extensibility** - Add new agents through manifests and scripts, not code
+- **Single entry point** — one binary that detects, configures, and manages all supported coding agents
+- **Profile isolation** — every profile has completely separate configuration and state
+- **Multi-provider support** — run the same agent against different API backends
+- **Centralized state** — the daemon is the single source of truth
+- **Usage tracking** — monitor token consumption and costs across all profiles
+- **Extensibility** — add new agents through manifests and scripts, not code changes
+
+---
+
+## Unified Binary
+
+Ringlet ships as a single binary. When you run a CLI command, it auto-starts the daemon if one isn't already running. The daemon shuts down after an idle timeout unless pinned with `--stay-alive`.
+
+```bash
+# CLI mode — runs a command and exits
+ringlet profiles list
+
+# Daemon mode — starts the background service
+ringlet daemon --stay-alive --foreground
+
+# The daemon also starts automatically on first CLI use
+```
+
+This eliminates the need for separate binaries or manual daemon management.
 
 ---
 
 ## Core Components
 
-### ringlet CLI
+### CLI
 
 A thin client that:
 
-- Parses commands like `agents list`, `profiles create`, `profiles run`
+- Parses commands (`agents list`, `profiles create`, `profiles run`)
 - Auto-starts the daemon if not running
-- Forwards requests over `async-nng` sockets
+- Forwards requests over IPC
 - Renders responses as tables or JSON
 
-The CLI never performs stateful operations directly - everything goes through the daemon.
+The CLI never performs stateful operations directly — everything goes through the daemon.
 
-### ringletd (Daemon)
+### Daemon
 
-The heart of Ringlet. Runs as a long-lived background process and owns:
+The heart of Ringlet. Runs as a long-lived background process and manages:
 
 | Responsibility | Description |
 |----------------|-------------|
 | Profile persistence | Stores and retrieves profile configurations |
 | Agent discovery | Detects installed agents and their versions |
-| Telemetry collection | Tracks usage, sessions, and costs |
-| Event distribution | Publishes changes via WebSocket/pub-sub |
+| Usage tracking | Tracks tokens, sessions, and costs |
+| Event distribution | Publishes changes via WebSocket |
 | Proxy management | Spawns and monitors ultrallm instances |
-| HTTP API | Serves REST endpoints and Web UI |
-
-The daemon auto-starts on first CLI use and exits after idle timeout unless pinned with `--stay-alive`.
+| Terminal sessions | Manages remote PTY sessions with sandboxing |
+| HTTP API | Serves REST endpoints and the web UI |
 
 ### Profile Manager
 
-Handles profile lifecycle:
+Handles the profile lifecycle:
 
-1. **Creation** - Validates agent+provider pairing, prompts for API key, runs Rhai script
-2. **Storage** - Writes profile JSON to `~/.config/ringlet/profiles/`
-3. **Execution** - Creates isolated environment, injects variables, spawns agent
-4. **Tracking** - Updates `last_used` timestamps
+1. **Creation** — validates agent + provider pairing, prompts for API key, runs Rhai script
+2. **Storage** — writes profile JSON to `~/.config/ringlet/profiles/`
+3. **Execution** — creates isolated environment, injects variables, spawns agent
+4. **Tracking** — updates `last_used` timestamps
 
 ### Agent Registry
 
 Loads and manages agent manifests:
 
-- Built-in manifests compiled into binary
+- Built-in manifests compiled into the binary
 - User manifests from `~/.config/ringlet/agents.d/`
 - Registry manifests from GitHub
 
-Detection probes run in parallel to capture versions and paths.
-
-### Provider Registry
-
-Manages API backend definitions:
-
-- Built-in providers (Anthropic, MiniMax, OpenAI, OpenRouter)
-- User providers from `~/.config/ringlet/providers.d/`
-
-Providers define endpoints, authentication, and available models.
+Detection probes run in parallel to find installed agents and their versions.
 
 ### Scripting Engine
 
@@ -115,63 +127,46 @@ Embeds [Rhai](https://rhai.rs/) for configuration generation:
 
 - Receives context (provider, profile, preferences)
 - Outputs configuration files and environment variables
-- Scripts resolved: user override → registry → built-in
-
-### Registry Client
-
-Synchronizes GitHub-hosted metadata:
-
-- Downloads manifests, templates, and model catalog
-- Verifies checksums/signatures
-- Caches under `~/.config/ringlet/registry/`
-- Downloads LiteLLM pricing for cost calculation
+- Resolution order: user override → registry → built-in
 
 ### Proxy Manager
 
 Manages ultrallm proxy instances:
 
-- Spawns processes on dedicated ports (8080-8180 range)
+- Spawns processes on dedicated ports
 - Generates routing configuration from profile rules
 - Monitors health and handles graceful shutdown
 - Auto-starts proxies when profiles with proxy enabled run
 
-### Usage Tracking
+### Terminal Manager
 
-Collects and aggregates token usage:
+Manages remote PTY sessions:
 
-- Per-session records in `sessions.jsonl`
-- Rolled-up stats in `aggregates.json`
-- Cost calculation using LiteLLM pricing
-- Queryable via CLI, HTTP API, and Web UI
+- Creates sandboxed agent processes (bwrap on Linux, sandbox-exec on macOS)
+- Streams terminal I/O over WebSocket
+- Supports multiple concurrent clients per session
+- Maintains scrollback buffer for reconnection
 
 ---
 
 ## Communication
 
-### CLI ↔ Daemon Transport
+### CLI to Daemon
 
-The CLI and daemon communicate through `async-nng`:
+The CLI and daemon communicate through IPC:
 
-```
-CLI                                      Daemon
- │                                         │
- │  ──── RegistrySyncRequest ──────►       │
- │                                         │
- │  ◄──── RegistrySyncResponse ────        │
- │                                         │
-```
-
-- **Request/Reply**: Commands serialized via `serde_json`, sent over IPC
-- **Pub/Sub**: Change notifications for watch modes and UI clients
-- **Endpoint**: `/tmp/ringletd.sock` (Unix) or `%LOCALAPPDATA%/ringlet/ringletd.ipc` (Windows)
+- **Request/Reply** — commands serialized via JSON, sent over IPC sockets
+- **Endpoint** — `/tmp/ringlet.sock` (Unix) or `%LOCALAPPDATA%\ringlet\ringlet.ipc` (Windows)
 
 ### HTTP API
 
-For UI integrations that can't speak NNG:
+For UI integrations:
 
 - REST endpoints at `http://127.0.0.1:8765`
-- WebSocket at `ws://127.0.0.1:8765/ws`
-- Serves embedded Web UI
+- WebSocket at `ws://127.0.0.1:8765/ws` for real-time events
+- Terminal WebSocket at `ws://127.0.0.1:8765/ws/terminal/{id}`
+- Embedded web UI served at the root path
+- Bearer-token authentication from `~/.config/ringlet/http_token`
 
 ---
 
@@ -208,16 +203,40 @@ The agent reads configuration from the profile HOME, ensuring:
 
 ---
 
+## Sandbox Architecture
+
+Remote terminal sessions are sandboxed by default:
+
+```
+┌───────────────────────────────────────────────────┐
+│                   Host System                      │
+│  ┌─────────────────────────────────────────────┐  │
+│  │        Sandbox (bwrap / sandbox-exec)        │  │
+│  │  ┌───────────────────────────────────────┐  │  │
+│  │  │        Agent Process (claude)          │  │  │
+│  │  │                                        │  │  │
+│  │  │  Read-only:  /usr, /bin, /lib, /etc   │  │  │
+│  │  │  Read-write: ~/, working_dir, /tmp    │  │  │
+│  │  │  Network:    allowed (API access)      │  │  │
+│  │  └───────────────────────────────────────┘  │  │
+│  └─────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────┘
+```
+
+See [Security](../security.md) for full details on sandbox configuration and custom rules.
+
+---
+
 ## Data Flow
 
-### Profile Run Workflow
+### Profile Run
 
 ```
 1. User: ringlet profiles run my-project
 
 2. CLI:
    - Connects to daemon (or starts it)
-   - Sends ProfileRunRequest
+   - Sends run request
 
 3. Daemon:
    - Loads profile configuration
@@ -233,31 +252,8 @@ The agent reads configuration from the profile HOME, ensuring:
 
 5. Daemon tracks:
    - Session start/end times
-   - Token usage (from agent files)
+   - Token usage
    - Runtime duration
-```
-
-### Registry Sync Workflow
-
-```
-1. CLI sends RegistrySyncRequest to daemon
-
-2. Daemon:
-   - Acquires per-channel lock
-   - Checks registry.lock for cached data
-   - If force or cache stale:
-     - Downloads registry.json
-     - Verifies checksums
-     - Fetches missing artifacts
-     - Stages under commits/<sha>/
-   - Updates registry.lock
-   - Publishes RegistryUpdated event
-
-3. CLI receives response with:
-   - Resolved commit
-   - Channel
-   - Downloaded artifact count
-   - Cache/network indicator
 ```
 
 ---
@@ -267,7 +263,7 @@ The agent reads configuration from the profile HOME, ensuring:
 ```
 ~/.config/ringlet/
 ├── config.toml               # User preferences
-├── daemon-endpoint           # Active daemon endpoint
+├── http_token                 # Daemon auth token
 ├── agents.d/                 # Custom agent manifests
 ├── providers.d/              # Custom provider manifests
 ├── scripts/                  # Custom Rhai scripts
@@ -276,16 +272,12 @@ The agent reads configuration from the profile HOME, ensuring:
 ├── registry/                 # Cached registry data
 │   ├── current -> commits/f4a12c3
 │   ├── registry.lock
-│   ├── litellm-pricing.json
-│   └── commits/
-│       └── f4a12c3/
+│   └── litellm-pricing.json
 ├── cache/
 │   └── agent-detections.json
-├── telemetry/
-│   ├── sessions.jsonl
-│   └── aggregates.json
+├── telemetry/                # Usage data
 └── logs/
-    └── ringletd.log
+    └── daemon.log
 ```
 
 ---
@@ -294,17 +286,6 @@ The agent reads configuration from the profile HOME, ensuring:
 
 | Platform | Config Path | IPC Endpoint |
 |----------|-------------|--------------|
-| macOS | `~/.config/ringlet/` | `/tmp/ringletd.sock` |
-| Linux | `~/.config/ringlet/` or XDG | `/tmp/ringletd.sock` |
-| Windows | `%APPDATA%\ringlet\` | `%LOCALAPPDATA%\ringlet\ringletd.ipc` |
-
-Ringlet uses the `dirs` crate to resolve paths and keeps launcher scripts optional.
-
----
-
-## Future Directions
-
-- **UI Layer** - Desktop/web frontend connecting to daemon
-- **Delta syncs** - Download only changed registry entries
-- **Prometheus/OpenTelemetry** - Enterprise observability endpoints
-- **Plugin system** - User-defined hooks and extensions
+| macOS | `~/.config/ringlet/` | `/tmp/ringlet.sock` |
+| Linux | `~/.config/ringlet/` or XDG | `/tmp/ringlet.sock` |
+| Windows | `%APPDATA%\ringlet\` | `%LOCALAPPDATA%\ringlet\ringlet.ipc` |

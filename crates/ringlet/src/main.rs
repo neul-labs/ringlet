@@ -1,6 +1,9 @@
 //! ringlet - CLI orchestrator for coding agents.
 //!
-//! A thin client that auto-starts the daemon and forwards commands over IPC.
+//! A unified binary that serves as CLI client, daemon, and (optionally) GUI launcher.
+//! - `ringlet agents list` — CLI commands (auto-starts daemon)
+//! - `ringlet daemon` — run daemon in-process
+//! - `ringlet gui` — launch Tauri desktop app (requires --features gui)
 
 use mimalloc::MiMalloc;
 
@@ -9,6 +12,9 @@ static GLOBAL: MiMalloc = MiMalloc;
 
 mod client;
 mod commands;
+mod daemon;
+#[cfg(feature = "gui")]
+mod gui;
 mod output;
 
 use anyhow::Result;
@@ -171,10 +177,29 @@ EXAMPLES:
         model: Option<String>,
     },
 
-    /// Daemon management
+    /// Run daemon in-process, or manage a running daemon
+    ///
+    /// With no subcommand, starts the daemon in the current process.
+    /// Use `ringlet daemon stop` or `ringlet daemon status` to manage it.
     Daemon {
         #[command(subcommand)]
-        command: DaemonCommands,
+        command: Option<DaemonCommands>,
+
+        /// Keep daemon running indefinitely (disable idle timeout)
+        #[arg(long)]
+        stay_alive: bool,
+
+        /// Override IPC socket path
+        #[arg(long)]
+        socket: Option<std::path::PathBuf>,
+
+        /// Run in foreground (don't daemonize)
+        #[arg(long, short)]
+        foreground: bool,
+
+        /// Log level (trace, debug, info, warn, error)
+        #[arg(long, default_value = "info")]
+        daemon_log_level: String,
     },
 
     /// Run environment setup tasks
@@ -199,6 +224,26 @@ EXAMPLES:
     Terminal {
         #[command(subcommand)]
         command: TerminalCommands,
+    },
+
+    /// Launch the Tauri desktop GUI
+    #[cfg(feature = "gui")]
+    Gui {
+        /// Auto-start and manage daemon lifecycle
+        #[arg(long)]
+        standalone: bool,
+
+        /// Connect to a remote daemon (host)
+        #[arg(long)]
+        remote: Option<String>,
+
+        /// Daemon port
+        #[arg(long, default_value = "8765")]
+        port: u16,
+
+        /// Authentication token
+        #[arg(long)]
+        token: Option<String>,
     },
 }
 
@@ -346,12 +391,6 @@ enum RegistryCommands {
 
 #[derive(Subcommand, Debug)]
 enum DaemonCommands {
-    /// Start daemon in foreground
-    Start {
-        /// Keep running indefinitely
-        #[arg(long)]
-        stay_alive: bool,
-    },
     /// Stop the daemon
     Stop,
     /// Check daemon status
@@ -576,6 +615,12 @@ pub enum TerminalCommands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Backward compat: if invoked as "ringletd" (symlink), run daemon directly
+    let argv0 = std::env::args().next().unwrap_or_default();
+    if argv0.ends_with("ringletd") || argv0.ends_with("ringletd.exe") {
+        return run_as_legacy_daemon().await;
+    }
+
     let cli = Cli::parse();
 
     // Initialize logging
@@ -603,4 +648,53 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Handle legacy `ringletd` invocation via argv[0] symlink detection.
+/// Translates old-style ringletd CLI args to daemon::run_daemon().
+async fn run_as_legacy_daemon() -> Result<()> {
+    let mut stay_alive = false;
+    let mut foreground = false;
+    let mut socket: Option<std::path::PathBuf> = None;
+    let mut log_level = "info".to_string();
+
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--stay-alive" => stay_alive = true,
+            "--foreground" | "-f" => foreground = true,
+            "--socket" => {
+                i += 1;
+                if i < args.len() {
+                    socket = Some(std::path::PathBuf::from(&args[i]));
+                }
+            }
+            "--log-level" => {
+                i += 1;
+                if i < args.len() {
+                    log_level = args[i].clone();
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+
+    // Initialize logging for daemon mode
+    let filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new(&log_level));
+
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_target(true)
+        .init();
+
+    daemon::run_daemon(daemon::DaemonArgs {
+        stay_alive,
+        socket,
+        foreground,
+        log_level,
+    })
+    .await
 }

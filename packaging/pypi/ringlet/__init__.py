@@ -80,6 +80,6 @@ def main():
 
 
 def main_daemon():
-    """Entry point for ringletd daemon."""
-    binary = ensure_binary("ringletd")
-    sys.exit(subprocess.call([str(binary)] + sys.argv[1:]))
+    """Entry point for ringletd daemon (backward compat wrapper)."""
+    binary = ensure_binary("ringlet")
+    sys.exit(subprocess.call([str(binary)] + ['daemon'] + sys.argv[1:]))

@@ -71,9 +71,7 @@ module Ringlet
       # Make executable on Unix
       unless RUBY_PLATFORM =~ /mingw|mswin/
         ringlet_path = File.join(binary_dir, 'ringlet')
-        ringletd_path = File.join(binary_dir, 'ringletd')
         File.chmod(0755, ringlet_path) if File.exist?(ringlet_path)
-        File.chmod(0755, ringletd_path) if File.exist?(ringletd_path)
       end
 
       warn "ringlet binaries installed successfully"

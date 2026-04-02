@@ -113,7 +113,7 @@ The embedded Web UI includes a dedicated Usage page accessible at `http://127.0.
 
 ```bash
 # Start the daemon
-ringlet daemon start --stay-alive
+ringlet daemon --stay-alive
 
 # Open in browser
 open http://127.0.0.1:8765
@@ -227,13 +227,7 @@ The pricing file includes per-token costs for 200+ models:
 
 ## Data Storage
 
-Usage data is stored under the telemetry directory:
-
-```
-~/.config/ringlet/telemetry/
-├── sessions.jsonl        # Per-session records with token/cost data
-└── aggregates.json       # Rolled-up stats per profile/model
-```
+Usage data is stored under `~/.config/ringlet/telemetry/`.
 
 ---
 

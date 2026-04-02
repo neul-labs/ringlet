@@ -46,10 +46,11 @@
                       Source="ringlet.exe"
                       KeyPath="yes" />
             </Component>
+            <!-- ringletd.exe is a copy of ringlet.exe for backward compatibility -->
             <Component Id="RingletdExe" Guid="*" Win64="yes">
                 <File Id="ringletd.exe"
                       Name="ringletd.exe"
-                      Source="ringletd.exe" />
+                      Source="ringlet.exe" />
             </Component>
         </ComponentGroup>
 

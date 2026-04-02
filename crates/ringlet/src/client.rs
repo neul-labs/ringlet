@@ -1,4 +1,4 @@
-//! Client for communicating with the ringletd daemon.
+//! Client for communicating with the ringlet daemon.
 
 use anyhow::{anyhow, Context, Result};
 use ringlet_core::{RingletPaths, Request, Response};
@@ -8,7 +8,7 @@ use std::process::{Command, Stdio};
 use std::time::Duration;
 use tracing::{debug, info};
 
-/// Client for the ringletd daemon.
+/// Client for the ringlet daemon.
 pub struct DaemonClient {
     socket: Socket,
 }
@@ -67,33 +67,23 @@ impl DaemonClient {
         Ok(Self { socket })
     }
 
-    /// Start the daemon process.
+    /// Start the daemon process via `ringlet daemon`.
     fn start_daemon(paths: &RingletPaths) -> Result<()> {
-        // Find ringletd binary
-        let ringletd = std::env::current_exe()?
-            .parent()
-            .ok_or_else(|| anyhow!("Cannot find parent directory"))?
-            .join("ringletd");
+        let ringlet = std::env::current_exe()?;
 
-        // Check if it exists, otherwise try PATH
-        let ringletd = if ringletd.exists() {
-            ringletd
-        } else {
-            which_ringletd()?
-        };
-
-        debug!("Starting daemon: {}", ringletd.display());
+        debug!("Starting daemon: {} daemon", ringlet.display());
 
         // Ensure directories exist
         paths.ensure_dirs()?;
 
         // Start daemon in background
-        Command::new(&ringletd)
+        Command::new(&ringlet)
+            .args(["daemon"])
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
-            .context("Failed to start ringletd")?;
+            .context("Failed to start ringlet daemon")?;
 
         Ok(())
     }
@@ -123,35 +113,4 @@ impl DaemonClient {
         self.request(&Request::Shutdown)?;
         Ok(())
     }
-}
-
-/// Find ringletd in PATH.
-fn which_ringletd() -> Result<std::path::PathBuf> {
-    // Try common locations
-    let candidates = [
-        "/usr/local/bin/ringletd",
-        "/usr/bin/ringletd",
-    ];
-
-    for candidate in candidates {
-        let path = std::path::PathBuf::from(candidate);
-        if path.exists() {
-            return Ok(path);
-        }
-    }
-
-    // Try which command
-    #[cfg(unix)]
-    {
-        let output = Command::new("which")
-            .arg("ringletd")
-            .output()?;
-
-        if output.status.success() {
-            let path = String::from_utf8_lossy(&output.stdout);
-            return Ok(std::path::PathBuf::from(path.trim()));
-        }
-    }
-
-    Err(anyhow!("ringletd not found in PATH"))
 }

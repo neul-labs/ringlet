@@ -109,7 +109,7 @@ The agent runs with `HOME` set to this directory, so:
 
 ## The Daemon
 
-Ringlet uses a background daemon (`ringletd`) that:
+Ringlet uses a background daemon that:
 
 - **Manages profiles** - Stores and retrieves profile data
 - **Tracks usage** - Monitors token consumption and costs
@@ -123,7 +123,7 @@ The daemon starts automatically when needed and stops after idle timeout.
 ringlet daemon status
 
 # Keep daemon running indefinitely
-ringlet daemon start --stay-alive
+ringlet daemon --stay-alive
 ```
 
 ### Why a Daemon?
@@ -229,7 +229,7 @@ project-b   # Starts Claude with project-b profile
 | Agent | AI coding CLI tool | Claude Code, Codex |
 | Provider | API backend | Anthropic, MiniMax |
 | Profile | Agent + Provider binding | `work-claude` |
-| Daemon | Background service | `ringletd` |
+| Daemon | Background service | `ringlet daemon` |
 | Registry | Configuration source | GitHub repo |
 
 ---

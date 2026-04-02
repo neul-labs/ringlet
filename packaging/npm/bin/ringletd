@@ -4,14 +4,14 @@ const path = require('path');
 const fs = require('fs');
 
 const ext = process.platform === 'win32' ? '.exe' : '';
-const binPath = path.join(__dirname, `ringletd${ext}`);
+const binPath = path.join(__dirname, `ringlet${ext}`);
 
 if (!fs.existsSync(binPath)) {
-  console.error('ringletd binary not found. Try reinstalling: npm install -g ringlet-cli');
+  console.error('ringlet binary not found. Try reinstalling: npm install -g ringlet-cli');
   process.exit(1);
 }
 
-const child = spawn(binPath, process.argv.slice(2), {
+const child = spawn(binPath, ['daemon', ...process.argv.slice(2)], {
   stdio: 'inherit',
   windowsHide: true
 });

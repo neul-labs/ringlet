@@ -28,7 +28,7 @@ class Ringlet < Formula
 
   def install
     bin.install "ringlet"
-    bin.install "ringletd"
+    bin.install_symlink "ringlet" => "ringletd"
   end
 
   def caveats
@@ -36,7 +36,7 @@ class Ringlet < Formula
       ringlet has been installed. To start using it:
         ringlet --help
 
-      The daemon (ringletd) will auto-start when needed.
+      The daemon runs via `ringlet daemon`. The `ringletd` symlink is provided for backward compatibility.
     EOS
   end
 

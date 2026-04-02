@@ -55,6 +55,8 @@ nav:
     - Configuration: reference/configuration.md
     - HTTP API: reference/api.md
     - WebSocket Events: reference/events.md
+  - Security: security.md
+  - Roadmap: roadmap.md
   - Advanced:
     - Architecture: advanced/architecture.md
     - Registry: advanced/registry.md

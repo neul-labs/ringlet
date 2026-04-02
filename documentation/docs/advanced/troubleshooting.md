@@ -23,20 +23,20 @@ Common issues and their solutions when working with Ringlet.
 2. Check for stale socket file:
    ```bash
    # Linux/macOS
-   rm /tmp/ringletd.sock
+   rm /tmp/ringlet.sock
 
    # Windows
-   del %LOCALAPPDATA%\ringlet\ringletd.ipc
+   del %LOCALAPPDATA%\ringlet\ringlet.ipc
    ```
 
 3. Start daemon manually with debug logging:
    ```bash
-   ringlet --log-level debug daemon start
+   ringlet --log-level debug daemon
    ```
 
 4. Check daemon logs:
    ```bash
-   cat ~/.config/ringlet/logs/ringletd.log
+   cat ~/.config/ringlet/logs/daemon.log
    ```
 
 ### Daemon Keeps Stopping
@@ -46,7 +46,7 @@ Common issues and their solutions when working with Ringlet.
 **Solution:** Keep daemon running indefinitely:
 
 ```bash
-ringlet daemon start --stay-alive
+ringlet daemon --stay-alive
 ```
 
 ---
@@ -509,7 +509,7 @@ If you're still stuck:
 
 1. **Check logs:**
    ```bash
-   cat ~/.config/ringlet/logs/ringletd.log
+   cat ~/.config/ringlet/logs/daemon.log
    ```
 
 2. **Enable debug mode:**

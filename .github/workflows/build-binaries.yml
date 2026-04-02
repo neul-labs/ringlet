@@ -60,9 +60,10 @@ jobs:
         run: |
           mkdir -p dist
           cp target/${{ matrix.target }}/release/ringlet dist/
-          cp target/${{ matrix.target }}/release/ringletd dist/
+          # Create ringletd symlink for backward compatibility
+          ln -sf ringlet dist/ringletd
           cd dist
-          tar -czvf ../${{ matrix.artifact_name }}-${{ inputs.version }}.tar.gz *
+          tar -czhvf ../${{ matrix.artifact_name }}-${{ inputs.version }}.tar.gz *
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
@@ -70,7 +71,8 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path dist
           Copy-Item target/${{ matrix.target }}/release/ringlet.exe dist/
-          Copy-Item target/${{ matrix.target }}/release/ringletd.exe dist/
+          # Create ringletd copy for backward compatibility on Windows
+          Copy-Item target/${{ matrix.target }}/release/ringlet.exe dist/ringletd.exe
           Compress-Archive -Path dist/* -DestinationPath ${{ matrix.artifact_name }}-${{ inputs.version }}.zip
 
       - name: Upload artifact
@@ -108,13 +110,14 @@ jobs:
           tar -xzf x64/*.tar.gz -C x64-extract
           tar -xzf arm64/*.tar.gz -C arm64-extract
 
-          # Create universal binaries using lipo
+          # Create universal binary using lipo
           lipo -create x64-extract/ringlet arm64-extract/ringlet -output universal/ringlet
-          lipo -create x64-extract/ringletd arm64-extract/ringletd -output universal/ringletd
+          # Create ringletd symlink for backward compatibility
+          ln -sf ringlet universal/ringletd
 
           # Package
           cd universal
-          tar -czvf ../ringlet-darwin-universal-${{ inputs.version }}.tar.gz *
+          tar -czhvf ../ringlet-darwin-universal-${{ inputs.version }}.tar.gz *
 
       - name: Upload universal artifact
         uses: actions/upload-artifact@v4

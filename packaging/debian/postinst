@@ -7,7 +7,7 @@ case "$1" in
     configure)
         # Ensure binaries are executable
         chmod 755 /usr/bin/ringlet 2>/dev/null || true
-        chmod 755 /usr/bin/ringletd 2>/dev/null || true
+        ln -sf ringlet /usr/bin/ringletd 2>/dev/null || true  # backward compat symlink
 
         echo ""
         echo "Ringlet has been installed successfully!"
