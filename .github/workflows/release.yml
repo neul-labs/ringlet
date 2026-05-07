@@ -70,6 +70,8 @@ jobs:
     name: Create GitHub Release
     needs: [check-version, build-binaries]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       release_url: ${{ steps.create.outputs.url }}
     steps:
