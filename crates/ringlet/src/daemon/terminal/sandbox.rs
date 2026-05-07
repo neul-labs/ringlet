@@ -60,7 +60,7 @@ impl SandboxPlatform {
     pub fn detect() -> Self {
         #[cfg(target_os = "linux")]
         {
-            return SandboxPlatform::Linux;
+            SandboxPlatform::Linux
         }
 
         #[cfg(target_os = "macos")]

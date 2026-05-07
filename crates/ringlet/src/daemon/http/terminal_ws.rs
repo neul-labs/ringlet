@@ -263,10 +263,10 @@ async fn handle_terminal_socket(socket: WebSocket, session_id: SessionId, state:
                         debug!("Terminal client sent close for session {}", session_id);
                         break;
                     }
-                    Ok(Message::Ping(data)) => {
-                        if sender.send(Message::Pong(data)).await.is_err() {
-                            break;
-                        }
+                    Ok(Message::Ping(data))
+                        if sender.send(Message::Pong(data.clone())).await.is_err() =>
+                    {
+                        break;
                     }
                     Err(e) => {
                         error!("WebSocket receive error for session {}: {}", session_id, e);

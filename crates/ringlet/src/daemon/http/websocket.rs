@@ -135,10 +135,10 @@ async fn handle_socket(socket: WebSocket, state: Arc<ServerState>) {
                         debug!("WebSocket client sent close");
                         break;
                     }
-                    Ok(Message::Ping(data)) => {
-                        if sender.send(Message::Pong(data)).await.is_err() {
-                            break;
-                        }
+                    Ok(Message::Ping(data))
+                        if sender.send(Message::Pong(data.clone())).await.is_err() =>
+                    {
+                        break;
                     }
                     Err(e) => {
                         error!("WebSocket receive error: {}", e);

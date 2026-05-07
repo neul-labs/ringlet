@@ -193,7 +193,7 @@ impl WorkspaceService {
             }
         }
 
-        completions.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        completions.sort_by_key(|a| a.name.to_lowercase());
 
         Ok(PathCompletions { completions })
     }

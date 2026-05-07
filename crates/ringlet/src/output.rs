@@ -373,7 +373,7 @@ pub fn usage_summary(usage: &UsageStatsResponse) {
         profile_table.set_header(vec!["Profile", "Sessions", "Tokens", "Cost", "Last Used"]);
 
         let mut profiles: Vec<_> = usage.aggregates.by_profile.iter().collect();
-        profiles.sort_by(|a, b| b.1.sessions.cmp(&a.1.sessions));
+        profiles.sort_by_key(|b| std::cmp::Reverse(b.1.sessions));
 
         for (name, profile_usage) in profiles {
             let total_tokens = profile_usage.tokens.input_tokens

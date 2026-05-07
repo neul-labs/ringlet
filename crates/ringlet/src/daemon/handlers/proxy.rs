@@ -268,7 +268,7 @@ pub async fn route_add(alias: &str, rule: &RoutingRule, state: &ServerState) -> 
     proxy_config
         .routing
         .rules
-        .sort_by(|a, b| b.priority.cmp(&a.priority));
+        .sort_by_key(|b| std::cmp::Reverse(b.priority));
 
     updated.metadata.proxy_config = Some(proxy_config);
 
