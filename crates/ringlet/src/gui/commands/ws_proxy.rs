@@ -2,10 +2,7 @@ use crate::gui::error::AppError;
 use crate::gui::state::AppState;
 use futures_util::{SinkExt, StreamExt};
 use tauri::{AppHandle, Emitter, State};
-use tokio_tungstenite::tungstenite::{
-    client::IntoClientRequest,
-    Message,
-};
+use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest};
 
 /// Connect to a WebSocket endpoint on the daemon.
 ///
@@ -25,9 +22,9 @@ pub async fn ws_connect(
 
     let ws_url = format!("{}{}", connection.ws_url(), path);
 
-    let mut request = ws_url.into_client_request().map_err(|e| {
-        AppError::WebSocket(format!("Invalid WebSocket URL: {}", e))
-    })?;
+    let mut request = ws_url
+        .into_client_request()
+        .map_err(|e| AppError::WebSocket(format!("Invalid WebSocket URL: {}", e)))?;
 
     // Pass auth token via Sec-WebSocket-Protocol header
     // Format: "bearer, {token}" — matches daemon's extract_token in auth.rs

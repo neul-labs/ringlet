@@ -12,14 +12,17 @@ mod handlers;
 mod http;
 mod pricing;
 mod profile_manager;
+mod profile_store;
 mod provider_registry;
 mod proxy_manager;
 mod registry_client;
+mod secret_store;
 pub(crate) mod server;
 mod telemetry;
 mod terminal;
 mod usage_watcher;
 mod watcher;
+mod workspace_service;
 
 use anyhow::Result;
 use ringlet_core::RingletPaths;
@@ -51,12 +54,12 @@ pub async fn run_daemon(args: DaemonArgs) -> Result<()> {
 
     // Write PID file
     let pid = std::process::id();
-    std::fs::write(&paths.daemon_pid(), pid.to_string())?;
+    std::fs::write(paths.daemon_pid(), pid.to_string())?;
     info!("PID {} written to {}", pid, paths.daemon_pid().display());
 
     // Write endpoint file for CLI discovery
     std::fs::write(
-        &paths.daemon_endpoint(),
+        paths.daemon_endpoint(),
         socket_path.to_string_lossy().as_ref(),
     )?;
 
@@ -103,8 +106,14 @@ pub async fn run_daemon(args: DaemonArgs) -> Result<()> {
     });
 
     // Run the IPC server (blocks until shutdown)
-    let result =
-        server::run(&socket_path, idle_timeout, &paths, state.clone(), nng_shutdown_rx).await;
+    let result = server::run(
+        &socket_path,
+        idle_timeout,
+        &paths,
+        state.clone(),
+        nng_shutdown_rx,
+    )
+    .await;
 
     // Signal HTTP server to shut down
     let _ = http_shutdown_tx.send(());
@@ -132,8 +141,8 @@ pub async fn run_daemon(args: DaemonArgs) -> Result<()> {
     }
 
     // Cleanup
-    let _ = std::fs::remove_file(&paths.daemon_pid());
-    let _ = std::fs::remove_file(&paths.daemon_endpoint());
+    let _ = std::fs::remove_file(paths.daemon_pid());
+    let _ = std::fs::remove_file(paths.daemon_endpoint());
     let _ = std::fs::remove_file(&socket_path);
 
     Ok(())

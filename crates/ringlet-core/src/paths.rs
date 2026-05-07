@@ -139,13 +139,13 @@ impl RingletPaths {
     pub fn ensure_dirs(&self) -> std::io::Result<()> {
         std::fs::create_dir_all(&self.config_dir)?;
         std::fs::create_dir_all(&self.cache_dir)?;
-        std::fs::create_dir_all(&self.agents_d())?;
-        std::fs::create_dir_all(&self.providers_d())?;
-        std::fs::create_dir_all(&self.scripts_dir())?;
-        std::fs::create_dir_all(&self.profiles_dir())?;
-        std::fs::create_dir_all(&self.registry_dir())?;
-        std::fs::create_dir_all(&self.telemetry_dir())?;
-        std::fs::create_dir_all(&self.logs_dir())?;
+        std::fs::create_dir_all(self.agents_d())?;
+        std::fs::create_dir_all(self.providers_d())?;
+        std::fs::create_dir_all(self.scripts_dir())?;
+        std::fs::create_dir_all(self.profiles_dir())?;
+        std::fs::create_dir_all(self.registry_dir())?;
+        std::fs::create_dir_all(self.telemetry_dir())?;
+        std::fs::create_dir_all(self.logs_dir())?;
         Ok(())
     }
 }
@@ -158,14 +158,14 @@ impl Default for RingletPaths {
 
 /// Expand ~ to home directory in a path string.
 pub fn expand_tilde(path: &str) -> PathBuf {
-    if path.starts_with("~/") {
+    if let Some(stripped) = path.strip_prefix("~/") {
         if let Some(home) = home_dir() {
-            return home.join(&path[2..]);
+            return home.join(stripped);
         }
-    } else if path == "~" {
-        if let Some(home) = home_dir() {
-            return home;
-        }
+    } else if path == "~"
+        && let Some(home) = home_dir()
+    {
+        return home;
     }
     PathBuf::from(path)
 }

@@ -7,9 +7,9 @@
 //! Each line contains a JSON object with token usage and optional cost data.
 
 use super::UsageEntry;
-use ringlet_core::AgentType;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
+use ringlet_core::AgentType;
 use ringlet_core::TokenUsage;
 use serde::Deserialize;
 use std::io::{BufRead, BufReader};
@@ -47,7 +47,7 @@ pub async fn scan_usage(claude_dir: &Path) -> Result<Vec<UsageEntry>> {
         .filter_map(|e| e.ok())
     {
         let path = entry.path();
-        if path.is_file() && path.extension().map_or(false, |ext| ext == "jsonl") {
+        if path.is_file() && path.extension().is_some_and(|ext| ext == "jsonl") {
             trace!("Parsing Claude JSONL file: {:?}", path);
             match parse_jsonl_file(path) {
                 Ok(file_entries) => {
@@ -70,8 +70,8 @@ pub async fn scan_usage(claude_dir: &Path) -> Result<Vec<UsageEntry>> {
 
 /// Parse a single Claude JSONL file.
 fn parse_jsonl_file(path: &Path) -> Result<Vec<UsageEntry>> {
-    let file = std::fs::File::open(path)
-        .with_context(|| format!("Failed to open {}", path.display()))?;
+    let file =
+        std::fs::File::open(path).with_context(|| format!("Failed to open {}", path.display()))?;
     let reader = BufReader::new(file);
     let mut entries = Vec::new();
 
@@ -120,7 +120,7 @@ fn extract_project_path(path: &Path) -> String {
     // Walk up the path to find the project directory
     let mut current = path.parent();
     while let Some(parent) = current {
-        if parent.file_name().map_or(false, |n| n == "projects") {
+        if parent.file_name().is_some_and(|n| n == "projects") {
             // The next component after "projects" is the project name
             if let Some(project) = path
                 .strip_prefix(parent)

@@ -71,26 +71,12 @@ Scripts must return a map with these keys:
         "ANTHROPIC_AUTH_TOKEN": "..."
     },
 
-    // Optional: Hooks configuration (for agents that support them)
-    "hooks": #{
-        "PreToolUse": [...],
-        "PostToolUse": [...],
-        "Notification": [...],
-        "Stop": [...]
-    },
-
-    // Optional: MCP servers (for agents that support them)
-    // Note: Use snake_case "mcp_servers" in script output.
-    // When writing to .claude.json, encode as camelCase "mcpServers" per Claude Code spec.
-    "mcp_servers": #{
-        "filesystem": #{
-            "command": "npx",
-            "args": ["-y", "@anthropic/mcp-filesystem"],
-            "env": #{}
-        }
-    }
+    // Optional: Extra CLI arguments
+    "args": ["--flag", "value"]
 }
 ```
+
+Hook, MCP, and proxy configuration should be expressed by generating the agent's real config files under `files`, not by returning side-channel objects. For example, Claude hook config belongs in `.claude/settings.json`, and Claude MCP server config belongs in `.claude.json`.
 
 ## Built-in Functions
 
@@ -184,8 +170,7 @@ if hooks_config.keys().len() > 0 {
     "files": #{
         ".claude/settings.json": json::encode(settings)
     },
-    "env": #{},
-    "hooks": hooks_config
+    "env": #{}
 }
 ```
 
@@ -237,8 +222,7 @@ if mcp_config.keys().len() > 0 {
 
 #{
     "files": files,
-    "env": #{},
-    "mcp_servers": mcp_config
+    "env": #{}
 }
 ```
 

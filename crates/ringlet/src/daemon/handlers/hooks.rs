@@ -1,7 +1,7 @@
 //! Hooks management handlers.
 
 use crate::daemon::server::ServerState;
-use ringlet_core::{rpc::error_codes, HookAction, HookRule, HooksConfig, Response};
+use ringlet_core::{HookAction, HookRule, HooksConfig, Response, rpc::error_codes};
 use tracing::info;
 
 /// Add a hook rule to a profile.
@@ -25,13 +25,13 @@ pub async fn add(
     }
 
     // Load profile
-    let profile = match state.profile_manager.get(alias) {
+    let profile = match state.profile_store.get(alias) {
         Ok(Some(p)) => p,
         Ok(None) => {
             return Response::error(
                 error_codes::PROFILE_NOT_FOUND,
                 format!("Profile not found: {}", alias),
-            )
+            );
         }
         Err(e) => return Response::error(error_codes::INTERNAL_ERROR, e.to_string()),
     };
@@ -44,7 +44,7 @@ pub async fn add(
             return Response::error(
                 error_codes::AGENT_NOT_FOUND,
                 format!("Agent not found: {}", profile.agent_id),
-            )
+            );
         }
     };
 
@@ -77,7 +77,7 @@ pub async fn add(
     let mut updated_profile = profile.clone();
     updated_profile.metadata.hooks_config = Some(hooks_config);
 
-    if let Err(e) = state.profile_manager.update(&updated_profile) {
+    if let Err(e) = state.profile_store.update(&updated_profile) {
         return Response::error(error_codes::INTERNAL_ERROR, e.to_string());
     }
 
@@ -94,13 +94,13 @@ pub async fn add(
 
 /// List hooks for a profile.
 pub async fn list(alias: &str, state: &ServerState) -> Response {
-    let profile = match state.profile_manager.get(alias) {
+    let profile = match state.profile_store.get(alias) {
         Ok(Some(p)) => p,
         Ok(None) => {
             return Response::error(
                 error_codes::PROFILE_NOT_FOUND,
                 format!("Profile not found: {}", alias),
-            )
+            );
         }
         Err(e) => return Response::error(error_codes::INTERNAL_ERROR, e.to_string()),
     };
@@ -125,13 +125,13 @@ pub async fn remove(alias: &str, event: &str, index: usize, state: &ServerState)
     }
 
     // Load profile
-    let profile = match state.profile_manager.get(alias) {
+    let profile = match state.profile_store.get(alias) {
         Ok(Some(p)) => p,
         Ok(None) => {
             return Response::error(
                 error_codes::PROFILE_NOT_FOUND,
                 format!("Profile not found: {}", alias),
-            )
+            );
         }
         Err(e) => return Response::error(error_codes::INTERNAL_ERROR, e.to_string()),
     };
@@ -143,7 +143,7 @@ pub async fn remove(alias: &str, event: &str, index: usize, state: &ServerState)
             return Response::error(
                 error_codes::INTERNAL_ERROR,
                 "No hooks configured for this profile",
-            )
+            );
         }
     };
 
@@ -171,7 +171,7 @@ pub async fn remove(alias: &str, event: &str, index: usize, state: &ServerState)
         Some(hooks_config)
     };
 
-    if let Err(e) = state.profile_manager.update(&updated_profile) {
+    if let Err(e) = state.profile_store.update(&updated_profile) {
         return Response::error(error_codes::INTERNAL_ERROR, e.to_string());
     }
 
@@ -189,13 +189,13 @@ pub async fn remove(alias: &str, event: &str, index: usize, state: &ServerState)
 /// Import hooks configuration for a profile.
 pub async fn import(alias: &str, config: &HooksConfig, state: &ServerState) -> Response {
     // Load profile
-    let profile = match state.profile_manager.get(alias) {
+    let profile = match state.profile_store.get(alias) {
         Ok(Some(p)) => p,
         Ok(None) => {
             return Response::error(
                 error_codes::PROFILE_NOT_FOUND,
                 format!("Profile not found: {}", alias),
-            )
+            );
         }
         Err(e) => return Response::error(error_codes::INTERNAL_ERROR, e.to_string()),
     };
@@ -208,7 +208,7 @@ pub async fn import(alias: &str, config: &HooksConfig, state: &ServerState) -> R
             return Response::error(
                 error_codes::AGENT_NOT_FOUND,
                 format!("Agent not found: {}", profile.agent_id),
-            )
+            );
         }
     };
 
@@ -228,7 +228,7 @@ pub async fn import(alias: &str, config: &HooksConfig, state: &ServerState) -> R
         Some(config.clone())
     };
 
-    if let Err(e) = state.profile_manager.update(&updated_profile) {
+    if let Err(e) = state.profile_store.update(&updated_profile) {
         return Response::error(error_codes::INTERNAL_ERROR, e.to_string());
     }
 

@@ -8,9 +8,9 @@
 //! Note: Codex embeds "reasoning tokens" in output_tokens.
 
 use super::UsageEntry;
-use ringlet_core::AgentType;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
+use ringlet_core::AgentType;
 use ringlet_core::TokenUsage;
 use serde::Deserialize;
 use std::io::{BufRead, BufReader};
@@ -48,7 +48,7 @@ pub async fn scan_usage(codex_dir: &Path) -> Result<Vec<UsageEntry>> {
         .filter_map(|e| e.ok())
     {
         let path = entry.path();
-        if path.is_file() && path.extension().map_or(false, |ext| ext == "jsonl") {
+        if path.is_file() && path.extension().is_some_and(|ext| ext == "jsonl") {
             trace!("Parsing Codex JSONL file: {:?}", path);
             match parse_jsonl_file(path) {
                 Ok(file_entries) => {
@@ -71,8 +71,8 @@ pub async fn scan_usage(codex_dir: &Path) -> Result<Vec<UsageEntry>> {
 
 /// Parse a single Codex JSONL file.
 fn parse_jsonl_file(path: &Path) -> Result<Vec<UsageEntry>> {
-    let file = std::fs::File::open(path)
-        .with_context(|| format!("Failed to open {}", path.display()))?;
+    let file =
+        std::fs::File::open(path).with_context(|| format!("Failed to open {}", path.display()))?;
     let reader = BufReader::new(file);
     let mut entries = Vec::new();
 
@@ -97,11 +97,11 @@ fn parse_jsonl_file(path: &Path) -> Result<Vec<UsageEntry>> {
         match serde_json::from_str::<CodexEntry>(&line) {
             Ok(codex_entry) => {
                 // Only process token_count entries
-                if codex_entry.entry_type.as_deref() == Some("token_count") {
-                    if let Some(entry) = codex_entry.to_usage_entry(&session_path, &mut entry_counter)
-                    {
-                        entries.push(entry);
-                    }
+                if codex_entry.entry_type.as_deref() == Some("token_count")
+                    && let Some(entry) =
+                        codex_entry.to_usage_entry(&session_path, &mut entry_counter)
+                {
+                    entries.push(entry);
                 }
             }
             Err(e) => {
@@ -125,7 +125,7 @@ fn extract_session_path(path: &Path) -> String {
     // Walk up the path to find the session directory
     let mut current = path.parent();
     while let Some(parent) = current {
-        if parent.file_name().map_or(false, |n| n == "sessions") {
+        if parent.file_name().is_some_and(|n| n == "sessions") {
             // The next component after "sessions" is the session ID
             if let Some(session) = path
                 .strip_prefix(parent)

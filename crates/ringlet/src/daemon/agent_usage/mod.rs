@@ -11,11 +11,13 @@ pub mod claude;
 pub mod codex;
 pub mod opencode;
 
+use crate::daemon::pricing::PricingLoader;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use ringlet_core::{AgentType, TokenUsage};
+use ringlet_core::{AgentType, CostBreakdown, RingletPaths, TokenUsage};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use tracing::{debug, warn};
 
 /// A single usage entry from an agent's native files.
@@ -58,6 +60,19 @@ pub struct ScanResult {
     pub by_agent: std::collections::HashMap<AgentType, Vec<UsageEntry>>,
     /// Warnings encountered during scanning (non-fatal).
     pub warnings: Vec<String>,
+}
+
+/// Snapshot of known native usage entry keys for a profile home.
+#[derive(Debug, Clone, Default)]
+pub struct UsageSnapshot {
+    known_keys: HashSet<String>,
+}
+
+/// Usage observed for a single completed Ringlet session.
+#[derive(Debug, Clone)]
+pub struct UsageDelta {
+    pub tokens: TokenUsage,
+    pub cost: Option<CostBreakdown>,
 }
 
 impl ScanResult {
@@ -165,6 +180,111 @@ pub async fn scan_all_agents() -> Result<ScanResult> {
     Ok(result)
 }
 
+/// Capture a baseline snapshot of native usage entries for a specific profile home.
+pub async fn snapshot_for_profile(
+    agent_id: &str,
+    profile_home: &Path,
+) -> Result<Option<UsageSnapshot>> {
+    let Some(agent) = agent_type_for_id(agent_id) else {
+        return Ok(None);
+    };
+
+    let entries = scan_agent_profile_home(agent, profile_home).await?;
+    Ok(Some(UsageSnapshot {
+        known_keys: entries.into_iter().map(|entry| entry.dedup_key()).collect(),
+    }))
+}
+
+/// Compute the usage delta since a previously captured baseline snapshot.
+pub async fn delta_for_profile(
+    agent_id: &str,
+    profile_home: &Path,
+    before: &UsageSnapshot,
+    model: &str,
+    provider_id: &str,
+    paths: &RingletPaths,
+) -> Result<Option<UsageDelta>> {
+    let Some(agent) = agent_type_for_id(agent_id) else {
+        return Ok(None);
+    };
+
+    let entries = scan_agent_profile_home(agent, profile_home).await?;
+    let new_entries: Vec<UsageEntry> = entries
+        .into_iter()
+        .filter(|entry| !before.known_keys.contains(&entry.dedup_key()))
+        .collect();
+
+    if new_entries.is_empty() {
+        return Ok(None);
+    }
+
+    let mut tokens = TokenUsage::default();
+    let mut total_cost = 0.0;
+    let mut has_native_cost = false;
+
+    for entry in &new_entries {
+        tokens += entry.tokens.clone();
+        if let Some(cost_usd) = entry.cost_usd {
+            total_cost += cost_usd;
+            has_native_cost = true;
+        }
+    }
+
+    let cost = if has_native_cost {
+        Some(CostBreakdown {
+            total_cost,
+            ..Default::default()
+        })
+    } else {
+        PricingLoader::new(paths.clone()).calculate_cost(&tokens, model, provider_id)
+    };
+
+    Ok(Some(UsageDelta { tokens, cost }))
+}
+
+fn agent_type_for_id(agent_id: &str) -> Option<AgentType> {
+    match agent_id {
+        "claude" => Some(AgentType::Claude),
+        "codex" => Some(AgentType::Codex),
+        "opencode" => Some(AgentType::OpenCode),
+        _ => None,
+    }
+}
+
+async fn scan_agent_profile_home(agent: AgentType, profile_home: &Path) -> Result<Vec<UsageEntry>> {
+    let mut entries = Vec::new();
+
+    for root in profile_usage_roots(agent, profile_home) {
+        if !root.exists() {
+            continue;
+        }
+
+        let mut root_entries = match agent {
+            AgentType::Claude => claude::scan_usage(&root).await?,
+            AgentType::Codex => codex::scan_usage(&root).await?,
+            AgentType::OpenCode => opencode::scan_usage(&root).await?,
+        };
+        entries.append(&mut root_entries);
+    }
+
+    let mut seen = HashSet::new();
+    entries.retain(|entry| seen.insert(entry.dedup_key()));
+    Ok(entries)
+}
+
+fn profile_usage_roots(agent: AgentType, profile_home: &Path) -> Vec<PathBuf> {
+    match agent {
+        AgentType::Claude => vec![profile_home.join(".claude")],
+        AgentType::Codex => vec![profile_home.join(".codex")],
+        AgentType::OpenCode => vec![
+            profile_home.join(".local/share/opencode"),
+            profile_home.join("Library/Application Support/opencode"),
+            profile_home.join("AppData/Local/opencode"),
+            profile_home.join(".opencode"),
+        ],
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -219,5 +339,13 @@ mod tests {
         assert_eq!(result.entries.len(), 2);
         result.deduplicate();
         assert_eq!(result.entries.len(), 1);
+    }
+
+    #[test]
+    fn test_agent_type_for_id() {
+        assert_eq!(agent_type_for_id("claude"), Some(AgentType::Claude));
+        assert_eq!(agent_type_for_id("codex"), Some(AgentType::Codex));
+        assert_eq!(agent_type_for_id("opencode"), Some(AgentType::OpenCode));
+        assert_eq!(agent_type_for_id("unknown"), None);
     }
 }

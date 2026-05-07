@@ -7,9 +7,9 @@
 //! Unlike Claude and Codex, OpenCode uses individual JSON files (not JSONL).
 
 use super::UsageEntry;
-use ringlet_core::AgentType;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
+use ringlet_core::AgentType;
 use ringlet_core::TokenUsage;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
@@ -53,7 +53,7 @@ pub async fn scan_usage(opencode_dir: &Path) -> Result<Vec<UsageEntry>> {
         .filter_map(|e| e.ok())
     {
         let path = entry.path();
-        if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
+        if path.is_file() && path.extension().is_some_and(|ext| ext == "json") {
             trace!("Parsing OpenCode JSON file: {:?}", path);
             match parse_json_file(path) {
                 Ok(Some(usage_entry)) => {

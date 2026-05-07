@@ -6,7 +6,7 @@
 //!   cargo xtask release 0.2.0 --only cargo,npm
 //!   cargo xtask build 0.2.0
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 use console::{style, Emoji};
 use serde::Deserialize;
@@ -18,7 +18,6 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-static LOOKING_GLASS: Emoji<'_, '_> = Emoji("🔍 ", "");
 static PACKAGE: Emoji<'_, '_> = Emoji("📦 ", "");
 static ROCKET: Emoji<'_, '_> = Emoji("🚀 ", "");
 static CHECK: Emoji<'_, '_> = Emoji("✅ ", "[OK] ");
@@ -87,6 +86,13 @@ enum Commands {
         #[arg(long)]
         dry_run: bool,
     },
+
+    /// Sync the web UI TypeScript API contract from ringlet-core
+    ApiTypes {
+        /// Check that the generated UI file is up to date without writing it
+        #[arg(long)]
+        check: bool,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -96,6 +102,7 @@ struct ReleaseConfig {
     publishers: PublishersConfig,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct ProjectConfig {
     name: String,
@@ -275,8 +282,8 @@ impl ReleaseContext {
         let config_content = fs::read_to_string(&config_path)
             .with_context(|| format!("Failed to read {}", config_path.display()))?;
 
-        let config: ReleaseConfig = toml::from_str(&config_content)
-            .with_context(|| "Failed to parse release.toml")?;
+        let config: ReleaseConfig =
+            toml::from_str(&config_content).with_context(|| "Failed to parse release.toml")?;
 
         let dist_dir = project_root.join(&config.build.dist_dir);
 
@@ -397,15 +404,16 @@ fn build_platform(ctx: &mut ReleaseContext, platform: &str, current: &str) -> Re
 
 fn package_binaries(ctx: &mut ReleaseContext, platform: &str, target: &str) -> Result<()> {
     if ctx.dry_run {
-        println!("  {} [DRY-RUN] Would package binaries for {}", style("→").dim(), platform);
+        println!(
+            "  {} [DRY-RUN] Would package binaries for {}",
+            style("→").dim(),
+            platform
+        );
         return Ok(());
     }
 
     let target_dir = ctx.project_root.join("target").join(target).join("release");
-    let archive_name = format!(
-        "{}-{}-{}",
-        ctx.config.project.name, platform, ctx.version
-    );
+    let archive_name = format!("{}-{}-{}", ctx.config.project.name, platform, ctx.version);
 
     let staging_dir = ctx.dist_dir.join("staging").join(&archive_name);
     fs::create_dir_all(&staging_dir)?;
@@ -522,7 +530,10 @@ fn create_universal_binary(ctx: &mut ReleaseContext) -> Result<()> {
     }
 
     if ctx.dry_run {
-        println!("  {} [DRY-RUN] Would create universal binary", style("→").dim());
+        println!(
+            "  {} [DRY-RUN] Would create universal binary",
+            style("→").dim()
+        );
         return Ok(());
     }
 
@@ -536,7 +547,10 @@ fn generate_checksums(ctx: &ReleaseContext) -> Result<()> {
     ctx.log_step("Generating checksums");
 
     if ctx.dry_run {
-        println!("  {} [DRY-RUN] Would generate checksums.txt", style("→").dim());
+        println!(
+            "  {} [DRY-RUN] Would generate checksums.txt",
+            style("→").dim()
+        );
         return Ok(());
     }
 
@@ -576,10 +590,22 @@ fn publish_all(ctx: &ReleaseContext, only: Option<&str>) -> Result<()> {
         ("cargo", is_publisher_enabled(&ctx.config.publishers.cargo)),
         ("npm", is_publisher_enabled(&ctx.config.publishers.npm)),
         ("pypi", is_publisher_enabled(&ctx.config.publishers.pypi)),
-        ("rubygems", is_publisher_enabled(&ctx.config.publishers.rubygems)),
-        ("homebrew", is_publisher_enabled(&ctx.config.publishers.homebrew)),
-        ("chocolatey", is_publisher_enabled(&ctx.config.publishers.chocolatey)),
-        ("debian", is_publisher_enabled(&ctx.config.publishers.debian)),
+        (
+            "rubygems",
+            is_publisher_enabled(&ctx.config.publishers.rubygems),
+        ),
+        (
+            "homebrew",
+            is_publisher_enabled(&ctx.config.publishers.homebrew),
+        ),
+        (
+            "chocolatey",
+            is_publisher_enabled(&ctx.config.publishers.chocolatey),
+        ),
+        (
+            "debian",
+            is_publisher_enabled(&ctx.config.publishers.debian),
+        ),
         ("arch", is_publisher_enabled(&ctx.config.publishers.arch)),
         ("dmg", is_publisher_enabled(&ctx.config.publishers.dmg)),
         ("msi", is_publisher_enabled(&ctx.config.publishers.msi)),
@@ -627,8 +653,7 @@ fn publish_to(ctx: &ReleaseContext, registry: &str) -> Result<()> {
 }
 
 fn publish_cargo(ctx: &ReleaseContext) -> Result<()> {
-    let token = env::var("CARGO_REGISTRY_TOKEN")
-        .context("CARGO_REGISTRY_TOKEN not set")?;
+    let token = env::var("CARGO_REGISTRY_TOKEN").context("CARGO_REGISTRY_TOKEN not set")?;
 
     let crates = ["ringlet-core", "ringlet-scripting", "ringletd", "ringlet"];
 
@@ -698,7 +723,11 @@ fn publish_rubygems(ctx: &ReleaseContext) -> Result<()> {
 
     ctx.log_info("Publishing ringlet to RubyGems");
     run_command("gem", &["build", "ringlet.gemspec"], ctx.dry_run)?;
-    run_command("gem", &["push", &format!("ringlet-{}.gem", ctx.version)], ctx.dry_run)?;
+    run_command(
+        "gem",
+        &["push", &format!("ringlet-{}.gem", ctx.version)],
+        ctx.dry_run,
+    )?;
 
     Ok(())
 }
@@ -711,7 +740,10 @@ fn publish_homebrew(ctx: &ReleaseContext) -> Result<()> {
     ctx.log_info("Updating Homebrew tap");
     // Implementation would clone tap repo, update formula, push
     if ctx.dry_run {
-        println!("  {} [DRY-RUN] Would update Homebrew formula", style("→").dim());
+        println!(
+            "  {} [DRY-RUN] Would update Homebrew formula",
+            style("→").dim()
+        );
     }
 
     Ok(())
@@ -783,8 +815,16 @@ fn publish_arch(ctx: &ReleaseContext) -> Result<()> {
     fs::create_dir_all(&arch_dir)?;
 
     // Generate PKGBUILD content
-    let x64_checksum = ctx.checksums.get("linux-x64").map(|s| s.as_str()).unwrap_or("SKIP");
-    let arm64_checksum = ctx.checksums.get("linux-arm64").map(|s| s.as_str()).unwrap_or("SKIP");
+    let x64_checksum = ctx
+        .checksums
+        .get("linux-x64")
+        .map(|s| s.as_str())
+        .unwrap_or("SKIP");
+    let arm64_checksum = ctx
+        .checksums
+        .get("linux-arm64")
+        .map(|s| s.as_str())
+        .unwrap_or("SKIP");
 
     let pkgbuild = format!(
         r#"# Maintainer: Neul Labs <hello@neullabs.com>
@@ -818,7 +858,10 @@ package() {{
     );
 
     fs::write(arch_dir.join("PKGBUILD"), pkgbuild)?;
-    ctx.log_success(&format!("Generated: {}", arch_dir.join("PKGBUILD").display()));
+    ctx.log_success(&format!(
+        "Generated: {}",
+        arch_dir.join("PKGBUILD").display()
+    ));
 
     Ok(())
 }
@@ -887,13 +930,21 @@ fn create_github_release(ctx: &ReleaseContext) -> Result<()> {
     let tag = format!("v{}", ctx.version);
 
     if ctx.dry_run {
-        println!("  {} [DRY-RUN] Would create release {}", style("→").dim(), tag);
+        println!(
+            "  {} [DRY-RUN] Would create release {}",
+            style("→").dim(),
+            tag
+        );
         return Ok(());
     }
 
     // Create tag
     ctx.log_info(&format!("Creating tag {}", tag));
-    run_command("git", &["tag", "-a", &tag, "-m", &format!("Release {}", ctx.version)], false)?;
+    run_command(
+        "git",
+        &["tag", "-a", &tag, "-m", &format!("Release {}", ctx.version)],
+        false,
+    )?;
     run_command("git", &["push", "origin", &tag], false)?;
 
     // Generate release notes
@@ -991,6 +1042,38 @@ See `checksums.txt` in the release assets.
     Ok(notes)
 }
 
+fn sync_api_types(check: bool) -> Result<()> {
+    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .map(Path::to_path_buf)
+        .context("failed to resolve repository root")?;
+    let target = repo_root.join("ringlet-ui/src/api/generated.ts");
+    let contents = format!(
+        "{}\n\n{}",
+        "// This file is generated by `cargo xtask api-types`. Do not edit manually.",
+        ringlet_core::typescript::API_TYPES.trim_end()
+    );
+
+    if check {
+        let existing = fs::read_to_string(&target)
+            .with_context(|| format!("failed to read {}", target.display()))?;
+        if existing != contents {
+            bail!(
+                "{} is out of date; run `cargo xtask api-types`",
+                target.display()
+            );
+        }
+        println!("{} API types are up to date", CHECK);
+        return Ok(());
+    }
+
+    fs::write(&target, contents)
+        .with_context(|| format!("failed to write {}", target.display()))?;
+    println!("{} wrote {}", CHECK, target.display());
+    Ok(())
+}
+
 // ============================================================================
 // Main
 // ============================================================================
@@ -1077,15 +1160,21 @@ async fn main() -> Result<()> {
 
             println!(
                 "\n{}",
-                style("╔════════════════════════════════════════════════╗").green().bold()
+                style("╔════════════════════════════════════════════════╗")
+                    .green()
+                    .bold()
             );
             println!(
                 "{}",
-                style(format!("║     Release v{} Complete!     ", ctx.version)).green().bold()
+                style(format!("║     Release v{} Complete!     ", ctx.version))
+                    .green()
+                    .bold()
             );
             println!(
                 "{}",
-                style("╚════════════════════════════════════════════════╝").green().bold()
+                style("╚════════════════════════════════════════════════╝")
+                    .green()
+                    .bold()
             );
         }
 
@@ -1103,6 +1192,10 @@ async fn main() -> Result<()> {
             }
 
             publish_to(&ctx, &registry)?;
+        }
+
+        Commands::ApiTypes { check } => {
+            sync_api_types(check)?;
         }
     }
 

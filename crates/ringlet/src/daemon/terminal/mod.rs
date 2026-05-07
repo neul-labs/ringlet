@@ -9,6 +9,7 @@ mod pty_bridge;
 pub mod sandbox;
 pub mod session;
 
+pub use crate::daemon::telemetry::SessionTelemetryContext;
 pub use manager::TerminalSessionManager;
-pub use sandbox::{SandboxConfig, SandboxPlatform};
-pub use session::{SessionId, SessionState, TerminalInput, TerminalOutput, TerminalSession, TerminalSessionInfo};
+pub use sandbox::SandboxConfig;
+pub use session::{SessionId, SessionState, TerminalSessionInfo};

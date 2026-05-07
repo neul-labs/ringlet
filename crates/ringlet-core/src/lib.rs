@@ -17,20 +17,22 @@ pub mod config;
 pub mod error;
 pub mod events;
 pub mod hooks;
+pub mod http_api;
 pub mod paths;
 pub mod profile;
 pub mod provider;
 pub mod proxy;
 pub mod rpc;
+pub mod typescript;
 pub mod usage;
 
 pub use agent::{AgentInfo, AgentManifest, ProviderCompatibility};
 pub use binary::{BinaryConfig, BinaryPaths};
 pub use config::UserConfig;
-pub use error::{RingletError, Result};
+pub use error::{Result, RingletError};
 pub use events::{ClientMessage, Event, ServerMessage};
 pub use hooks::{HookAction, HookRule, HooksConfig};
-pub use paths::{expand_template, expand_tilde, home_dir, RingletPaths};
+pub use paths::{RingletPaths, expand_template, expand_tilde, home_dir};
 pub use profile::{Profile, ProfileCreateRequest, ProfileInfo, ProfileMetadata};
 pub use provider::{ProviderInfo, ProviderManifest, ProviderType};
 pub use proxy::{
@@ -39,8 +41,8 @@ pub use proxy::{
 };
 pub use rpc::{RegistryStatus, Request, Response, StatsResponse, UsageStatsResponse};
 pub use usage::{
-    AgentType, CostBreakdown, DailyUsage, LiteLLMModelPricing, ModelUsage, ProfileUsage,
-    SessionUsage, TokenUsage, UsageAggregates, UsagePeriod, UsageResponse,
+    AgentType, AgentUsage, CostBreakdown, DailyUsage, LiteLLMModelPricing, ModelUsage,
+    ProfileUsage, SessionUsage, TokenUsage, UsageAggregates, UsagePeriod, UsageResponse,
 };
 
 /// Ringlet version.

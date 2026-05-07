@@ -135,7 +135,11 @@ pub struct RoutingRule {
 
 impl RoutingRule {
     /// Create a new routing rule.
-    pub fn new(name: impl Into<String>, condition: RoutingCondition, target: impl Into<String>) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        condition: RoutingCondition,
+        target: impl Into<String>,
+    ) -> Self {
         Self {
             name: name.into(),
             condition,
@@ -174,22 +178,16 @@ pub enum RoutingCondition {
     ThinkingMode,
 
     /// Route based on model name pattern.
-    ModelPattern {
-        pattern: String,
-    },
+    ModelPattern { pattern: String },
 
     /// Always match (default fallback).
     Always,
 
     /// Combine conditions with AND.
-    All {
-        conditions: Vec<RoutingCondition>,
-    },
+    All { conditions: Vec<RoutingCondition> },
 
     /// Combine conditions with OR.
-    Any {
-        conditions: Vec<RoutingCondition>,
-    },
+    Any { conditions: Vec<RoutingCondition> },
 }
 
 impl RoutingCondition {
@@ -226,11 +224,17 @@ impl RoutingCondition {
             let rest = s.trim_start_matches("tokens").trim();
             if rest.starts_with('>') {
                 let n: u32 = rest.trim_start_matches('>').trim().parse().ok()?;
-                return Some(Self::TokenCount { min: Some(n), max: None });
+                return Some(Self::TokenCount {
+                    min: Some(n),
+                    max: None,
+                });
             }
             if rest.starts_with('<') {
                 let n: u32 = rest.trim_start_matches('<').trim().parse().ok()?;
-                return Some(Self::TokenCount { min: None, max: Some(n) });
+                return Some(Self::TokenCount {
+                    min: None,
+                    max: Some(n),
+                });
             }
         }
 
@@ -243,7 +247,9 @@ impl RoutingCondition {
             }
             if rest.starts_with('>') {
                 let n: u32 = rest.trim_start_matches('>').trim().parse().ok()?;
-                return Some(Self::HasTools { min_count: Some(n + 1) });
+                return Some(Self::HasTools {
+                    min_count: Some(n + 1),
+                });
             }
         }
 
@@ -252,7 +258,7 @@ impl RoutingCondition {
 }
 
 /// Proxy instance status.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum ProxyStatus {
     /// Proxy is starting up.
@@ -267,17 +273,10 @@ pub enum ProxyStatus {
     /// Proxy is stopping.
     Stopping,
     /// Proxy is stopped.
+    #[default]
     Stopped,
     /// Proxy failed to start or crashed.
-    Failed {
-        reason: String,
-    },
-}
-
-impl Default for ProxyStatus {
-    fn default() -> Self {
-        Self::Stopped
-    }
+    Failed { reason: String },
 }
 
 /// Information about a running proxy instance.
@@ -325,14 +324,18 @@ mod tests {
             Some(RoutingCondition::ThinkingMode)
         ));
 
-        if let Some(RoutingCondition::TokenCount { min, max }) = RoutingCondition::parse("tokens > 100000") {
+        if let Some(RoutingCondition::TokenCount { min, max }) =
+            RoutingCondition::parse("tokens > 100000")
+        {
             assert_eq!(min, Some(100000));
             assert_eq!(max, None);
         } else {
             panic!("Failed to parse token count condition");
         }
 
-        if let Some(RoutingCondition::HasTools { min_count }) = RoutingCondition::parse("tools >= 5") {
+        if let Some(RoutingCondition::HasTools { min_count }) =
+            RoutingCondition::parse("tools >= 5")
+        {
             assert_eq!(min_count, Some(5));
         } else {
             panic!("Failed to parse has tools condition");
@@ -346,9 +349,11 @@ mod tests {
             port: Some(8081),
             routing: RoutingConfig {
                 strategy: RoutingStrategy::Conditional,
-                rules: vec![
-                    RoutingRule::new("default", RoutingCondition::Always, "zai/claude-3-5-sonnet"),
-                ],
+                rules: vec![RoutingRule::new(
+                    "default",
+                    RoutingCondition::Always,
+                    "zai/claude-3-5-sonnet",
+                )],
             },
             model_aliases: HashMap::new(),
         };

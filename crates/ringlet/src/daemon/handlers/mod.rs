@@ -2,17 +2,20 @@
 
 use crate::daemon::server::ServerState;
 use ringlet_core::{Request, Response};
-use tracing::warn;
 
 pub mod agents;
 pub mod aliases;
+pub mod env;
 pub mod hooks;
 pub mod profiles;
 pub mod providers;
 pub mod proxy;
 pub mod registry;
 pub mod stats;
+pub mod system;
+pub mod terminal;
 pub mod usage;
+pub mod workspace;
 
 /// Handle an incoming request.
 pub async fn handle_request(request: &Request, state: &ServerState) -> Response {
@@ -31,6 +34,12 @@ pub async fn handle_request(request: &Request, state: &ServerState) -> Response 
         Request::ProfilesInspect { alias } => profiles::inspect(alias, state).await,
         Request::ProfilesRun { alias, args } => profiles::run(alias, args, state).await,
         Request::ProfilesPrepare { alias, args } => profiles::prepare(alias, args, state).await,
+        Request::ProfilesComplete {
+            run_id,
+            started_at,
+            ended_at,
+            exit_code,
+        } => profiles::complete(run_id, *started_at, *ended_at, *exit_code, state).await,
         Request::ProfilesDelete { alias } => profiles::delete(alias, state).await,
         Request::ProfilesEnv { alias } => profiles::env(alias, state).await,
 
@@ -46,17 +55,23 @@ pub async fn handle_request(request: &Request, state: &ServerState) -> Response 
         Request::RegistryInspect => registry::inspect(state).await,
 
         // Stats commands
-        Request::Stats { agent_id, provider_id } => {
-            stats::get_stats(agent_id.as_deref(), provider_id.as_deref(), state).await
-        }
+        Request::Stats {
+            agent_id,
+            provider_id,
+        } => stats::get_stats(agent_id.as_deref(), provider_id.as_deref(), state).await,
 
         // Usage commands
-        Request::Usage { period, profile, model } => {
-            usage::get_usage(period.as_ref(), profile.as_deref(), model.as_deref(), state).await
-        }
+        Request::Usage {
+            period,
+            profile,
+            model,
+        } => usage::get_usage(period.as_ref(), profile.as_deref(), model.as_deref(), state).await,
         Request::UsageImportClaude { claude_dir } => {
             usage::import_claude(claude_dir.as_ref(), state).await
         }
+
+        // Env setup commands
+        Request::EnvSetup { alias, task } => env::setup(alias, task, state).await,
 
         // Hooks commands
         Request::HooksAdd {
@@ -80,11 +95,7 @@ pub async fn handle_request(request: &Request, state: &ServerState) -> Response 
         Request::ProxyStart { alias } => proxy::start(alias, state).await,
         Request::ProxyStop { alias } => proxy::stop(alias, state).await,
         Request::ProxyStopAll => proxy::stop_all(state).await,
-        Request::ProxyRestart { alias } => {
-            // Stop then start
-            let _ = proxy::stop(alias, state).await;
-            proxy::start(alias, state).await
-        }
+        Request::ProxyRestart { alias } => proxy::restart(alias, state).await,
         Request::ProxyStatus { alias } => proxy::status(alias.as_deref(), state).await,
         Request::ProxyConfig { alias } => proxy::config(alias, state).await,
         Request::ProxyLogs { alias, lines } => proxy::logs(alias, *lines, state).await,
@@ -108,14 +119,5 @@ pub async fn handle_request(request: &Request, state: &ServerState) -> Response 
 
         // Shutdown is handled in server.rs
         Request::Shutdown => Response::success("Shutdown handled by server"),
-
-        // Not yet implemented
-        _ => {
-            warn!("Unimplemented request: {:?}", request);
-            Response::error(
-                ringlet_core::rpc::error_codes::INTERNAL_ERROR,
-                "Not yet implemented",
-            )
-        }
     }
 }

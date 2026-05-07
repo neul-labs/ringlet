@@ -6,11 +6,12 @@
 
 use crate::daemon::agent_usage;
 use crate::daemon::server::ServerState;
+use chrono::{Datelike, Duration, NaiveDate, Utc};
 use ringlet_core::rpc::error_codes;
 use ringlet_core::{
-    Response, TokenUsage, UsageAggregates, UsagePeriod, UsageStatsResponse,
+    AgentUsage, CostBreakdown, DailyUsage, ModelUsage, Response, TokenUsage, UsageAggregates,
+    UsagePeriod, UsageStatsResponse,
 };
-use std::collections::HashMap;
 use std::path::PathBuf;
 use tracing::{debug, info, warn};
 
@@ -27,6 +28,12 @@ pub async fn get_usage(
 ) -> Response {
     let period = period.cloned().unwrap_or_default();
     let period_desc = format_period(&period);
+    let period_range = match period_range(&period) {
+        Ok(range) => range,
+        Err(message) => {
+            return Response::error(error_codes::INTERNAL_ERROR, message);
+        }
+    };
 
     debug!(
         "Getting usage for period={:?}, profile={:?}, model={:?}",
@@ -53,35 +60,51 @@ pub async fn get_usage(
         }
     };
 
-    // Load aggregates from telemetry
-    match state.telemetry.load_aggregates() {
-        Ok(telemetry_aggregates) => {
-            // Convert telemetry aggregates and merge with agent scan data
+    match state.telemetry.load_all_sessions() {
+        Ok(all_sessions) => {
+            let filtered_sessions: Vec<_> = all_sessions
+                .into_iter()
+                .filter(|session| {
+                    matches_period(
+                        session.ended_at.unwrap_or(session.started_at).date_naive(),
+                        period_range,
+                    ) && profile.is_none_or(|alias| session.profile == alias)
+                        && model.is_none_or(|session_model| {
+                            session.model.as_deref() == Some(session_model)
+                        })
+                })
+                .collect();
+
+            let telemetry_aggregates =
+                crate::daemon::telemetry::TelemetryCollector::aggregate_sessions(
+                    &filtered_sessions,
+                );
             let mut aggregates = convert_to_usage_aggregates(&telemetry_aggregates);
 
-            // Merge agent scan data
             if let Some(scan) = agent_scan {
-                merge_agent_scan_data(&mut aggregates, &scan);
+                let filtered_entries = scan
+                    .entries
+                    .into_iter()
+                    .filter(|entry| {
+                        // Native agent files currently expose agent-local project/session IDs,
+                        // not Ringlet profile aliases, so profile-filtered usage must remain
+                        // telemetry-only until Ringlet owns a stable cross-system join key.
+                        profile.is_none()
+                            && matches_period(entry.timestamp.date_naive(), period_range)
+                            && model.is_none_or(|model_filter| entry.model == model_filter)
+                    })
+                    .collect::<Vec<_>>();
+                merge_agent_scan_entries(&mut aggregates, &filtered_entries);
             }
 
-            // Filter by profile if specified
-            let filtered_aggregates = if let Some(profile_filter) = profile {
-                filter_aggregates_by_profile(&aggregates, profile_filter)
-            } else {
-                aggregates.clone()
-            };
-
-            // Calculate totals
-            let (total_tokens, total_cost) = calculate_totals(&filtered_aggregates);
-
-            Response::Usage(UsageStatsResponse {
+            Response::Usage(Box::new(UsageStatsResponse {
                 period: period_desc,
-                total_tokens,
-                total_cost,
+                total_tokens: aggregates.total_tokens.clone(),
+                total_cost: aggregates.total_cost.clone(),
                 total_sessions: telemetry_aggregates.total_sessions,
                 total_runtime_secs: telemetry_aggregates.total_runtime_secs,
-                aggregates: filtered_aggregates,
-            })
+                aggregates,
+            }))
         }
         Err(e) => Response::error(
             error_codes::INTERNAL_ERROR,
@@ -90,106 +113,62 @@ pub async fn get_usage(
     }
 }
 
-/// Merge agent scan data into usage aggregates.
-fn merge_agent_scan_data(
-    aggregates: &mut UsageAggregates,
-    scan: &agent_usage::ScanResult,
-) {
-    use ringlet_core::usage::ModelUsage;
-
-    // Aggregate by model
-    for entry in &scan.entries {
-        let model_usage = aggregates.by_model.entry(entry.model.clone()).or_insert_with(|| {
-            ModelUsage {
+/// Merge filtered agent-native usage data into usage aggregates.
+fn merge_agent_scan_entries(aggregates: &mut UsageAggregates, entries: &[agent_usage::UsageEntry]) {
+    for entry in entries {
+        let model_usage = aggregates
+            .by_model
+            .entry(entry.model.clone())
+            .or_insert_with(|| ModelUsage {
                 model: entry.model.clone(),
                 tokens: TokenUsage::default(),
                 cost: None,
                 sessions: 0,
-            }
-        });
+            });
         model_usage.tokens += entry.tokens.clone();
         model_usage.sessions += 1;
 
-        // Add cost if available
         if let Some(cost_usd) = entry.cost_usd {
-            if let Some(ref mut cost) = model_usage.cost {
-                cost.total_cost += cost_usd;
-            } else {
-                model_usage.cost = Some(ringlet_core::CostBreakdown {
-                    total_cost: cost_usd,
-                    ..Default::default()
-                });
-            }
+            add_cost(&mut model_usage.cost, cost_usd);
         }
-    }
 
-    // Update totals from agent data
-    for entry in &scan.entries {
+        let date_key = entry.timestamp.date_naive().to_string();
+        let daily_usage = aggregates
+            .by_date
+            .entry(date_key.clone())
+            .or_insert_with(|| DailyUsage {
+                date: date_key,
+                ..Default::default()
+            });
+        daily_usage.tokens += entry.tokens.clone();
+        daily_usage.sessions += 1;
+        if let Some(cost_usd) = entry.cost_usd {
+            add_cost(&mut daily_usage.cost, cost_usd);
+        }
+
+        let agent_id = entry.agent.to_string();
+        let agent_usage = aggregates
+            .by_agent
+            .entry(agent_id.clone())
+            .or_insert_with(|| AgentUsage {
+                agent: agent_id,
+                ..Default::default()
+            });
+        agent_usage.tokens += entry.tokens.clone();
+        agent_usage.sessions += 1;
+        if let Some(cost_usd) = entry.cost_usd {
+            add_cost(&mut agent_usage.cost, cost_usd);
+        }
+
         aggregates.total_tokens += entry.tokens.clone();
         if let Some(cost_usd) = entry.cost_usd {
-            if let Some(ref mut total_cost) = aggregates.total_cost {
-                total_cost.total_cost += cost_usd;
-            } else {
-                aggregates.total_cost = Some(ringlet_core::CostBreakdown {
-                    total_cost: cost_usd,
-                    ..Default::default()
-                });
-            }
+            add_cost(&mut aggregates.total_cost, cost_usd);
         }
-    }
-}
-
-/// Calculate totals from filtered aggregates.
-fn calculate_totals(
-    aggregates: &UsageAggregates,
-) -> (TokenUsage, Option<ringlet_core::CostBreakdown>) {
-    let mut total_tokens = TokenUsage::default();
-    let mut total_cost = None;
-
-    for profile_usage in aggregates.by_profile.values() {
-        total_tokens += profile_usage.tokens.clone();
-        if let Some(ref cost) = profile_usage.cost {
-            if let Some(ref mut tc) = total_cost {
-                *tc += cost.clone();
-            } else {
-                total_cost = Some(cost.clone());
-            }
-        }
-    }
-
-    // Also include model-level data that might not be attributed to profiles
-    for model_usage in aggregates.by_model.values() {
-        // Note: We're already counting tokens in profile aggregates,
-        // so we don't double-count here. This is for models not attributed to profiles.
-    }
-
-    (total_tokens, total_cost)
-}
-
-/// Filter aggregates by profile.
-fn filter_aggregates_by_profile(
-    aggregates: &UsageAggregates,
-    profile: &str,
-) -> UsageAggregates {
-    UsageAggregates {
-        total_tokens: TokenUsage::default(), // Will be recalculated
-        total_cost: None,
-        by_date: HashMap::new(),
-        by_model: HashMap::new(),
-        by_profile: aggregates
-            .by_profile
-            .iter()
-            .filter(|(k, _)| k.as_str() == profile)
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect(),
     }
 }
 
 /// Import usage data from Claude's native files.
-pub async fn import_claude(
-    claude_dir: Option<&PathBuf>,
-    _state: &ServerState,
-) -> Response {
+pub async fn import_claude(claude_dir: Option<&PathBuf>, _state: &ServerState) -> Response {
     let claude_home = claude_dir
         .cloned()
         .or_else(crate::daemon::claude_import::default_claude_dir);
@@ -214,8 +193,7 @@ pub async fn import_claude(
         Ok(result) => {
             let mut message = format!(
                 "Imported {} input tokens, {} output tokens from stats-cache.json",
-                result.stats_cache_tokens.input_tokens,
-                result.stats_cache_tokens.output_tokens
+                result.stats_cache_tokens.input_tokens, result.stats_cache_tokens.output_tokens
             );
 
             if result.sessions_imported > 0 {
@@ -231,9 +209,7 @@ pub async fn import_claude(
 
             Response::success(message)
         }
-        Err(e) => {
-            Response::error(error_codes::INTERNAL_ERROR, format!("Import failed: {}", e))
-        }
+        Err(e) => Response::error(error_codes::INTERNAL_ERROR, format!("Import failed: {}", e)),
     }
 }
 
@@ -255,90 +231,83 @@ fn format_period(period: &UsagePeriod) -> String {
 fn convert_to_usage_aggregates(
     aggregates: &crate::daemon::telemetry::Aggregates,
 ) -> UsageAggregates {
-    use ringlet_core::usage::ProfileUsage;
-    use std::collections::HashMap;
-
-    let by_profile: HashMap<String, ProfileUsage> = aggregates
-        .by_profile
-        .iter()
-        .map(|(k, v)| {
-            (
-                k.clone(),
-                ProfileUsage {
-                    profile: k.clone(),
-                    provider_id: String::new(), // TODO: Get from profile
-                    tokens: v.tokens.clone(),
-                    cost: v.cost.clone(),
-                    sessions: v.sessions,
-                    runtime_secs: v.runtime_secs,
-                    last_used: v.last_used,
-                },
-            )
-        })
-        .collect();
-
     UsageAggregates {
         total_tokens: aggregates.total_tokens.clone(),
         total_cost: aggregates.total_cost.clone(),
-        by_date: HashMap::new(), // TODO: Implement date-based tracking
-        by_model: HashMap::new(), // TODO: Implement model-based tracking
-        by_profile,
+        by_date: aggregates.by_date.clone(),
+        by_model: aggregates.by_model.clone(),
+        by_profile: aggregates.by_profile.clone(),
+        by_agent: aggregates
+            .by_agent
+            .iter()
+            .map(|(agent, stats)| {
+                (
+                    agent.clone(),
+                    AgentUsage {
+                        agent: agent.clone(),
+                        tokens: stats.tokens.clone(),
+                        cost: stats.cost.clone(),
+                        sessions: stats.sessions,
+                        runtime_secs: stats.runtime_secs,
+                    },
+                )
+            })
+            .collect(),
     }
 }
 
-/// Filter aggregates by profile.
-fn filter_by_profile(
-    aggregates: &crate::daemon::telemetry::Aggregates,
-    profile: &str,
-) -> UsageAggregates {
-    use ringlet_core::usage::ProfileUsage;
-    use std::collections::HashMap;
+fn period_range(period: &UsagePeriod) -> Result<Option<(NaiveDate, NaiveDate)>, String> {
+    let today = Utc::now().date_naive();
 
-    let by_profile: HashMap<String, ProfileUsage> = aggregates
-        .by_profile
-        .iter()
-        .filter(|(k, _)| k.as_str() == profile)
-        .map(|(k, v)| {
-            (
-                k.clone(),
-                ProfileUsage {
-                    profile: k.clone(),
-                    provider_id: String::new(),
-                    tokens: v.tokens.clone(),
-                    cost: v.cost.clone(),
-                    sessions: v.sessions,
-                    runtime_secs: v.runtime_secs,
-                    last_used: v.last_used,
-                },
-            )
-        })
-        .collect();
-
-    // Calculate totals from filtered profiles
-    let mut total_tokens = TokenUsage::default();
-    let mut total_cost = None;
-    let mut total_sessions = 0u64;
-    let mut total_runtime = 0u64;
-
-    for profile_usage in by_profile.values() {
-        total_tokens += profile_usage.tokens.clone();
-        total_sessions += profile_usage.sessions;
-        total_runtime += profile_usage.runtime_secs;
-        if let Some(ref cost) = profile_usage.cost {
-            if let Some(ref mut tc) = total_cost {
-                *tc += cost.clone();
-            } else {
-                total_cost = Some(cost.clone());
-            }
+    match period {
+        UsagePeriod::Today => Ok(Some((today, today))),
+        UsagePeriod::Yesterday => {
+            let yesterday = today - Duration::days(1);
+            Ok(Some((yesterday, yesterday)))
         }
-    }
-
-    UsageAggregates {
-        total_tokens,
-        total_cost,
-        by_date: HashMap::new(),
-        by_model: HashMap::new(),
-        by_profile,
+        UsagePeriod::ThisWeek => {
+            let start = today - Duration::days(today.weekday().num_days_from_monday() as i64);
+            Ok(Some((start, today)))
+        }
+        UsagePeriod::ThisMonth => {
+            let start = today
+                .with_day(1)
+                .ok_or_else(|| "Failed to determine start of current month".to_string())?;
+            Ok(Some((start, today)))
+        }
+        UsagePeriod::Last7Days => Ok(Some((today - Duration::days(6), today))),
+        UsagePeriod::Last30Days => Ok(Some((today - Duration::days(29), today))),
+        UsagePeriod::DateRange { start, end } => {
+            let start = NaiveDate::parse_from_str(start, "%Y-%m-%d")
+                .map_err(|err| format!("Invalid usage period start date '{}': {}", start, err))?;
+            let end = NaiveDate::parse_from_str(end, "%Y-%m-%d")
+                .map_err(|err| format!("Invalid usage period end date '{}': {}", end, err))?;
+            if start > end {
+                return Err(format!(
+                    "Invalid usage period range: start date {} is after end date {}",
+                    start, end
+                ));
+            }
+            Ok(Some((start, end)))
+        }
+        UsagePeriod::All => Ok(None),
     }
 }
 
+fn matches_period(date: NaiveDate, range: Option<(NaiveDate, NaiveDate)>) -> bool {
+    match range {
+        Some((start, end)) => date >= start && date <= end,
+        None => true,
+    }
+}
+
+fn add_cost(cost: &mut Option<CostBreakdown>, total_cost: f64) {
+    if let Some(existing) = cost {
+        existing.total_cost += total_cost;
+    } else {
+        *cost = Some(CostBreakdown {
+            total_cost,
+            ..Default::default()
+        });
+    }
+}

@@ -11,6 +11,19 @@ Usage tracking captures:
 - **Session Metrics**: Session counts, runtime durations, and last-used timestamps
 - **Aggregations**: Breakdowns by profile, model, and date
 
+### Attribution Boundary
+
+Ringlet collects usage from two different sources:
+
+- **Ringlet telemetry sessions**: authoritative for profile alias, runtime, and Ringlet-owned session counts
+- **Agent native files**: authoritative for agent-native token records, but they only expose agent-local project/session identifiers
+
+That means:
+
+- `--profile` usage views are telemetry-backed and only include usage Ringlet can attribute to a real profile alias
+- unfiltered and model/date usage views may also include agent-native usage entries
+- agent-native websocket updates do not claim a Ringlet profile alias unless Ringlet can prove the mapping
+
 ### Key Concepts
 
 | Concept | Description |
@@ -100,6 +113,8 @@ GET /api/usage?period=week
 GET /api/usage?profile=my-profile
 GET /api/usage?period=month&profile=work-claude
 ```
+
+Profile-filtered responses are derived from Ringlet telemetry sessions. Native agent scans are only merged when the query does not require per-profile attribution.
 
 **Response:**
 

@@ -4,9 +4,10 @@ use crate::daemon::handlers;
 use crate::daemon::http::error::{ApiResponse, HttpError};
 use crate::daemon::server::ServerState;
 use axum::{
-    extract::{Path, Query, State},
     Json,
+    extract::{Path, Query, State},
 };
+use ringlet_core::http_api::SetAliasRequest;
 use ringlet_core::{ProfileProxyConfig, ProxyInstanceInfo, Response, RoutingRule};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -73,9 +74,7 @@ pub async fn restart(
     State(state): State<Arc<ServerState>>,
     Path(alias): Path<String>,
 ) -> Result<Json<ApiResponse<()>>, HttpError> {
-    // Stop then start
-    let _ = handlers::proxy::stop(&alias, &state).await;
-    let response = handlers::proxy::start(&alias, &state).await;
+    let response = handlers::proxy::restart(&alias, &state).await;
 
     match response {
         Response::Success { .. } => Ok(Json(ApiResponse::ok())),
@@ -213,11 +212,6 @@ pub async fn alias_list(
         Response::Error { code, message } => Err(HttpError::new(code, message)),
         _ => Err(HttpError::internal("Unexpected response type")),
     }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct SetAliasRequest {
-    pub to: String,
 }
 
 /// PUT /api/profiles/:alias/proxy/aliases/:from - Set model alias.

@@ -34,10 +34,7 @@ pub enum Event {
     /// A proxy instance was stopped.
     ProxyStopped { alias: String },
     /// A proxy instance status changed.
-    ProxyStatusChanged {
-        alias: String,
-        status: ProxyStatus,
-    },
+    ProxyStatusChanged { alias: String, status: ProxyStatus },
 
     // Registry events
     /// Registry sync started.
@@ -50,7 +47,8 @@ pub enum Event {
     UsageUpdated {
         /// Agent type that generated the usage.
         agent: AgentType,
-        /// Profile alias if attributable.
+        /// Ringlet profile alias if attributable.
+        /// Agent-local project or session identifiers must not be sent here.
         profile: Option<String>,
         /// Token usage.
         tokens: TokenUsage,

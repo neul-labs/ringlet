@@ -7,8 +7,8 @@
 //! - ~/.config/ringlet/scripts/ for script overrides
 
 use anyhow::Result;
-use ringlet_core::RingletPaths;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
+use ringlet_core::RingletPaths;
 use std::path::Path;
 use std::sync::mpsc;
 use std::time::Duration;
@@ -44,7 +44,6 @@ impl FileWatcher {
     pub fn start(&self) -> Result<mpsc::Receiver<ChangeEvent>> {
         let (tx, rx) = mpsc::channel();
 
-        let config_dir = self.paths.config_dir.clone();
         let agents_d = self.paths.agents_d();
         let providers_d = self.paths.providers_d();
         let profiles_dir = self.paths.profiles_dir();
@@ -85,7 +84,9 @@ impl FileWatcher {
             // Process events
             for event in event_rx {
                 for path in event.paths {
-                    if let Some(change) = classify_change(&path, &agents_d, &providers_d, &profiles_dir, &scripts_dir) {
+                    if let Some(change) =
+                        classify_change(&path, &agents_d, &providers_d, &profiles_dir, &scripts_dir)
+                    {
                         debug!("Detected change: {:?}", change);
                         if tx.send(change).is_err() {
                             // Receiver dropped, stop watching
@@ -112,47 +113,39 @@ fn classify_change(
 ) -> Option<ChangeEvent> {
     let filename = path.file_name()?.to_string_lossy().to_string();
 
-    if path.starts_with(agents_d) {
-        if filename.ends_with(".toml") {
-            let id = filename.trim_end_matches(".toml").to_string();
-            if path.exists() {
-                return Some(ChangeEvent::AgentChanged(id));
-            } else {
-                return Some(ChangeEvent::Removed(format!("agent:{}", id)));
-            }
+    if path.starts_with(agents_d) && filename.ends_with(".toml") {
+        let id = filename.trim_end_matches(".toml").to_string();
+        if path.exists() {
+            return Some(ChangeEvent::AgentChanged(id));
+        } else {
+            return Some(ChangeEvent::Removed(format!("agent:{}", id)));
         }
     }
 
-    if path.starts_with(providers_d) {
-        if filename.ends_with(".toml") {
-            let id = filename.trim_end_matches(".toml").to_string();
-            if path.exists() {
-                return Some(ChangeEvent::ProviderChanged(id));
-            } else {
-                return Some(ChangeEvent::Removed(format!("provider:{}", id)));
-            }
+    if path.starts_with(providers_d) && filename.ends_with(".toml") {
+        let id = filename.trim_end_matches(".toml").to_string();
+        if path.exists() {
+            return Some(ChangeEvent::ProviderChanged(id));
+        } else {
+            return Some(ChangeEvent::Removed(format!("provider:{}", id)));
         }
     }
 
-    if path.starts_with(profiles_dir) {
-        if filename.ends_with(".json") {
-            let alias = filename.trim_end_matches(".json").to_string();
-            if path.exists() {
-                return Some(ChangeEvent::ProfileChanged(alias));
-            } else {
-                return Some(ChangeEvent::Removed(format!("profile:{}", alias)));
-            }
+    if path.starts_with(profiles_dir) && filename.ends_with(".json") {
+        let alias = filename.trim_end_matches(".json").to_string();
+        if path.exists() {
+            return Some(ChangeEvent::ProfileChanged(alias));
+        } else {
+            return Some(ChangeEvent::Removed(format!("profile:{}", alias)));
         }
     }
 
-    if path.starts_with(scripts_dir) {
-        if filename.ends_with(".rhai") {
-            let name = filename.clone();
-            if path.exists() {
-                return Some(ChangeEvent::ScriptChanged(name));
-            } else {
-                return Some(ChangeEvent::Removed(format!("script:{}", name)));
-            }
+    if path.starts_with(scripts_dir) && filename.ends_with(".rhai") {
+        let name = filename.clone();
+        if path.exists() {
+            return Some(ChangeEvent::ScriptChanged(name));
+        } else {
+            return Some(ChangeEvent::Removed(format!("script:{}", name)));
         }
     }
 

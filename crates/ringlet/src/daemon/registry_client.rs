@@ -8,7 +8,7 @@
 //! - Syncing LiteLLM pricing data
 //! - Offline mode support
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use ringlet_core::RingletPaths;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -129,7 +129,10 @@ impl RegistryClient {
 
         // Sync LiteLLM pricing data
         if let Err(e) = self.sync_litellm_pricing() {
-            warn!("Failed to sync LiteLLM pricing: {}. Cost tracking may be unavailable.", e);
+            warn!(
+                "Failed to sync LiteLLM pricing: {}. Cost tracking may be unavailable.",
+                e
+            );
         }
 
         // Update lock file
@@ -193,9 +196,10 @@ impl RegistryClient {
 
     /// Download all artifacts from the registry.
     fn download_artifacts(&self, index: &RegistryIndex) -> Result<()> {
-        let cache_dir = self.paths.registry_commits_dir().join(
-            index.commit.as_deref().unwrap_or("latest"),
-        );
+        let cache_dir = self
+            .paths
+            .registry_commits_dir()
+            .join(index.commit.as_deref().unwrap_or("latest"));
         std::fs::create_dir_all(&cache_dir)?;
 
         // Download agents
@@ -217,12 +221,7 @@ impl RegistryClient {
     }
 
     /// Download a single artifact.
-    fn download_artifact(
-        &self,
-        target_dir: &PathBuf,
-        id: &str,
-        info: &ArtifactInfo,
-    ) -> Result<()> {
+    fn download_artifact(&self, target_dir: &PathBuf, id: &str, info: &ArtifactInfo) -> Result<()> {
         std::fs::create_dir_all(target_dir)?;
 
         let url = format!("{}/{}", self.base_url, info.path);
@@ -238,12 +237,14 @@ impl RegistryClient {
 
         // Verify checksum if provided
         if let Some(expected) = &info.checksum {
-            use sha2::{Sha256, Digest};
+            use sha2::{Digest, Sha256};
             let computed = format!("{:x}", Sha256::digest(content.as_bytes()));
             if &computed != expected {
                 return Err(anyhow!(
                     "Checksum mismatch for {}: expected {}, got {}",
-                    id, expected, computed
+                    id,
+                    expected,
+                    computed
                 ));
             }
             debug!("Checksum verified for {}", id);
@@ -299,7 +300,7 @@ impl RegistryClient {
 
     /// Sync LiteLLM pricing data.
     fn sync_litellm_pricing(&self) -> Result<()> {
-        use crate::daemon::pricing::{PricingLoader, LITELLM_PRICING_URL};
+        use crate::daemon::pricing::LITELLM_PRICING_URL;
 
         debug!("Syncing LiteLLM pricing data");
 
@@ -317,8 +318,7 @@ impl RegistryClient {
 
         // Save to cache file
         let cache_path = self.paths.litellm_pricing_cache();
-        std::fs::write(&cache_path, &content)
-            .context("Failed to write pricing cache")?;
+        std::fs::write(&cache_path, &content).context("Failed to write pricing cache")?;
 
         info!("LiteLLM pricing data synced ({} bytes)", content.len());
         Ok(())

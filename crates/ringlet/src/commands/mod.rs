@@ -9,8 +9,11 @@ use crate::{
     ProfilesCommands, ProvidersCommands, ProxyAliasCommands, ProxyCommands, ProxyRouteCommands,
     RegistryCommands, TerminalCommands, UsageCommands,
 };
-use anyhow::{anyhow, Result};
-use ringlet_core::{HooksConfig, ModelTarget, ProfileCreateRequest, Request, Response, RingletPaths, RoutingCondition, RoutingRule, UsagePeriod, UserConfig};
+use anyhow::{Result, anyhow};
+use ringlet_core::{
+    HooksConfig, ProfileCreateRequest, Request, Response, RingletPaths, RoutingCondition,
+    RoutingRule, UsagePeriod, UserConfig,
+};
 use std::process::{Command, Stdio};
 
 /// Get the HTTP API base URL from config.
@@ -24,33 +27,68 @@ fn get_http_api_base() -> String {
 fn load_http_token() -> Option<String> {
     let config_dir = dirs::config_dir()?.join("ringlet");
     let token_file = config_dir.join("http_token");
-    std::fs::read_to_string(token_file).ok().map(|s| s.trim().to_string())
+    std::fs::read_to_string(token_file)
+        .ok()
+        .map(|s| s.trim().to_string())
 }
 
 /// Execute a command.
 pub async fn execute(command: &Commands, json: bool) -> Result<()> {
     match command {
-        Commands::Init { skip_daemon, no_profile, yes } => {
-            init::run_init(*skip_daemon, *no_profile, *yes, json).await
-        }
+        Commands::Init {
+            skip_daemon,
+            no_profile,
+            yes,
+        } => init::run_init(*skip_daemon, *no_profile, *yes, json).await,
         Commands::Agents { command } => execute_agents(command, json).await,
         Commands::Providers { command } => execute_providers(command, json).await,
         Commands::Profiles { command } => execute_profiles(command, json).await,
         Commands::Aliases { command } => execute_aliases(command, json).await,
         Commands::Registry { command } => execute_registry(command, json).await,
         Commands::Stats { agent, provider } => execute_stats(agent, provider, json).await,
-        Commands::Usage { command, period, profile, model } => {
-            execute_usage(command.as_ref(), period, profile.as_deref(), model.as_deref(), json).await
+        Commands::Usage {
+            command,
+            period,
+            profile,
+            model,
+        } => {
+            execute_usage(
+                command.as_ref(),
+                period,
+                profile.as_deref(),
+                model.as_deref(),
+                json,
+            )
+            .await
         }
-        Commands::Daemon { command, stay_alive, socket, foreground, daemon_log_level } => {
-            execute_daemon(command, *stay_alive, socket.clone(), *foreground, daemon_log_level, json).await
+        Commands::Daemon {
+            command,
+            stay_alive,
+            socket,
+            foreground,
+            daemon_log_level,
+        } => {
+            execute_daemon(
+                command,
+                *stay_alive,
+                socket.clone(),
+                *foreground,
+                daemon_log_level,
+                json,
+            )
+            .await
         }
         Commands::Env { command } => execute_env(command, json).await,
         Commands::Hooks { command } => execute_hooks(command, json).await,
         Commands::Proxy { command } => execute_proxy(command, json).await,
         Commands::Terminal { command } => execute_terminal(command, json).await,
         #[cfg(feature = "gui")]
-        Commands::Gui { standalone, remote, port, token } => {
+        Commands::Gui {
+            standalone,
+            remote,
+            port,
+            token,
+        } => {
             crate::gui::launch_gui(*standalone, remote.clone(), *port, token.clone());
             Ok(())
         }
@@ -149,7 +187,9 @@ async fn execute_profiles(command: &ProfilesCommands, json: bool) -> Result<()> 
             no_alias,
         } => {
             // Get provider info to check if auth is required
-            let provider_response = client.request(&Request::ProvidersInspect { id: provider.clone() })?;
+            let provider_response = client.request(&Request::ProvidersInspect {
+                id: provider.clone(),
+            })?;
             let (auth_required, auth_prompt) = match provider_response {
                 Response::Provider(info) => (info.auth_required, info.auth_prompt),
                 Response::Error { message, .. } => return Err(anyhow!("{}", message)),
@@ -166,9 +206,7 @@ async fn execute_profiles(command: &ProfilesCommands, json: bool) -> Result<()> 
                         } else {
                             auth_prompt
                         };
-                        dialoguer::Password::new()
-                            .with_prompt(&prompt)
-                            .interact()?
+                        dialoguer::Password::new().with_prompt(&prompt).interact()?
                     }
                 }
             } else {
@@ -249,10 +287,27 @@ async fn execute_profiles(command: &ProfilesCommands, json: bool) -> Result<()> 
                 _ => return Err(anyhow!("Unexpected response")),
             }
         }
-        ProfilesCommands::Run { alias, remote, cols, rows, no_sandbox, bwrap_flags, args } => {
+        ProfilesCommands::Run {
+            alias,
+            remote,
+            cols,
+            rows,
+            no_sandbox,
+            bwrap_flags,
+            args,
+        } => {
             if *remote {
                 // Run in remote mode - create a terminal session via HTTP API
-                return execute_remote_run(alias, args, *cols, *rows, *no_sandbox, bwrap_flags.as_deref(), json).await;
+                return execute_remote_run(
+                    alias,
+                    args,
+                    *cols,
+                    *rows,
+                    *no_sandbox,
+                    bwrap_flags.as_deref(),
+                    json,
+                )
+                .await;
             }
 
             // Get execution context from daemon (prepares config files, env, etc.)
@@ -266,6 +321,7 @@ async fn execute_profiles(command: &ProfilesCommands, json: bool) -> Result<()> 
                 Response::Error { message, .. } => return Err(anyhow!(message)),
                 _ => return Err(anyhow!("Unexpected response")),
             };
+            let started_at = chrono::Utc::now();
 
             // Spawn the agent directly in CLI process (inherits our TTY)
             let mut cmd = Command::new(&context.binary);
@@ -283,13 +339,31 @@ async fn execute_profiles(command: &ProfilesCommands, json: bool) -> Result<()> 
             cmd.args(&context.args);
 
             // Spawn and wait
-            let mut child = cmd.spawn()
+            let mut child = cmd
+                .spawn()
                 .map_err(|e| anyhow!("Failed to spawn {}: {}", context.binary, e))?;
 
-            let status = child.wait()
+            let status = child
+                .wait()
                 .map_err(|e| anyhow!("Failed to wait for process: {}", e))?;
 
             let exit_code = status.code().unwrap_or(-1);
+            let ended_at = chrono::Utc::now();
+
+            if let Some(run_id) = &context.run_id {
+                match client.request(&Request::ProfilesComplete {
+                    run_id: run_id.clone(),
+                    started_at,
+                    ended_at,
+                    exit_code,
+                })? {
+                    Response::RunCompleted { .. } => {}
+                    Response::Error { message, .. } => {
+                        return Err(anyhow!("Failed to record run telemetry: {}", message));
+                    }
+                    _ => return Err(anyhow!("Unexpected response")),
+                }
+            }
 
             if json {
                 println!("{}", serde_json::json!({"exit_code": exit_code}));
@@ -415,9 +489,7 @@ async fn execute_registry(command: &RegistryCommands, json: bool) -> Result<()> 
             }
         }
         RegistryCommands::Pin { ref_ } => {
-            let response = client.request(&Request::RegistryPin {
-                ref_: ref_.clone(),
-            })?;
+            let response = client.request(&Request::RegistryPin { ref_: ref_.clone() })?;
             match response {
                 Response::Success { message } => {
                     if json {
@@ -481,14 +553,20 @@ async fn execute_stats(
                 if !stats.by_agent.is_empty() {
                     println!("\nBy Agent:");
                     for (id, s) in &stats.by_agent {
-                        println!("  {}: {} sessions, {}s runtime", id, s.sessions, s.runtime_secs);
+                        println!(
+                            "  {}: {} sessions, {}s runtime",
+                            id, s.sessions, s.runtime_secs
+                        );
                     }
                 }
 
                 if !stats.by_provider.is_empty() {
                     println!("\nBy Provider:");
                     for (id, s) in &stats.by_provider {
-                        println!("  {}: {} sessions, {}s runtime", id, s.sessions, s.runtime_secs);
+                        println!(
+                            "  {}: {} sessions, {}s runtime",
+                            id, s.sessions, s.runtime_secs
+                        );
                     }
                 }
             }
@@ -547,7 +625,9 @@ async fn execute_usage(
                 Response::Usage(usage) => {
                     // Always output as requested format
                     if format == "csv" {
-                        println!("period,total_sessions,total_runtime_secs,input_tokens,output_tokens,cache_creation_tokens,cache_read_tokens,total_cost");
+                        println!(
+                            "period,total_sessions,total_runtime_secs,input_tokens,output_tokens,cache_creation_tokens,cache_read_tokens,total_cost"
+                        );
                         println!(
                             "{},{},{},{},{},{},{},{}",
                             usage.period,
@@ -557,7 +637,11 @@ async fn execute_usage(
                             usage.total_tokens.output_tokens,
                             usage.total_tokens.cache_creation_input_tokens,
                             usage.total_tokens.cache_read_input_tokens,
-                            usage.total_cost.as_ref().map(|c| c.total_cost).unwrap_or(0.0)
+                            usage
+                                .total_cost
+                                .as_ref()
+                                .map(|c| c.total_cost)
+                                .unwrap_or(0.0)
                         );
                     } else {
                         println!("{}", serde_json::to_string_pretty(&usage)?);
@@ -777,10 +861,10 @@ async fn execute_hooks(command: &HooksCommands, json: bool) -> Result<()> {
             }
         }
         HooksCommands::Import { alias, file } => {
-            let content = std::fs::read_to_string(file)
-                .map_err(|e| anyhow!("Failed to read file: {}", e))?;
-            let config: HooksConfig = serde_json::from_str(&content)
-                .map_err(|e| anyhow!("Invalid hooks JSON: {}", e))?;
+            let content =
+                std::fs::read_to_string(file).map_err(|e| anyhow!("Failed to read file: {}", e))?;
+            let config: HooksConfig =
+                serde_json::from_str(&content).map_err(|e| anyhow!("Invalid hooks JSON: {}", e))?;
 
             let response = client.request(&Request::HooksImport {
                 alias: alias.clone(),
@@ -1109,16 +1193,22 @@ async fn execute_remote_run(
     // Extract host:port for URLs
     let ws_base = api_base.replace("http://", "ws://");
     if json {
-        println!("{}", serde_json::json!({
-            "session_id": session_id,
-            "ws_url": format!("{}/ws/terminal/{}?token={}", ws_base, session_id, token),
-            "web_url": format!("{}/terminal/{}", api_base, session_id),
-        }));
+        println!(
+            "{}",
+            serde_json::json!({
+                "session_id": session_id,
+                "ws_url": format!("{}/ws/terminal/{}?token={}", ws_base, session_id, token),
+                "web_url": format!("{}/terminal/{}", api_base, session_id),
+            })
+        );
     } else {
         println!("Terminal session created:");
         println!("  Session ID: {}", session_id);
         println!("  Web UI: {}/terminal/{}", api_base, session_id);
-        println!("\nTo attach from CLI: ringlet terminal attach {}", session_id);
+        println!(
+            "\nTo attach from CLI: ringlet terminal attach {}",
+            session_id
+        );
     }
 
     Ok(())
@@ -1147,7 +1237,8 @@ async fn execute_terminal(command: &TerminalCommands, json: bool) -> Result<()> 
                 return Err(anyhow!("Failed to list sessions"));
             }
 
-            let sessions = response["data"].as_array()
+            let sessions = response["data"]
+                .as_array()
                 .ok_or_else(|| anyhow!("Invalid response format"))?;
 
             if json {
@@ -1155,7 +1246,10 @@ async fn execute_terminal(command: &TerminalCommands, json: bool) -> Result<()> 
             } else if sessions.is_empty() {
                 println!("No active terminal sessions");
             } else {
-                println!("{:<36}  {:<15}  {:<10}  {}", "SESSION ID", "PROFILE", "STATE", "CLIENTS");
+                println!(
+                    "{:<36}  {:<15}  {:<10}  CLIENTS",
+                    "SESSION ID", "PROFILE", "STATE"
+                );
                 println!("{}", "-".repeat(80));
                 for session in sessions {
                     println!(
@@ -1189,10 +1283,23 @@ async fn execute_terminal(command: &TerminalCommands, json: bool) -> Result<()> 
                 println!("{}", serde_json::to_string_pretty(session)?);
             } else {
                 println!("Session ID: {}", session["id"].as_str().unwrap_or("-"));
-                println!("Profile: {}", session["profile_alias"].as_str().unwrap_or("-"));
+                println!(
+                    "Profile: {}",
+                    session["profile_alias"].as_str().unwrap_or("-")
+                );
                 println!("State: {}", session["state"].as_str().unwrap_or("-"));
-                println!("PID: {}", session["pid"].as_u64().map(|p| p.to_string()).unwrap_or("-".to_string()));
-                println!("Size: {}x{}", session["cols"].as_u64().unwrap_or(0), session["rows"].as_u64().unwrap_or(0));
+                println!(
+                    "PID: {}",
+                    session["pid"]
+                        .as_u64()
+                        .map(|p| p.to_string())
+                        .unwrap_or("-".to_string())
+                );
+                println!(
+                    "Size: {}x{}",
+                    session["cols"].as_u64().unwrap_or(0),
+                    session["rows"].as_u64().unwrap_or(0)
+                );
                 println!("Clients: {}", session["client_count"].as_u64().unwrap_or(0));
                 println!("Created: {}", session["created_at"].as_str().unwrap_or("-"));
             }
@@ -1224,11 +1331,14 @@ async fn execute_terminal(command: &TerminalCommands, json: bool) -> Result<()> 
             // more complex terminal handling (crossterm, raw mode, etc.)
             let ws_base = api_base.replace("http://", "ws://");
             if json {
-                println!("{}", serde_json::json!({
-                    "session_id": id,
-                    "ws_url": format!("{}/ws/terminal/{}?token={}", ws_base, id, token),
-                    "web_url": format!("{}/terminal/{}", api_base, id),
-                }));
+                println!(
+                    "{}",
+                    serde_json::json!({
+                        "session_id": id,
+                        "ws_url": format!("{}/ws/terminal/{}?token={}", ws_base, id, token),
+                        "web_url": format!("{}/terminal/{}", api_base, id),
+                    })
+                );
             } else {
                 println!("To view this terminal session, open the web UI:");
                 println!("  {}/terminal/{}", api_base, id);

@@ -32,8 +32,8 @@ ringlet profiles create <agent-id> <alias> --provider <provider-id> [options]
 | `--provider <id>` | API provider to use (required) |
 | `--endpoint <id>` | Specific endpoint for multi-region providers |
 | `--model <model>` | Override default model |
-| `--hooks <list>` | Enable agent hooks (comma-separated) |
-| `--mcp <list>` | Enable MCP servers (comma-separated) |
+| `--hooks <list>` | Legacy compatibility input for custom scripts that still inspect simple hook names |
+| `--mcp <list>` | Legacy compatibility input for custom scripts that still inspect simple MCP server names |
 | `--bare` | Create minimal profile without defaults |
 | `--proxy` | Enable request routing proxy |
 | `--template <name>` | Use a registry template |
@@ -47,7 +47,7 @@ ringlet profiles create claude my-project --provider anthropic
 # With specific model and endpoint
 ringlet profiles create claude china-work --provider minimax --endpoint china --model MiniMax-M2.1
 
-# With hooks and MCP servers
+# With legacy hook/MCP compatibility inputs
 ringlet profiles create claude dev-claude --provider anthropic --hooks auto_format --mcp filesystem,github
 
 # Using a template
@@ -215,6 +215,8 @@ ringlet hooks remove my-project PreToolUse 0
 ```
 
 See [Hooks Guide](hooks.md) for details.
+
+Built-in scripts now write hook, MCP, and proxy config directly into agent config files. The `--hooks` and `--mcp` creation flags remain for compatibility with older or custom scripts that still inspect those simple lists.
 
 ### Proxy Routing
 

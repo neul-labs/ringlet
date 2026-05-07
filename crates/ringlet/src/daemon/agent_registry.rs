@@ -1,7 +1,7 @@
 //! Agent registry - loads manifests and detects installed agents.
 
-use anyhow::{Context, Result};
-use ringlet_core::{expand_tilde, AgentInfo, AgentManifest, RingletPaths};
+use anyhow::Result;
+use ringlet_core::{AgentInfo, AgentManifest, RingletPaths, expand_tilde};
 use std::collections::HashMap;
 use std::process::Command;
 use tracing::{debug, warn};
@@ -12,7 +12,10 @@ const BUILTIN_AGENTS: &[(&str, &str)] = &[
     ("grok", include_str!("../../manifests/agents/grok.toml")),
     ("codex", include_str!("../../manifests/agents/codex.toml")),
     ("droid", include_str!("../../manifests/agents/droid.toml")),
-    ("opencode", include_str!("../../manifests/agents/opencode.toml")),
+    (
+        "opencode",
+        include_str!("../../manifests/agents/opencode.toml"),
+    ),
 ];
 
 /// Agent registry.
@@ -49,24 +52,24 @@ impl AgentRegistry {
 
         // Load user-defined manifests from agents.d/
         let agents_d = paths.agents_d();
-        if agents_d.exists() {
-            if let Ok(entries) = std::fs::read_dir(&agents_d) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    if path.extension().is_some_and(|e| e == "toml") {
-                        match std::fs::read_to_string(&path) {
-                            Ok(content) => match AgentManifest::from_toml(&content) {
-                                Ok(manifest) => {
-                                    debug!("Loaded user agent from {:?}: {}", path, manifest.id);
-                                    agents.insert(manifest.id.clone(), manifest);
-                                }
-                                Err(e) => {
-                                    warn!("Failed to parse {:?}: {}", path, e);
-                                }
-                            },
-                            Err(e) => {
-                                warn!("Failed to read {:?}: {}", path, e);
+        if agents_d.exists()
+            && let Ok(entries) = std::fs::read_dir(&agents_d)
+        {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().is_some_and(|e| e == "toml") {
+                    match std::fs::read_to_string(&path) {
+                        Ok(content) => match AgentManifest::from_toml(&content) {
+                            Ok(manifest) => {
+                                debug!("Loaded user agent from {:?}: {}", path, manifest.id);
+                                agents.insert(manifest.id.clone(), manifest);
                             }
+                            Err(e) => {
+                                warn!("Failed to parse {:?}: {}", path, e);
+                            }
+                        },
+                        Err(e) => {
+                            warn!("Failed to read {:?}: {}", path, e);
                         }
                     }
                 }
@@ -114,7 +117,8 @@ impl AgentRegistry {
                     .cloned()
                     .unwrap_or_else(|| {
                         let result = detect_agent(manifest);
-                        self.detection_cache.insert(manifest.id.clone(), result.clone());
+                        self.detection_cache
+                            .insert(manifest.id.clone(), result.clone());
                         result
                     });
 
@@ -141,15 +145,11 @@ impl AgentRegistry {
     /// Get info for a single agent.
     pub fn get_info(&mut self, id: &str, profile_count: usize) -> Option<AgentInfo> {
         let manifest = self.agents.get(id)?;
-        let detection = self
-            .detection_cache
-            .get(id)
-            .cloned()
-            .unwrap_or_else(|| {
-                let result = detect_agent(manifest);
-                self.detection_cache.insert(id.to_string(), result.clone());
-                result
-            });
+        let detection = self.detection_cache.get(id).cloned().unwrap_or_else(|| {
+            let result = detect_agent(manifest);
+            self.detection_cache.insert(id.to_string(), result.clone());
+            result
+        });
 
         Some(AgentInfo {
             id: manifest.id.clone(),
@@ -211,10 +211,7 @@ fn try_command(cmd: &str, _version_flag: Option<&str>) -> Option<DetectionResult
         return None;
     }
 
-    let output = Command::new(parts[0])
-        .args(&parts[1..])
-        .output()
-        .ok()?;
+    let output = Command::new(parts[0]).args(&parts[1..]).output().ok()?;
 
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -235,10 +232,7 @@ fn try_command(cmd: &str, _version_flag: Option<&str>) -> Option<DetectionResult
 fn try_binary(binary: &str, version_flag: Option<&str>) -> Option<DetectionResult> {
     let flag = version_flag.unwrap_or("--version");
 
-    let output = Command::new(binary)
-        .arg(flag)
-        .output()
-        .ok()?;
+    let output = Command::new(binary).arg(flag).output().ok()?;
 
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);

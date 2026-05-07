@@ -1,11 +1,13 @@
 //! Output formatting for CLI.
 
+use comfy_table::{Cell, Color, Table};
+use ringlet_core::UsageStatsResponse;
 use ringlet_core::agent::AgentInfo;
 use ringlet_core::profile::ProfileInfo;
 use ringlet_core::provider::ProviderInfo;
-use ringlet_core::proxy::{ProfileProxyConfig, ProxyInstanceInfo, ProxyStatus, RoutingCondition, RoutingRule};
-use ringlet_core::UsageStatsResponse;
-use comfy_table::{Cell, Color, Table};
+use ringlet_core::proxy::{
+    ProfileProxyConfig, ProxyInstanceInfo, ProxyStatus, RoutingCondition, RoutingRule,
+};
 use std::collections::HashMap;
 
 /// Format agents as a table.
@@ -95,8 +97,15 @@ pub fn provider_detail(provider: &ProviderInfo) -> String {
 
     lines.push("Endpoints:".to_string());
     for endpoint in &provider.endpoints {
-        let default_marker = if endpoint.is_default { " (default)" } else { "" };
-        lines.push(format!("  {}: {}{}", endpoint.id, endpoint.url, default_marker));
+        let default_marker = if endpoint.is_default {
+            " (default)"
+        } else {
+            ""
+        };
+        lines.push(format!(
+            "  {}: {}{}",
+            endpoint.id, endpoint.url, default_marker
+        ));
     }
 
     if let Some(ref model) = provider.default_model {
@@ -173,7 +182,9 @@ pub fn proxy_status(instances: &[ProxyInstanceInfo]) {
     }
 
     let mut table = Table::new();
-    table.set_header(vec!["Profile", "Port", "PID", "Status", "Restarts", "Started"]);
+    table.set_header(vec![
+        "Profile", "Port", "PID", "Status", "Restarts", "Started",
+    ]);
 
     for instance in instances {
         let status_str = match &instance.status {
@@ -213,9 +224,7 @@ pub fn proxy_config(config: &ProfileProxyConfig) {
     println!("Enabled: {}", config.enabled);
     println!(
         "Port: {}",
-        config
-            .port
-            .map_or("auto".to_string(), |p| p.to_string())
+        config.port.map_or("auto".to_string(), |p| p.to_string())
     );
     println!("Strategy: {:?}", config.routing.strategy);
 
@@ -301,7 +310,9 @@ pub fn usage_summary(usage: &UsageStatsResponse) {
     ]);
     token_table.add_row(vec![
         Cell::new("Cache Creation"),
-        Cell::new(format_number(usage.total_tokens.cache_creation_input_tokens)),
+        Cell::new(format_number(
+            usage.total_tokens.cache_creation_input_tokens,
+        )),
     ]);
     token_table.add_row(vec![
         Cell::new("Cache Read"),
@@ -435,20 +446,16 @@ fn format_condition(condition: &RoutingCondition) -> String {
     match condition {
         RoutingCondition::Always => "always".to_string(),
         RoutingCondition::ThinkingMode => "thinking".to_string(),
-        RoutingCondition::TokenCount { min, max } => {
-            match (min, max) {
-                (Some(min), None) => format!("tokens > {}", min),
-                (None, Some(max)) => format!("tokens < {}", max),
-                (Some(min), Some(max)) => format!("tokens {} - {}", min, max),
-                (None, None) => "tokens: any".to_string(),
-            }
-        }
-        RoutingCondition::HasTools { min_count } => {
-            match min_count {
-                Some(n) => format!("tools >= {}", n),
-                None => "has tools".to_string(),
-            }
-        }
+        RoutingCondition::TokenCount { min, max } => match (min, max) {
+            (Some(min), None) => format!("tokens > {}", min),
+            (None, Some(max)) => format!("tokens < {}", max),
+            (Some(min), Some(max)) => format!("tokens {} - {}", min, max),
+            (None, None) => "tokens: any".to_string(),
+        },
+        RoutingCondition::HasTools { min_count } => match min_count {
+            Some(n) => format!("tools >= {}", n),
+            None => "has tools".to_string(),
+        },
         RoutingCondition::ModelPattern { pattern } => format!("model ~ {}", pattern),
         RoutingCondition::All { conditions } => {
             let parts: Vec<_> = conditions.iter().map(format_condition).collect();

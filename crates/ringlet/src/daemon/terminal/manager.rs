@@ -5,13 +5,16 @@
 
 use super::pty_bridge::spawn_pty_session;
 use super::sandbox::SandboxConfig;
-use super::session::{SessionId, SessionState, TerminalInput, TerminalOutput, TerminalSession, TerminalSessionInfo};
-use anyhow::{anyhow, Result};
+use super::session::{
+    SessionId, SessionState, TerminalInput, TerminalOutput, TerminalSession, TerminalSessionInfo,
+};
+use crate::daemon::telemetry::SessionTelemetryContext;
+use anyhow::{Result, anyhow};
 use portable_pty::PtySize;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use tokio::sync::{broadcast, mpsc, RwLock};
+use tokio::sync::{RwLock, broadcast, mpsc};
 use tracing::{debug, info, warn};
 use uuid::Uuid;
 
@@ -47,6 +50,7 @@ impl TerminalSessionManager {
     ///
     /// Returns the session ID and a handle to the session.
     /// The `owner_token_hash` is used to verify session ownership on WebSocket connections.
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_session(
         &self,
         profile_alias: &str,
@@ -57,6 +61,7 @@ impl TerminalSessionManager {
         initial_size: Option<PtySize>,
         sandbox_config: SandboxConfig,
         owner_token_hash: String,
+        telemetry: Option<SessionTelemetryContext>,
     ) -> Result<Arc<TerminalSession>> {
         // Check if there's already an active session for this profile
         // Skip this check for shell sessions (allow multiple shells)
@@ -64,14 +69,14 @@ impl TerminalSessionManager {
             let profile_sessions = self.profile_sessions.read().await;
             if let Some(existing_id) = profile_sessions.get(profile_alias) {
                 let sessions = self.sessions.read().await;
-                if let Some(session) = sessions.get(existing_id) {
-                    if !session.is_terminated().await {
-                        return Err(anyhow!(
-                            "Profile '{}' already has an active terminal session: {}",
-                            profile_alias,
-                            existing_id
-                        ));
-                    }
+                if let Some(session) = sessions.get(existing_id)
+                    && !session.is_terminated().await
+                {
+                    return Err(anyhow!(
+                        "Profile '{}' already has an active terminal session: {}",
+                        profile_alias,
+                        existing_id
+                    ));
                 }
             }
         }
@@ -130,6 +135,7 @@ impl TerminalSessionManager {
                 size,
                 input_rx,
                 sandbox_config,
+                telemetry,
             )
             .await
             {

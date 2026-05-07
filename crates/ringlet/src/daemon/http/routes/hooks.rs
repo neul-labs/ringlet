@@ -4,11 +4,11 @@ use crate::daemon::handlers;
 use crate::daemon::http::error::{ApiResponse, HttpError};
 use crate::daemon::server::ServerState;
 use axum::{
-    extract::{Path, State},
     Json,
+    extract::{Path, State},
 };
+use ringlet_core::http_api::AddHookRequest;
 use ringlet_core::{HooksConfig, Response};
-use serde::Deserialize;
 use std::sync::Arc;
 
 /// GET /api/profiles/:alias/hooks - List hooks.
@@ -23,13 +23,6 @@ pub async fn list(
         Response::Error { code, message } => Err(HttpError::new(code, message)),
         _ => Err(HttpError::internal("Unexpected response type")),
     }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct AddHookRequest {
-    pub event: String,
-    pub matcher: String,
-    pub command: String,
 }
 
 /// POST /api/profiles/:alias/hooks - Add a hook.
@@ -52,13 +45,6 @@ pub async fn add(
         Response::Error { code, message } => Err(HttpError::new(code, message)),
         _ => Err(HttpError::internal("Unexpected response type")),
     }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RemoveHookPath {
-    pub alias: String,
-    pub event: String,
-    pub index: usize,
 }
 
 /// DELETE /api/profiles/:alias/hooks/:event/:index - Remove a hook.

@@ -2,7 +2,7 @@
 
 use axum::{
     extract::{Request, State},
-    http::{header, StatusCode},
+    http::{StatusCode, header},
     middleware::Next,
     response::Response,
 };
@@ -32,9 +32,8 @@ const TOKEN_LENGTH: usize = 32;
 pub fn generate_token() -> Result<String, std::io::Error> {
     use std::fmt::Write;
     let mut bytes = [0u8; TOKEN_LENGTH];
-    getrandom::getrandom(&mut bytes).map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::Other, format!("RNG failed: {}", e))
-    })?;
+    getrandom::getrandom(&mut bytes)
+        .map_err(|e| std::io::Error::other(format!("RNG failed: {}", e)))?;
     let mut hex = String::with_capacity(TOKEN_LENGTH * 2);
     for byte in bytes {
         // write! to a String cannot fail
@@ -108,7 +107,9 @@ pub async fn auth_middleware(
 
                 // Inject token hash into request extensions for session ownership tracking
                 let token_hash = hash_token(t);
-                request.extensions_mut().insert(AuthenticatedTokenHash(token_hash));
+                request
+                    .extensions_mut()
+                    .insert(AuthenticatedTokenHash(token_hash));
 
                 Ok(next.run(request).await)
             } else {
@@ -133,23 +134,22 @@ pub async fn auth_middleware(
 /// or establish an authenticated session before upgrading.
 fn extract_token(request: &Request) -> Option<&str> {
     // Only accept Authorization header - query params are insecure
-    if let Some(auth_header) = request.headers().get(header::AUTHORIZATION) {
-        if let Ok(auth_str) = auth_header.to_str() {
-            if let Some(token) = auth_str.strip_prefix("Bearer ") {
-                return Some(token);
-            }
-        }
+    if let Some(auth_header) = request.headers().get(header::AUTHORIZATION)
+        && let Ok(auth_str) = auth_header.to_str()
+        && let Some(token) = auth_str.strip_prefix("Bearer ")
+    {
+        return Some(token);
     }
 
     // Also check Sec-WebSocket-Protocol for WebSocket upgrades
     // Format: "bearer, <token>" or just the token in first position
-    if let Some(protocol_header) = request.headers().get("sec-websocket-protocol") {
-        if let Ok(protocol_str) = protocol_header.to_str() {
-            // Handle "bearer, <token>" format
-            let parts: Vec<&str> = protocol_str.split(',').map(|s| s.trim()).collect();
-            if parts.len() >= 2 && parts[0].to_lowercase() == "bearer" {
-                return Some(parts[1]);
-            }
+    if let Some(protocol_header) = request.headers().get("sec-websocket-protocol")
+        && let Ok(protocol_str) = protocol_header.to_str()
+    {
+        // Handle "bearer, <token>" format
+        let parts: Vec<&str> = protocol_str.split(',').map(|s| s.trim()).collect();
+        if parts.len() >= 2 && parts[0].to_lowercase() == "bearer" {
+            return Some(parts[1]);
         }
     }
 

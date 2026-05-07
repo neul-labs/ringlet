@@ -1,9 +1,8 @@
 //! Registry-related request handlers.
 
-use crate::daemon::registry_client::RegistryClient;
 use crate::daemon::server::ServerState;
-use ringlet_core::rpc::{error_codes, RegistryStatus};
 use ringlet_core::Response;
+use ringlet_core::rpc::{RegistryStatus, error_codes};
 use tracing::info;
 
 /// Sync registry from remote.
@@ -33,10 +32,7 @@ pub async fn pin(ref_: &str, state: &ServerState) -> Response {
 
     match state.registry_client.pin(ref_) {
         Ok(()) => Response::success(format!("Pinned to: {}", ref_)),
-        Err(e) => Response::error(
-            error_codes::REGISTRY_ERROR,
-            format!("Failed to pin: {}", e),
-        ),
+        Err(e) => Response::error(error_codes::REGISTRY_ERROR, format!("Failed to pin: {}", e)),
     }
 }
 

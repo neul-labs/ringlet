@@ -3,10 +3,11 @@
 //! portable-pty is synchronous, so we use spawn_blocking and channels
 //! to integrate it with the async Tokio runtime.
 
-use super::sandbox::{prepare_command, SandboxConfig};
+use super::sandbox::{SandboxConfig, prepare_command};
 use super::session::{SessionState, TerminalInput, TerminalOutput, TerminalSession};
+use crate::daemon::telemetry::{Session, SessionTelemetryContext, TelemetryCollector};
 use anyhow::{Context, Result};
-use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+use portable_pty::{CommandBuilder, PtySize, native_pty_system};
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::path::Path;
@@ -15,6 +16,7 @@ use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 
 /// Spawn an agent process in a PTY and bridge it to a TerminalSession.
+#[allow(clippy::too_many_arguments)]
 pub async fn spawn_pty_session(
     session: Arc<TerminalSession>,
     command: &str,
@@ -24,6 +26,7 @@ pub async fn spawn_pty_session(
     initial_size: PtySize,
     mut input_rx: mpsc::Receiver<TerminalInput>,
     sandbox_config: SandboxConfig,
+    telemetry: Option<SessionTelemetryContext>,
 ) -> Result<()> {
     // Prepare command with sandboxing if enabled
     let sandboxed = prepare_command(command, args, working_dir, &sandbox_config)
@@ -89,9 +92,7 @@ pub async fn spawn_pty_session(
 
     // Take the writer handle for data I/O (implements std::io::Write)
     // Note: take_writer can only be called once per master
-    let writer_handle_pty = master
-        .take_writer()
-        .context("Failed to take PTY writer")?;
+    let writer_handle_pty = master.take_writer().context("Failed to take PTY writer")?;
 
     // Keep master for resize operations (resize is still on MasterPty)
     let master_for_resize = master;
@@ -153,13 +154,14 @@ pub async fn spawn_pty_session(
                 TerminalInput::Data(data) => {
                     let writer_clone = writer_pty.clone();
                     let session_id = session_id_writer.clone();
-                    let result: Result<(), std::io::Error> = tokio::task::spawn_blocking(move || {
-                        let mut writer = writer_clone.lock().unwrap();
-                        writer.write_all(&data)?;
-                        writer.flush()
-                    })
-                    .await
-                    .unwrap_or_else(|e| Err(std::io::Error::other(e.to_string())));
+                    let result: Result<(), std::io::Error> =
+                        tokio::task::spawn_blocking(move || {
+                            let mut writer = writer_clone.lock().unwrap();
+                            writer.write_all(&data)?;
+                            writer.flush()
+                        })
+                        .await
+                        .unwrap_or_else(|e| Err(std::io::Error::other(e.to_string())));
                     if let Err(e) = result {
                         error!("PTY write error for session {}: {}", session_id, e);
                         break;
@@ -174,41 +176,52 @@ pub async fn spawn_pty_session(
                         pixel_width: 0,
                         pixel_height: 0,
                     };
-                    let result: Result<(), anyhow::Error> = tokio::task::spawn_blocking(move || {
-                        let master = master_clone.lock().unwrap();
-                        master.resize(size)
-                    })
-                    .await
-                    .unwrap_or_else(|e| Err(anyhow::anyhow!(e.to_string())));
+                    let result: Result<(), anyhow::Error> =
+                        tokio::task::spawn_blocking(move || {
+                            let master = master_clone.lock().unwrap();
+                            master.resize(size)
+                        })
+                        .await
+                        .unwrap_or_else(|e| Err(anyhow::anyhow!(e.to_string())));
                     if let Err(e) = result {
                         warn!("PTY resize error for session {}: {}", session_id, e);
                     } else {
-                        debug!("PTY resized to {}x{} for session {}", cols, rows, session_id_writer);
+                        debug!(
+                            "PTY resized to {}x{} for session {}",
+                            cols, rows, session_id_writer
+                        );
                     }
                 }
                 TerminalInput::Signal(sig) => {
                     // Note: portable-pty doesn't have direct signal support
                     // For now, we can write control characters for common signals
                     let ctrl_char = match sig {
-                        2 => Some(b'\x03'),  // SIGINT -> Ctrl+C
-                        3 => Some(b'\x1c'),  // SIGQUIT -> Ctrl+\
-                        28 => None,          // SIGWINCH handled by resize
+                        2 => Some(b'\x03'), // SIGINT -> Ctrl+C
+                        3 => Some(b'\x1c'), // SIGQUIT -> Ctrl+\
+                        28 => None,         // SIGWINCH handled by resize
                         _ => {
-                            warn!("Unsupported signal {} for session {}", sig, session_id_writer);
+                            warn!(
+                                "Unsupported signal {} for session {}",
+                                sig, session_id_writer
+                            );
                             None
                         }
                     };
                     if let Some(c) = ctrl_char {
                         let writer_clone = writer_pty.clone();
                         let session_id = session_id_writer.clone();
-                        let result: Result<(), std::io::Error> = tokio::task::spawn_blocking(move || {
-                            let mut writer = writer_clone.lock().unwrap();
-                            writer.write_all(&[c])
-                        })
-                        .await
-                        .unwrap_or_else(|e| Err(std::io::Error::other(e.to_string())));
+                        let result: Result<(), std::io::Error> =
+                            tokio::task::spawn_blocking(move || {
+                                let mut writer = writer_clone.lock().unwrap();
+                                writer.write_all(&[c])
+                            })
+                            .await
+                            .unwrap_or_else(|e| Err(std::io::Error::other(e.to_string())));
                         if let Err(e) = result {
-                            error!("Failed to send signal {} to session {}: {}", sig, session_id, e);
+                            error!(
+                                "Failed to send signal {} to session {}: {}",
+                                sig, session_id, e
+                            );
                         }
                     }
                 }
@@ -242,6 +255,57 @@ pub async fn spawn_pty_session(
     session
         .set_state(SessionState::Terminated { exit_code })
         .await;
+
+    if let Some(telemetry) = telemetry {
+        let ended_at = chrono::Utc::now();
+        let duration_secs = ended_at
+            .signed_duration_since(session.created_at)
+            .num_seconds()
+            .max(0) as u64;
+        let usage_delta = match telemetry.usage_baseline.as_ref() {
+            Some(baseline) => match crate::daemon::agent_usage::delta_for_profile(
+                &telemetry.agent_id,
+                &telemetry.profile_home,
+                baseline,
+                telemetry.model.as_deref().unwrap_or("unknown"),
+                &telemetry.provider_id,
+                &telemetry.paths,
+            )
+            .await
+            {
+                Ok(delta) => delta,
+                Err(e) => {
+                    warn!(
+                        "Failed to compute terminal usage delta for session {}: {}",
+                        session.id, e
+                    );
+                    None
+                }
+            },
+            None => None,
+        };
+        let collector = TelemetryCollector::new(telemetry.paths);
+        let session_record = Session {
+            session_id: telemetry.session_id,
+            profile: telemetry.profile,
+            agent_id: telemetry.agent_id,
+            provider_id: telemetry.provider_id,
+            started_at: session.created_at,
+            ended_at: Some(ended_at),
+            duration_secs: Some(duration_secs),
+            exit_code,
+            source: telemetry.source,
+            model: telemetry.model,
+            tokens: usage_delta.as_ref().map(|delta| delta.tokens.clone()),
+            cost: usage_delta.and_then(|delta| delta.cost),
+        };
+        if let Err(e) = collector.record_session(&session_record) {
+            warn!(
+                "Failed to record PTY session telemetry for {}: {}",
+                session.id, e
+            );
+        }
+    }
 
     // Clean up tasks
     reader_handle.abort();

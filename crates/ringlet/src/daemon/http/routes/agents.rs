@@ -4,8 +4,8 @@ use crate::daemon::handlers;
 use crate::daemon::http::error::{ApiResponse, HttpError};
 use crate::daemon::server::ServerState;
 use axum::{
-    extract::{Path, State},
     Json,
+    extract::{Path, State},
 };
 use ringlet_core::{AgentInfo, Response};
 use std::sync::Arc;

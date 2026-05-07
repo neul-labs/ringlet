@@ -58,12 +58,12 @@ Profile templates stored in the GitHub registry (see `docs/registry.md`) provide
 
 Profiles can be customized with additional flags during creation:
 
-- `--hooks <hook1,hook2>` – Enable agent hooks like `auto_format` or `auto_lint`
-- `--mcp <server1,server2>` – Enable MCP servers like `filesystem` or `github`
+- `--hooks <hook1,hook2>` – Legacy compatibility input for custom scripts that still inspect simple hook names
+- `--mcp <server1,server2>` – Legacy compatibility input for custom scripts that still inspect simple MCP server names
 - `--bare` – Create a minimal profile without default hooks or MCP servers
 - `--proxy` – Enable proxy routing for this profile (requires ultrallm binary)
 
-See [Scripting](scripting.md) for hooks, MCP servers, and Rhai configuration scripts.
+Built-in scripts now generate hook, MCP, and proxy config directly into agent config files. Use `ringlet hooks ...` for managed hook configuration, and use [Scripting](scripting.md) when you need custom Rhai-driven file generation.
 See [Hooks](hooks.md) for event-driven hook configuration.
 See [Proxy](proxy.md) for intelligent request routing.
 

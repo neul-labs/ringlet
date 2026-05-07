@@ -58,11 +58,11 @@ pub struct ProfileMetadata {
     #[serde(default)]
     pub total_runs: u64,
 
-    /// Enabled hooks (for display/info, legacy).
+    /// Legacy simple hook names retained for compatibility with older/custom scripts.
     #[serde(default)]
     pub enabled_hooks: Vec<String>,
 
-    /// Enabled MCP servers (for display/info).
+    /// Legacy MCP server names retained for compatibility with older/custom scripts.
     #[serde(default)]
     pub enabled_mcp_servers: Vec<String>,
 
@@ -125,11 +125,11 @@ pub struct ProfileCreateRequest {
     /// API key (will be stored in keychain).
     pub api_key: String,
 
-    /// Enable specific hooks.
+    /// Legacy simple hook names for compatibility-oriented profile creation.
     #[serde(default)]
     pub hooks: Vec<String>,
 
-    /// Enable specific MCP servers.
+    /// Legacy MCP server names for compatibility-oriented profile creation.
     #[serde(default)]
     pub mcp_servers: Vec<String>,
 
@@ -226,7 +226,9 @@ mod tests {
             env: HashMap::new(),
             args: vec![],
             working_dir: None,
-            metadata: ProfileMetadata::new(PathBuf::from("/home/user/.claude-profiles/work-minimax")),
+            metadata: ProfileMetadata::new(PathBuf::from(
+                "/home/user/.claude-profiles/work-minimax",
+            )),
         };
 
         let json = serde_json::to_string_pretty(&profile).unwrap();

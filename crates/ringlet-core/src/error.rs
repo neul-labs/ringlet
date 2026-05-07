@@ -20,7 +20,9 @@ pub enum RingletError {
     #[error("Agent not installed: {0}")]
     AgentNotInstalled(String),
 
-    #[error("Incompatible provider: agent '{agent}' does not support provider type '{provider_type}'")]
+    #[error(
+        "Incompatible provider: agent '{agent}' does not support provider type '{provider_type}'"
+    )]
     IncompatibleProvider {
         agent: String,
         provider_type: String,

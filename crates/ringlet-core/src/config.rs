@@ -82,7 +82,6 @@ pub struct McpServersPrefs {
 
     // SECURITY: github_token removed - tokens should not be stored in config files.
     // If GitHub MCP support is needed, implement keychain storage similar to profile API keys.
-
     /// Custom MCP servers.
     #[serde(default)]
     pub custom: HashMap<String, McpServerConfig>,

@@ -9,10 +9,10 @@ use crate::daemon::server::ServerState;
 use crate::daemon::terminal::{SessionId, SessionState};
 use axum::{
     extract::{
-        ws::{Message, WebSocket},
         Path, State, WebSocketUpgrade,
+        ws::{Message, WebSocket},
     },
-    http::{header, HeaderMap, StatusCode},
+    http::{HeaderMap, StatusCode, header},
     response::Response,
 };
 use futures_util::{SinkExt, StreamExt};
@@ -30,7 +30,9 @@ fn validate_origin(headers: &HeaderMap) -> bool {
     match headers.get(header::ORIGIN) {
         Some(origin) => {
             if let Ok(origin_str) = origin.to_str() {
-                ALLOWED_ORIGINS.iter().any(|allowed| origin_str.starts_with(allowed))
+                ALLOWED_ORIGINS
+                    .iter()
+                    .any(|allowed| origin_str.starts_with(allowed))
             } else {
                 false
             }
@@ -43,12 +45,12 @@ fn validate_origin(headers: &HeaderMap) -> bool {
 /// Extract the auth token from the Sec-WebSocket-Protocol header.
 /// Format: "bearer, <token>"
 fn extract_ws_token(headers: &HeaderMap) -> Option<String> {
-    if let Some(protocol_header) = headers.get("sec-websocket-protocol") {
-        if let Ok(protocol_str) = protocol_header.to_str() {
-            let parts: Vec<&str> = protocol_str.split(',').map(|s| s.trim()).collect();
-            if parts.len() >= 2 && parts[0].to_lowercase() == "bearer" {
-                return Some(parts[1].to_string());
-            }
+    if let Some(protocol_header) = headers.get("sec-websocket-protocol")
+        && let Ok(protocol_str) = protocol_header.to_str()
+    {
+        let parts: Vec<&str> = protocol_str.split(',').map(|s| s.trim()).collect();
+        if parts.len() >= 2 && parts[0].to_lowercase() == "bearer" {
+            return Some(parts[1].to_string());
         }
     }
     None
@@ -169,18 +171,26 @@ async fn handle_terminal_socket(socket: WebSocket, session_id: SessionId, state:
     let connected_msg = TerminalServerMessage::Connected {
         session_id: session_id.clone(),
     };
-    if let Ok(json) = serde_json::to_string(&connected_msg) {
-        if sender.send(Message::Text(json.into())).await.is_err() {
-            session.remove_client().await;
-            return;
-        }
+    if let Ok(json) = serde_json::to_string(&connected_msg)
+        && sender.send(Message::Text(json.into())).await.is_err()
+    {
+        session.remove_client().await;
+        return;
     }
 
     // Send scrollback buffer (terminal history) to the new client
     let scrollback = session.get_scrollback().await;
     if !scrollback.is_empty() {
-        debug!("Sending {} bytes of scrollback to client for session {}", scrollback.len(), session_id);
-        if sender.send(Message::Binary(scrollback.into())).await.is_err() {
+        debug!(
+            "Sending {} bytes of scrollback to client for session {}",
+            scrollback.len(),
+            session_id
+        );
+        if sender
+            .send(Message::Binary(scrollback.into()))
+            .await
+            .is_err()
+        {
             session.remove_client().await;
             return;
         }
@@ -288,19 +298,17 @@ async fn handle_terminal_socket(socket: WebSocket, session_id: SessionId, state:
                                     state: state_str,
                                     exit_code,
                                 };
-                                if let Ok(json) = serde_json::to_string(&msg) {
-                                    if sender.send(Message::Text(json.into())).await.is_err() {
+                                if let Ok(json) = serde_json::to_string(&msg)
+                                    && sender.send(Message::Text(json.into())).await.is_err() {
                                         break;
                                     }
-                                }
                             }
                             TerminalOutput::Resized { cols, rows } => {
                                 let msg = TerminalServerMessage::Resized { cols, rows };
-                                if let Ok(json) = serde_json::to_string(&msg) {
-                                    if sender.send(Message::Text(json.into())).await.is_err() {
+                                if let Ok(json) = serde_json::to_string(&msg)
+                                    && sender.send(Message::Text(json.into())).await.is_err() {
                                         break;
                                     }
-                                }
                             }
                         }
                     }

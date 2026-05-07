@@ -19,7 +19,9 @@ ringlet is a Rust-native workspace built around a central background daemon (`ri
 Holds shared structs (agents, profiles, manifests), serialization helpers (`serde`), and filesystem abstractions. Both the CLI and the service daemon consume this crate.
 
 ### CLI (`ringlet`)
-A thin client that parses commands such as `agents list`, `profiles create`, and `profiles run`, then forwards them to the daemon over `async-nng`. On first invocation (or when the daemon is not running), the CLI **automatically spawns `ringletd`** in the background before sending the request—users never need to start the daemon manually. The daemon exits after an idle timeout unless pinned with `ringlet daemon --stay-alive`. The CLI renders responses as structured tables or `--json` for scripting. Direct library calls (bypassing the daemon) are reserved for offline/emergency scenarios only.
+A thin client that parses commands such as `agents list`, `profiles create`, and `profiles run`, then forwards them to the daemon over `async-nng`. On first invocation (or when the daemon is not running), the CLI **automatically spawns `ringletd`** in the background before sending the request—users never need to start the daemon manually. The daemon exits after an idle timeout unless pinned with `ringlet daemon --stay-alive`. The CLI renders responses as structured tables or `--json` for scripting.
+
+For local interactive runs, the CLI may still spawn the final agent process after receiving a fully prepared execution context from the daemon so the agent inherits the user's TTY. That does not change ownership: the daemon remains the source of truth for profile resolution, validation, proxy startup, script execution, config generation, and execution planning.
 
 ### Agent registry
 A loader that scans declarative manifest files (TOML/YAML) describing how to detect and run each agent. Built-in manifests for Claude Code, Grok CLI, Codex CLI, Droid, and OpenCode ship with the binary, while additional manifests can be dropped into `~/.config/ringlet/agents.d/`. Detection collects binary paths, versions, and last-used timestamps (persisted under `cache/agent-detections.json`) so `ringlet agents list` can surface both availability and freshness.
@@ -31,11 +33,13 @@ Synchronizes GitHub-hosted metadata (manifests, profile templates, model catalog
 Manages API backend definitions (Anthropic, MiniMax, OpenAI, OpenRouter, etc.) that profiles bind to. Each provider specifies endpoints, authentication requirements, and available models. Built-in providers ship with the binary while custom providers can be added to `~/.config/ringlet/providers.d/`. This separation lets users run the same agent (e.g., Claude Code) against different backends (Anthropic API vs MiniMax API) without modifying agent manifests.
 
 ### Scripting engine
-Embeds [Rhai](https://rhai.rs/) to dynamically generate agent-specific configuration files. Each agent has a `.rhai` script that receives provider, profile, and user preference context, then outputs the required config files (JSON, TOML, etc.) and environment variables. Scripts are resolved in order: user override (`~/.config/ringlet/scripts/`) → registry → built-in. This approach allows:
+Embeds [Rhai](https://rhai.rs/) to dynamically generate agent-specific configuration files. Each agent has a `.rhai` script that receives provider, profile, and user preference context, then outputs the required config files (JSON, TOML, etc.), environment variables, and optional extra CLI arguments. Scripts are resolved in order: user override (`~/.config/ringlet/scripts/`) → registry → built-in. This approach allows:
 - Adding new agents without recompiling (just add manifest + script)
 - User customization of configuration logic
 - Support for agent-specific features like Claude Code hooks and MCP servers
 - Future-proofing as agents add new configuration options
+
+The runtime contract is intentionally narrow: scripts configure agents by generating files, environment variables, and optional args. Hook, MCP, and proxy behavior is expressed by writing the agent's real config files instead of returning separate side-channel objects.
 
 ### Profile manager
 Stores aliases and environment overrides for each agent+model pairing. When profiles are created, the manager reads manifest metadata to prompt for model names, API keys, and other required values every time so secrets are never reused implicitly. Profiles live under `~/.config/ringlet/profiles/` (or `%APPDATA%/ringlet/profiles/` on Windows) and track metadata such as `last_used` to populate CLI dashboards. Import/export commands serialize the entire setup (agents cache pointer, profiles, registry pin) so users can migrate machines.
@@ -96,7 +100,7 @@ The daemon is the heart of ringlet. It runs as a long-lived process (auto-starte
 - **HTTP/WebSocket APIs** – optional loopback endpoints for UI integrations that cannot speak NNG directly.
 - **Filesystem watching** – monitors config directories for external changes and reconciles state.
 
-The CLI is intentionally thin; it auto-spawns the daemon on first use and delegates all real work to it.
+The CLI is intentionally thin; it auto-spawns the daemon on first use and delegates all stateful work to it. Any client-side spawning is limited to attaching a prepared execution plan to a local TTY.
 
 ### Web UI
 A Vue 3 single-page application embedded in the daemon binary (via `rust-embed`) and served at `http://127.0.0.1:8765`. The UI provides:
@@ -106,7 +110,9 @@ A Vue 3 single-page application embedded in the daemon binary (via `rust-embed`)
 - **Remote terminal** – full interactive terminal sessions using xterm.js
 - **Real-time updates** – WebSocket connections for live session state
 
-The UI connects to the same HTTP/WebSocket APIs available to external tools, keeping terminal workflows and graphical workflows consistent.
+The UI connects to the same HTTP/WebSocket APIs available to external tools, keeping terminal workflows and graphical workflows consistent. Those loopback APIs are bearer-token authenticated; workspace-oriented routes may inspect any existing local path after canonicalization so the UI can work with normal repositories outside `HOME`.
+
+That local-access policy is intentional: authenticated loopback clients are treated as the local user, so authorization is enforced at the daemon boundary rather than by layering a second per-route sandbox rooted to `HOME`.
 
 ## CLI ↔ daemon transport
 

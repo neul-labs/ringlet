@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use portable_pty::PtySize;
 use std::collections::VecDeque;
 use std::sync::Arc;
-use tokio::sync::{broadcast, mpsc, RwLock};
+use tokio::sync::{RwLock, broadcast, mpsc};
 
 /// Maximum scrollback buffer size (bytes).
 const MAX_SCROLLBACK_SIZE: usize = 1024 * 1024; // 1MB
@@ -193,7 +193,10 @@ impl TerminalSession {
     }
 
     /// Send input to the terminal.
-    pub async fn send_input(&self, input: TerminalInput) -> Result<(), mpsc::error::SendError<TerminalInput>> {
+    pub async fn send_input(
+        &self,
+        input: TerminalInput,
+    ) -> Result<(), mpsc::error::SendError<TerminalInput>> {
         // Handle resize internally as well
         if let TerminalInput::Resize { cols, rows } = &input {
             *self.size.write().await = PtySize {

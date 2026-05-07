@@ -5,7 +5,7 @@
 //! - macOS: sandbox-exec
 //! - Windows: No sandboxing (not supported)
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -65,7 +65,7 @@ impl SandboxPlatform {
 
         #[cfg(target_os = "macos")]
         {
-            return SandboxPlatform::MacOS;
+            SandboxPlatform::MacOS
         }
 
         #[cfg(target_os = "windows")]
@@ -317,7 +317,12 @@ mod tests {
     #[test]
     fn test_prepare_command_disabled() {
         let config = SandboxConfig::disabled();
-        let result = prepare_command("echo", &["hello".to_string()], &PathBuf::from("/tmp"), &config);
+        let result = prepare_command(
+            "echo",
+            &["hello".to_string()],
+            &PathBuf::from("/tmp"),
+            &config,
+        );
         assert!(result.is_ok());
         let cmd = result.unwrap();
         assert_eq!(cmd.command, "echo");

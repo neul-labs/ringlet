@@ -1,13 +1,19 @@
 import type {
   ApiResponse,
   AgentInfo,
+  AddHookRequest,
   ProviderInfo,
+  PingResponse,
+  PinRequest,
   ProfileInfo,
   ProfileCreateRequest,
   HooksConfig,
   ProxyInstanceInfo,
   ProfileProxyConfig,
   RoutingRule,
+  RunResponse,
+  SetAliasRequest,
+  SyncRequest,
   StatsResponse,
   RegistryStatus,
   UsageStatsResponse,
@@ -103,7 +109,7 @@ export const api = {
     delete: (alias: string) =>
       request<void>(`/profiles/${alias}`, { method: 'DELETE' }),
     run: (alias: string, args: string[] = []) =>
-      request<{ status: string; pid?: number; exit_code?: number }>(
+      request<RunResponse>(
         `/profiles/${alias}/run`,
         {
           method: 'POST',
@@ -117,7 +123,7 @@ export const api = {
   // Hooks
   hooks: {
     list: (alias: string) => request<HooksConfig>(`/profiles/${alias}/hooks`),
-    add: (alias: string, event: string, data: { matcher: string; command: string }) =>
+    add: (alias: string, event: string, data: Omit<AddHookRequest, 'event'>) =>
       request<void>(`/profiles/${alias}/hooks`, {
         method: 'POST',
         body: JSON.stringify({ event, matcher: data.matcher, command: data.command }),
@@ -177,7 +183,7 @@ export const api = {
       set: (alias: string, from: string, to: string) =>
         request<void>(`/profiles/${alias}/proxy/aliases/${from}`, {
           method: 'PUT',
-          body: JSON.stringify({ to }),
+          body: JSON.stringify({ to } satisfies SetAliasRequest),
         }),
       remove: (alias: string, from: string) =>
         request<void>(`/profiles/${alias}/proxy/aliases/${from}`, {
@@ -192,12 +198,12 @@ export const api = {
     sync: (force = false, offline = false) =>
       request<RegistryStatus>('/registry/sync', {
         method: 'POST',
-        body: JSON.stringify({ force, offline }),
+        body: JSON.stringify({ force, offline } satisfies SyncRequest),
       }),
     pin: (ref: string) =>
       request<void>('/registry/pin', {
         method: 'POST',
-        body: JSON.stringify({ ref }),
+        body: JSON.stringify({ ref } satisfies PinRequest),
       }),
   },
 
@@ -234,7 +240,7 @@ export const api = {
 
   // System
   system: {
-    ping: () => request<{ status: string; version: string }>('/ping'),
+    ping: () => request<PingResponse>('/ping'),
     shutdown: () => request<void>('/shutdown', { method: 'POST' }),
   },
 

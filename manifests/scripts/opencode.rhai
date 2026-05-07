@@ -31,7 +31,5 @@ if ctx.provider.type != "self" {
     files: #{
         ".opencode/config.json": json::encode_pretty(config)
     },
-    env: env,
-    hooks: (),
-    mcp_servers: ()
+    env: env
 }

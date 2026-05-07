@@ -5,7 +5,7 @@
 use axum::{
     body::Body,
     extract::Path,
-    http::{header, Response, StatusCode},
+    http::{Response, StatusCode, header},
     response::IntoResponse,
 };
 use rust_embed::Embed;
@@ -49,15 +49,16 @@ fn serve_file(path: &str) -> Response<Body> {
         None => {
             // For SPA routing: if file not found and not an API/asset request,
             // serve index.html
-            if !path.starts_with("api/") && !path.contains('.') {
-                if let Some(content) = Assets::get("index.html") {
-                    return Response::builder()
-                        .status(StatusCode::OK)
-                        .header(header::CONTENT_TYPE, "text/html")
-                        .header(header::CACHE_CONTROL, "no-cache")
-                        .body(Body::from(content.data.into_owned()))
-                        .unwrap();
-                }
+            if !path.starts_with("api/")
+                && !path.contains('.')
+                && let Some(content) = Assets::get("index.html")
+            {
+                return Response::builder()
+                    .status(StatusCode::OK)
+                    .header(header::CONTENT_TYPE, "text/html")
+                    .header(header::CACHE_CONTROL, "no-cache")
+                    .body(Body::from(content.data.into_owned()))
+                    .unwrap();
             }
 
             Response::builder()

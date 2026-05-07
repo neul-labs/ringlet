@@ -20,6 +20,7 @@ pub enum AgentType {
     /// OpenAI Codex CLI.
     Codex,
     /// OpenCode editor.
+    #[serde(rename = "opencode")]
     OpenCode,
 }
 
@@ -185,10 +186,7 @@ pub enum UsagePeriod {
     /// Last 30 days.
     Last30Days,
     /// Custom date range.
-    DateRange {
-        start: String,
-        end: String,
-    },
+    DateRange { start: String, end: String },
     /// All time.
     All,
 }
@@ -238,6 +236,21 @@ pub struct ProfileUsage {
     pub last_used: Option<DateTime<Utc>>,
 }
 
+/// Per-agent usage statistics.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct AgentUsage {
+    /// Agent ID.
+    pub agent: String,
+    /// Token usage.
+    pub tokens: TokenUsage,
+    /// Cost breakdown.
+    pub cost: Option<CostBreakdown>,
+    /// Number of sessions.
+    pub sessions: u64,
+    /// Total runtime in seconds.
+    pub runtime_secs: u64,
+}
+
 /// Aggregated usage statistics.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UsageAggregates {
@@ -251,6 +264,8 @@ pub struct UsageAggregates {
     pub by_model: HashMap<String, ModelUsage>,
     /// Usage by profile.
     pub by_profile: HashMap<String, ProfileUsage>,
+    /// Usage by agent.
+    pub by_agent: HashMap<String, AgentUsage>,
 }
 
 /// Usage query response.
@@ -323,8 +338,7 @@ mod tests {
 
         // Claude Sonnet 4 pricing (per token)
         let cost = CostBreakdown::from_tokens(
-            &tokens,
-            0.000003,   // $3/MTok input
+            &tokens, 0.000003,   // $3/MTok input
             0.000015,   // $15/MTok output
             0.00000375, // $3.75/MTok cache creation
             0.0000003,  // $0.30/MTok cache read
@@ -357,5 +371,11 @@ mod tests {
         let cost = pricing.calculate_cost(&tokens);
         assert!((cost.input_cost - 0.003).abs() < 0.0001);
         assert!((cost.output_cost - 0.0075).abs() < 0.0001);
+    }
+
+    #[test]
+    fn test_agent_type_opencode_serialization_matches_agent_id() {
+        let json = serde_json::to_string(&AgentType::OpenCode).unwrap();
+        assert_eq!(json, "\"opencode\"");
     }
 }

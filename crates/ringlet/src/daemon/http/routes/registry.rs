@@ -3,12 +3,9 @@
 use crate::daemon::handlers;
 use crate::daemon::http::error::{ApiResponse, HttpError};
 use crate::daemon::server::ServerState;
-use axum::{
-    extract::State,
-    Json,
-};
+use axum::{Json, extract::State};
+use ringlet_core::http_api::{PinRequest, SyncRequest};
 use ringlet_core::{RegistryStatus, Response};
-use serde::Deserialize;
 use std::sync::Arc;
 
 /// GET /api/registry - Get registry status.
@@ -24,14 +21,6 @@ pub async fn inspect(
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct SyncRequest {
-    #[serde(default)]
-    pub force: bool,
-    #[serde(default)]
-    pub offline: bool,
-}
-
 /// POST /api/registry/sync - Sync registry.
 pub async fn sync(
     State(state): State<Arc<ServerState>>,
@@ -44,12 +33,6 @@ pub async fn sync(
         Response::Error { code, message } => Err(HttpError::new(code, message)),
         _ => Err(HttpError::internal("Unexpected response type")),
     }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct PinRequest {
-    #[serde(rename = "ref")]
-    pub ref_: String,
 }
 
 /// POST /api/registry/pin - Pin registry to a specific ref.

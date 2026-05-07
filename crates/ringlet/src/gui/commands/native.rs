@@ -10,9 +10,9 @@ pub async fn pick_directory(app: tauri::AppHandle) -> Result<Option<String>, App
         let _ = tx.send(path.map(|p| p.to_string()));
     });
 
-    let result = rx.await.map_err(|_| {
-        AppError::Other("Dialog was cancelled".to_string())
-    })?;
+    let result = rx
+        .await
+        .map_err(|_| AppError::Other("Dialog was cancelled".to_string()))?;
 
     Ok(result)
 }

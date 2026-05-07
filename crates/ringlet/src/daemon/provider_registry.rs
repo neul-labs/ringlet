@@ -1,20 +1,38 @@
 //! Provider registry - loads provider manifests.
 
 use anyhow::Result;
-use ringlet_core::{RingletPaths, ProviderInfo, ProviderManifest};
+use ringlet_core::{ProviderInfo, ProviderManifest, RingletPaths};
 use std::collections::HashMap;
 use tracing::{debug, warn};
 
 /// Built-in provider manifests (embedded at compile time).
 const BUILTIN_PROVIDERS: &[(&str, &str)] = &[
-    ("anthropic", include_str!("../../manifests/providers/anthropic.toml")),
-    ("minimax", include_str!("../../manifests/providers/minimax.toml")),
-    ("minimax-openai", include_str!("../../manifests/providers/minimax-openai.toml")),
-    ("openai", include_str!("../../manifests/providers/openai.toml")),
-    ("openrouter", include_str!("../../manifests/providers/openrouter.toml")),
+    (
+        "anthropic",
+        include_str!("../../manifests/providers/anthropic.toml"),
+    ),
+    (
+        "minimax",
+        include_str!("../../manifests/providers/minimax.toml"),
+    ),
+    (
+        "minimax-openai",
+        include_str!("../../manifests/providers/minimax-openai.toml"),
+    ),
+    (
+        "openai",
+        include_str!("../../manifests/providers/openai.toml"),
+    ),
+    (
+        "openrouter",
+        include_str!("../../manifests/providers/openrouter.toml"),
+    ),
     ("self", include_str!("../../manifests/providers/self.toml")),
     ("zai", include_str!("../../manifests/providers/zai.toml")),
-    ("zai-openai", include_str!("../../manifests/providers/zai-openai.toml")),
+    (
+        "zai-openai",
+        include_str!("../../manifests/providers/zai-openai.toml"),
+    ),
 ];
 
 /// Provider registry.
@@ -42,24 +60,24 @@ impl ProviderRegistry {
 
         // Load user-defined manifests from providers.d/
         let providers_d = paths.providers_d();
-        if providers_d.exists() {
-            if let Ok(entries) = std::fs::read_dir(&providers_d) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    if path.extension().is_some_and(|e| e == "toml") {
-                        match std::fs::read_to_string(&path) {
-                            Ok(content) => match ProviderManifest::from_toml(&content) {
-                                Ok(manifest) => {
-                                    debug!("Loaded user provider from {:?}: {}", path, manifest.id);
-                                    providers.insert(manifest.id.clone(), manifest);
-                                }
-                                Err(e) => {
-                                    warn!("Failed to parse {:?}: {}", path, e);
-                                }
-                            },
-                            Err(e) => {
-                                warn!("Failed to read {:?}: {}", path, e);
+        if providers_d.exists()
+            && let Ok(entries) = std::fs::read_dir(&providers_d)
+        {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().is_some_and(|e| e == "toml") {
+                    match std::fs::read_to_string(&path) {
+                        Ok(content) => match ProviderManifest::from_toml(&content) {
+                            Ok(manifest) => {
+                                debug!("Loaded user provider from {:?}: {}", path, manifest.id);
+                                providers.insert(manifest.id.clone(), manifest);
                             }
+                            Err(e) => {
+                                warn!("Failed to parse {:?}: {}", path, e);
+                            }
+                        },
+                        Err(e) => {
+                            warn!("Failed to read {:?}: {}", path, e);
                         }
                     }
                 }
@@ -81,11 +99,7 @@ impl ProviderRegistry {
 
     /// List all providers.
     pub fn list_all(&self) -> Vec<ProviderInfo> {
-        let mut infos: Vec<ProviderInfo> = self
-            .providers
-            .values()
-            .map(|m| m.to_info())
-            .collect();
+        let mut infos: Vec<ProviderInfo> = self.providers.values().map(|m| m.to_info()).collect();
 
         // Sort by ID for consistent ordering
         infos.sort_by(|a, b| a.id.cmp(&b.id));

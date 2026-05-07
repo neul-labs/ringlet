@@ -6961,6 +6961,7 @@ dependencies = [
  "flate2",
  "hex",
  "reqwest 0.12.28",
+ "ringlet-core",
  "serde",
  "sha2",
  "tar",

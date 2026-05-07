@@ -14,7 +14,7 @@ pub mod terminal;
 pub mod usage;
 
 use crate::daemon::server::ServerState;
-use axum::{routing::get, routing::post, routing::delete, Router};
+use axum::{Router, routing::delete, routing::get, routing::post};
 use std::sync::Arc;
 
 /// Build all API routes.
@@ -35,11 +35,11 @@ pub fn api_routes() -> Router<Arc<ServerState>> {
         .route("/profiles/{alias}/run", post(profiles::run))
         .route("/profiles/{alias}/env", get(profiles::env))
         // Hooks
+        .route("/profiles/{alias}/hooks", get(hooks::list).post(hooks::add))
         .route(
-            "/profiles/{alias}/hooks",
-            get(hooks::list).post(hooks::add),
+            "/profiles/{alias}/hooks/{event}/{index}",
+            delete(hooks::remove),
         )
-        .route("/profiles/{alias}/hooks/{event}/{index}", delete(hooks::remove))
         .route("/profiles/{alias}/hooks/import", post(hooks::import))
         .route("/profiles/{alias}/hooks/export", get(hooks::export))
         // Proxy per-profile
@@ -55,11 +55,11 @@ pub fn api_routes() -> Router<Arc<ServerState>> {
             "/profiles/{alias}/proxy/routes",
             get(proxy::route_list).post(proxy::route_add),
         )
-        .route("/profiles/{alias}/proxy/routes/{name}", delete(proxy::route_remove))
         .route(
-            "/profiles/{alias}/proxy/aliases",
-            get(proxy::alias_list),
+            "/profiles/{alias}/proxy/routes/{name}",
+            delete(proxy::route_remove),
         )
+        .route("/profiles/{alias}/proxy/aliases", get(proxy::alias_list))
         .route(
             "/profiles/{alias}/proxy/aliases/{from}",
             axum::routing::put(proxy::alias_set).delete(proxy::alias_remove),

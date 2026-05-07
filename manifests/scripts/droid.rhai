@@ -26,7 +26,5 @@ if ctx.provider.type != "self" && ctx.provider.type != "anthropic" {
     files: #{
         ".factory/config.json": json::encode_pretty(config)
     },
-    env: env,
-    hooks: (),
-    mcp_servers: ()
+    env: env
 }

@@ -86,7 +86,7 @@ A thin client that:
 - Forwards requests over IPC
 - Renders responses as tables or JSON
 
-The CLI never performs stateful operations directly — everything goes through the daemon.
+The CLI never performs stateful operations directly — everything goes through the daemon. For local interactive sessions, the CLI may still spawn the final agent process after the daemon has prepared the execution context, so the process can inherit the user's TTY without duplicating profile-resolution logic.
 
 ### Daemon
 
@@ -101,6 +101,8 @@ The heart of Ringlet. Runs as a long-lived background process and manages:
 | Proxy management | Spawns and monitors ultrallm instances |
 | Terminal sessions | Manages remote PTY sessions with sandboxing |
 | HTTP API | Serves REST endpoints and the web UI |
+
+Authenticated loopback HTTP clients are treated as the local user. For workspace-oriented routes, the daemon allows any existing canonicalized local path instead of re-sandboxing access to `HOME`, which keeps the UI usable with normal repositories stored elsewhere.
 
 ### Profile Manager
 
@@ -126,8 +128,10 @@ Detection probes run in parallel to find installed agents and their versions.
 Embeds [Rhai](https://rhai.rs/) for configuration generation:
 
 - Receives context (provider, profile, preferences)
-- Outputs configuration files and environment variables
+- Outputs configuration files, environment variables, and optional extra CLI arguments
 - Resolution order: user override → registry → built-in
+
+Hook, MCP, and proxy behavior are expressed by generating the agent's real config files, not by a separate backend assembly path.
 
 ### Proxy Manager
 
@@ -167,6 +171,7 @@ For UI integrations:
 - Terminal WebSocket at `ws://127.0.0.1:8765/ws/terminal/{id}`
 - Embedded web UI served at the root path
 - Bearer-token authentication from `~/.config/ringlet/http_token`
+- Authenticated workspace routes may access any existing local path, not just `HOME`
 
 ---
 

@@ -5,13 +5,10 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// Write half of a WebSocket connection for sending messages.
-pub type WsSender =
-    futures_util::stream::SplitSink<
-        tokio_tungstenite::WebSocketStream<
-            tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
-        >,
-        tokio_tungstenite::tungstenite::Message,
-    >;
+pub type WsSender = futures_util::stream::SplitSink<
+    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
+    tokio_tungstenite::tungstenite::Message,
+>;
 
 /// Shared application state across all Tauri commands.
 pub struct AppState {

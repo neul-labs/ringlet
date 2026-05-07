@@ -37,27 +37,6 @@ if ctx.profile.hooks_config != () {
     settings.hooks = ctx.profile.hooks_config;
 }
 
-// Legacy: Add simple hooks if enabled (for backwards compatibility)
-let hooks = ();
-if ctx.profile.hooks.len() > 0 {
-    hooks = #{};
-    for hook in ctx.profile.hooks {
-        hooks[hook] = true;
-    }
-}
-
-// Add MCP servers if enabled
-let mcp_servers = ();
-if ctx.profile.mcp_servers.len() > 0 {
-    mcp_servers = [];
-    for server in ctx.profile.mcp_servers {
-        mcp_servers.push(#{
-            name: server,
-            enabled: true
-        });
-    }
-}
-
 // Build environment variables
 let env = #{};
 
@@ -87,7 +66,5 @@ if ctx.provider.type != "self" {
     files: #{
         ".claude/settings.json": json::encode_pretty(settings)
     },
-    env: env,
-    hooks: hooks,
-    mcp_servers: mcp_servers
+    env: env
 }

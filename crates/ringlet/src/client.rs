@@ -1,9 +1,9 @@
 //! Client for communicating with the ringlet daemon.
 
-use anyhow::{anyhow, Context, Result};
-use ringlet_core::{RingletPaths, Request, Response};
+use anyhow::{Context, Result, anyhow};
 use nng::options::Options;
 use nng::{Protocol, Socket};
+use ringlet_core::{Request, Response, RingletPaths};
 use std::process::{Command, Stdio};
 use std::time::Duration;
 use tracing::{debug, info};
@@ -53,11 +53,11 @@ impl DaemonClient {
 
     /// Try to connect to existing daemon.
     fn try_connect(socket_path: &std::path::Path) -> Result<Self> {
-        let socket = Socket::new(Protocol::Req0)
-            .context("Failed to create nng socket")?;
+        let socket = Socket::new(Protocol::Req0).context("Failed to create nng socket")?;
 
         let url = format!("ipc://{}", socket_path.display());
-        socket.dial(&url)
+        socket
+            .dial(&url)
             .context(format!("Failed to connect to {}", url))?;
 
         // Set timeouts
@@ -93,11 +93,11 @@ impl DaemonClient {
         let json = serde_json::to_vec(request)?;
         let msg = nng::Message::from(&json[..]);
 
-        self.socket.send(msg)
+        self.socket
+            .send(msg)
             .map_err(|(_, e)| anyhow!("Send failed: {}", e))?;
 
-        let response_msg = self.socket.recv()
-            .context("Failed to receive response")?;
+        let response_msg = self.socket.recv().context("Failed to receive response")?;
 
         let response: Response = serde_json::from_slice(&response_msg)?;
         Ok(response)

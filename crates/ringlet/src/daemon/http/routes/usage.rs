@@ -4,8 +4,8 @@ use crate::daemon::handlers;
 use crate::daemon::http::error::{ApiResponse, HttpError};
 use crate::daemon::server::ServerState;
 use axum::{
-    extract::{Query, State},
     Json,
+    extract::{Query, State},
 };
 use ringlet_core::{Response, UsagePeriod, UsageStatsResponse};
 use serde::Deserialize;
@@ -51,7 +51,7 @@ pub async fn get_usage(
     .await;
 
     match response {
-        Response::Usage(usage) => Ok(Json(ApiResponse::success(usage))),
+        Response::Usage(usage) => Ok(Json(ApiResponse::success(*usage))),
         Response::Error { code, message } => Err(HttpError::new(code, message)),
         _ => Err(HttpError::internal("Unexpected response type")),
     }

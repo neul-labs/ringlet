@@ -35,9 +35,10 @@ pub fn import_all(claude_dir: &Path) -> Result<ClaudeImportResult> {
             Ok((total, by_model)) => {
                 result.stats_cache_tokens = total;
                 result.by_model = by_model;
-                info!("Imported stats-cache.json: {} input tokens, {} output tokens",
-                    result.stats_cache_tokens.input_tokens,
-                    result.stats_cache_tokens.output_tokens);
+                info!(
+                    "Imported stats-cache.json: {} input tokens, {} output tokens",
+                    result.stats_cache_tokens.input_tokens, result.stats_cache_tokens.output_tokens
+                );
             }
             Err(e) => {
                 let warning = format!("Failed to import stats-cache.json: {}", e);
@@ -145,17 +146,16 @@ fn import_sessions(projects_dir: &Path) -> Result<usize> {
         for file in std::fs::read_dir(&path)? {
             let file = file?;
             let file_path = file.path();
-            if file_path.extension().map_or(false, |ext| ext == "jsonl") {
-                if let Some(name) = file_path.file_name().and_then(|n| n.to_str()) {
-                    if name.contains("session") {
-                        match import_session_file(&file_path) {
-                            Ok(session_count) => {
-                                count += session_count;
-                            }
-                            Err(e) => {
-                                debug!("Failed to import {}: {}", file_path.display(), e);
-                            }
-                        }
+            if file_path.extension().is_some_and(|ext| ext == "jsonl")
+                && let Some(name) = file_path.file_name().and_then(|n| n.to_str())
+                && name.contains("session")
+            {
+                match import_session_file(&file_path) {
+                    Ok(session_count) => {
+                        count += session_count;
+                    }
+                    Err(e) => {
+                        debug!("Failed to import {}: {}", file_path.display(), e);
                     }
                 }
             }
@@ -182,10 +182,10 @@ fn import_session_file(path: &Path) -> Result<usize> {
         }
 
         // Try to parse as JSON and extract usage data
-        if let Ok(entry) = serde_json::from_str::<SessionEntry>(&line) {
-            if entry.usage.is_some() {
-                count += 1;
-            }
+        if let Ok(entry) = serde_json::from_str::<SessionEntry>(&line)
+            && entry.usage.is_some()
+        {
+            count += 1;
         }
     }
 

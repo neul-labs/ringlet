@@ -79,17 +79,12 @@ pub struct ProfileConfig {
 }
 
 /// Profile isolation strategy.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub enum ProfileStrategy {
     /// Full HOME directory isolation.
+    #[default]
     HomeWrapper,
-}
-
-impl Default for ProfileStrategy {
-    fn default() -> Self {
-        Self::HomeWrapper
-    }
 }
 
 /// Model configuration for an agent.

@@ -15,12 +15,7 @@ pub use state::AppState;
 use tauri::Manager;
 
 /// Launch the Tauri desktop GUI.
-pub fn launch_gui(
-    standalone: bool,
-    remote: Option<String>,
-    port: u16,
-    token: Option<String>,
-) {
+pub fn launch_gui(standalone: bool, remote: Option<String>, port: u16, token: Option<String>) {
     let mode = if standalone {
         ConnectionMode::Standalone
     } else if remote.is_some() {
@@ -93,14 +88,10 @@ pub fn launch_gui(
                     if conn.mode == ConnectionMode::Standalone {
                         // Try graceful shutdown
                         let token = auth_token.read().await;
-                        let shutdown_url =
-                            format!("{}/api/shutdown", conn.base_url());
+                        let shutdown_url = format!("{}/api/shutdown", conn.base_url());
                         let _ = http_client
                             .post(&shutdown_url)
-                            .header(
-                                "Authorization",
-                                format!("Bearer {}", *token),
-                            )
+                            .header("Authorization", format!("Bearer {}", *token))
                             .timeout(std::time::Duration::from_secs(2))
                             .send()
                             .await;

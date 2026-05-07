@@ -6,12 +6,16 @@
 //! - OpenCode: `~/.local/share/opencode/storage/message/**/*.json`
 //!
 //! When new entries are detected, broadcasts `UsageUpdated` events via WebSocket.
+//!
+//! Native agent files expose agent-local project/session hints, not Ringlet profile aliases.
+//! UsageUpdated events therefore only populate `profile` when Ringlet can attribute the usage
+//! to a real profile alias.
 
-use crate::daemon::agent_usage::{claude, codex, opencode, UsageEntry};
+use crate::daemon::agent_usage::{UsageEntry, claude, codex, opencode};
 use crate::daemon::events::EventBroadcaster;
 use anyhow::Result;
-use ringlet_core::{AgentType, Event};
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
+use ringlet_core::{AgentType, Event};
 use std::collections::{HashMap, HashSet};
 use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::path::PathBuf;
@@ -72,9 +76,21 @@ fn run_watcher(broadcaster: Arc<EventBroadcaster>) -> Result<()> {
 
     // Directories to watch
     let watch_dirs = [
-        (claude::get_data_dir().join("projects"), AgentType::Claude, true),   // JSONL
-        (codex::get_data_dir().join("sessions"), AgentType::Codex, true),     // JSONL
-        (opencode::get_data_dir().join("storage").join("message"), AgentType::OpenCode, false), // JSON
+        (
+            claude::get_data_dir().join("projects"),
+            AgentType::Claude,
+            true,
+        ), // JSONL
+        (
+            codex::get_data_dir().join("sessions"),
+            AgentType::Codex,
+            true,
+        ), // JSONL
+        (
+            opencode::get_data_dir().join("storage").join("message"),
+            AgentType::OpenCode,
+            false,
+        ), // JSON
     ];
 
     // Start watching directories that exist
@@ -103,8 +119,8 @@ fn run_watcher(broadcaster: Arc<EventBroadcaster>) -> Result<()> {
 
             if let Some(agent) = agent {
                 // Check if it's a relevant file type
-                let is_jsonl = path.extension().map_or(false, |ext| ext == "jsonl");
-                let is_json = path.extension().map_or(false, |ext| ext == "json");
+                let is_jsonl = path.extension().is_some_and(|ext| ext == "jsonl");
+                let is_json = path.extension().is_some_and(|ext| ext == "json");
 
                 if is_jsonl && matches!(agent, AgentType::Claude | AgentType::Codex) {
                     // Read new entries from JSONL file
@@ -127,7 +143,7 @@ fn run_watcher(broadcaster: Arc<EventBroadcaster>) -> Result<()> {
 
 /// Determine which agent a file path belongs to.
 fn determine_agent(
-    path: &PathBuf,
+    path: &std::path::Path,
     watch_dirs: &[(PathBuf, AgentType, bool)],
 ) -> Option<AgentType> {
     for (dir, agent, _) in watch_dirs {
@@ -241,7 +257,8 @@ fn parse_claude_line(line: &str, project_path: &str) -> Option<UsageEntry> {
     let usage = entry.message?.usage?;
     let message_id = entry.message_id?;
 
-    let timestamp = entry.timestamp
+    let timestamp = entry
+        .timestamp
         .and_then(|ts| DateTime::parse_from_rfc3339(&ts).ok())
         .map(|dt| dt.with_timezone(&Utc))
         .unwrap_or_else(Utc::now);
@@ -264,7 +281,11 @@ fn parse_claude_line(line: &str, project_path: &str) -> Option<UsageEntry> {
 }
 
 /// Parse a single Codex JSONL line.
-fn parse_codex_line(line: &str, session_path: &str, seen_ids: &mut HashSet<String>) -> Option<UsageEntry> {
+fn parse_codex_line(
+    line: &str,
+    session_path: &str,
+    seen_ids: &mut HashSet<String>,
+) -> Option<UsageEntry> {
     use chrono::{DateTime, Utc};
     use serde::Deserialize;
 
@@ -326,12 +347,14 @@ fn parse_codex_line(line: &str, session_path: &str, seen_ids: &mut HashSet<Strin
     let counter = seen_ids.len(); // Use seen count as counter
     let message_id = format!("codex_{}_{}", timestamp_str, counter);
 
-    let timestamp = entry.timestamp
+    let timestamp = entry
+        .timestamp
         .and_then(|ts| DateTime::parse_from_rfc3339(&ts).ok())
         .map(|dt| dt.with_timezone(&Utc))
         .unwrap_or_else(Utc::now);
 
-    let model = payload.model_name
+    let model = payload
+        .model_name
         .or_else(|| info.metadata.and_then(|m| m.model))
         .unwrap_or_else(|| "gpt-4o".to_string());
 
@@ -407,7 +430,8 @@ fn parse_new_json_entry(path: &PathBuf, state: &mut FilePositions) -> Result<Opt
         None => return Ok(None),
     };
 
-    let timestamp = entry.created_at
+    let timestamp = entry
+        .created_at
         .and_then(|ts| DateTime::parse_from_rfc3339(&ts).ok())
         .map(|dt| dt.with_timezone(&Utc))
         .unwrap_or_else(Utc::now);
@@ -430,15 +454,15 @@ fn parse_new_json_entry(path: &PathBuf, state: &mut FilePositions) -> Result<Opt
 }
 
 /// Extract project/session path from file path.
-fn extract_project_path(path: &PathBuf, agent: AgentType) -> String {
+fn extract_project_path(path: &std::path::Path, agent: AgentType) -> String {
     match agent {
         AgentType::Claude => {
             // Find "projects" in path and get next component
             for (i, component) in path.components().enumerate() {
-                if component.as_os_str() == "projects" {
-                    if let Some(next) = path.components().nth(i + 1) {
-                        return next.as_os_str().to_string_lossy().to_string();
-                    }
+                if component.as_os_str() == "projects"
+                    && let Some(next) = path.components().nth(i + 1)
+                {
+                    return next.as_os_str().to_string_lossy().to_string();
                 }
             }
             path.display().to_string()
@@ -446,10 +470,10 @@ fn extract_project_path(path: &PathBuf, agent: AgentType) -> String {
         AgentType::Codex => {
             // Find "sessions" in path and get next component
             for (i, component) in path.components().enumerate() {
-                if component.as_os_str() == "sessions" {
-                    if let Some(next) = path.components().nth(i + 1) {
-                        return next.as_os_str().to_string_lossy().to_string();
-                    }
+                if component.as_os_str() == "sessions"
+                    && let Some(next) = path.components().nth(i + 1)
+                {
+                    return next.as_os_str().to_string_lossy().to_string();
                 }
             }
             path.display().to_string()
@@ -466,11 +490,15 @@ fn extract_project_path(path: &PathBuf, agent: AgentType) -> String {
 /// Broadcast usage entries as events.
 fn broadcast_entries(broadcaster: &EventBroadcaster, entries: Vec<UsageEntry>) {
     for entry in entries {
-        debug!("Broadcasting usage update: {} {:?}", entry.agent, entry.tokens);
+        debug!(
+            "Broadcasting usage update: {} {:?}",
+            entry.agent, entry.tokens
+        );
 
         let event = Event::UsageUpdated {
             agent: entry.agent,
-            profile: Some(entry.project_path.clone()),
+            // Agent-local project/session IDs are not Ringlet profile aliases.
+            profile: None,
             tokens: entry.tokens.clone(),
             cost: entry.cost_usd.map(|c| ringlet_core::CostBreakdown {
                 input_cost: 0.0,

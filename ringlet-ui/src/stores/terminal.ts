@@ -16,12 +16,7 @@ export const useTerminalStore = defineStore('terminal', () => {
   const tauriConnections = new Map<string, TauriWsHandle>()
 
   const activeSessions = computed(() =>
-    sessions.value.filter(s => {
-      if (typeof s.state === 'string') {
-        return s.state !== 'terminated'
-      }
-      return false
-    })
+    sessions.value.filter(s => s.state === 'starting' || s.state === 'running')
   )
 
   async function fetchSessions() {

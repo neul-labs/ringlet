@@ -19,9 +19,9 @@ pub async fn api_request(
 
     let url = format!("{}/api{}", connection.base_url(), endpoint);
 
-    let http_method = method.parse::<Method>().map_err(|e| {
-        AppError::Http(format!("Invalid HTTP method '{}': {}", method, e))
-    })?;
+    let http_method = method
+        .parse::<Method>()
+        .map_err(|e| AppError::Http(format!("Invalid HTTP method '{}': {}", method, e)))?;
 
     let mut request = state.http_client.request(http_method, &url);
 

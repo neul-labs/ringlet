@@ -5,6 +5,8 @@
 //! - `ringlet daemon` — run daemon in-process
 //! - `ringlet gui` — launch Tauri desktop app (requires --features gui)
 
+#![allow(dead_code)]
+
 use mimalloc::MiMalloc;
 
 #[global_allocator]
@@ -58,8 +60,7 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
     /// Initialize ringlet with an interactive setup wizard
-    #[command(
-        after_long_help = r#"DESCRIPTION:
+    #[command(after_long_help = r#"DESCRIPTION:
     The init command guides you through setting up ringlet for first use:
 
     1. Checks daemon connectivity (starts daemon if needed)
@@ -72,8 +73,7 @@ EXAMPLES:
     ringlet init --skip-daemon  Skip daemon check
     ringlet init --no-profile   Skip profile creation
     ringlet init -y             Use defaults without prompting
-"#
-    )]
+"#)]
     Init {
         /// Skip daemon connectivity check
         #[arg(long)]
@@ -89,32 +89,27 @@ EXAMPLES:
     },
 
     /// Manage agents
-    #[command(
-        after_long_help = r#"EXAMPLES:
+    #[command(after_long_help = r#"EXAMPLES:
     ringlet agents list         List all agents and their installation status
     ringlet agents inspect claude   Show detailed info about an agent
-"#
-    )]
+"#)]
     Agents {
         #[command(subcommand)]
         command: AgentsCommands,
     },
 
     /// Manage providers
-    #[command(
-        after_long_help = r#"EXAMPLES:
+    #[command(after_long_help = r#"EXAMPLES:
     ringlet providers list          List all available API providers
     ringlet providers inspect anthropic   Show provider details and endpoints
-"#
-    )]
+"#)]
     Providers {
         #[command(subcommand)]
         command: ProvidersCommands,
     },
 
     /// Manage profiles
-    #[command(
-        after_long_help = r#"EXAMPLES:
+    #[command(after_long_help = r#"EXAMPLES:
     ringlet profiles create claude work-profile -p anthropic
         Create a profile using Claude with the Anthropic API
 
@@ -129,8 +124,7 @@ EXAMPLES:
 
     ringlet profiles env work-profile
         Export environment variables for manual shell use
-"#
-    )]
+"#)]
     Profiles {
         #[command(subcommand)]
         command: ProfilesCommands,
@@ -624,8 +618,8 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // Initialize logging
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(&cli.log_level));
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&cli.log_level));
 
     tracing_subscriber::fmt()
         .with_env_filter(filter)
@@ -682,8 +676,7 @@ async fn run_as_legacy_daemon() -> Result<()> {
     }
 
     // Initialize logging for daemon mode
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(&log_level));
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&log_level));
 
     tracing_subscriber::fmt()
         .with_env_filter(filter)

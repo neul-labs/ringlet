@@ -1,12 +1,17 @@
 //! Interactive onboarding wizard for ringlet.
 
 use crate::client::DaemonClient;
-use anyhow::{anyhow, Result};
-use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password, Select};
+use anyhow::{Result, anyhow};
+use dialoguer::{Confirm, Input, Password, Select, theme::ColorfulTheme};
 use ringlet_core::{AgentInfo, ProfileCreateRequest, ProviderInfo, Request, Response};
 
 /// Run the interactive init wizard.
-pub async fn run_init(skip_daemon: bool, no_profile: bool, auto_yes: bool, json: bool) -> Result<()> {
+pub async fn run_init(
+    skip_daemon: bool,
+    no_profile: bool,
+    auto_yes: bool,
+    json: bool,
+) -> Result<()> {
     let theme = ColorfulTheme::default();
 
     if !json {
@@ -125,7 +130,10 @@ pub async fn run_init(skip_daemon: bool, no_profile: bool, auto_yes: bool, json:
     }
 
     // Step 4: Optionally create first profile
-    if !no_profile && !installed.is_empty() && client.is_some() {
+    if !no_profile
+        && !installed.is_empty()
+        && let Some(client) = client.as_ref()
+    {
         let create_profile = if auto_yes {
             true
         } else if json {
@@ -138,8 +146,7 @@ pub async fn run_init(skip_daemon: bool, no_profile: bool, auto_yes: bool, json:
         };
 
         if create_profile {
-            create_first_profile(client.as_ref().unwrap(), &installed, &providers, &theme, json)
-                .await?;
+            create_first_profile(client, &installed, &providers, &theme, json).await?;
         }
     }
 
@@ -237,10 +244,7 @@ async fn create_first_profile(
         .collect();
 
     // Default to "self" provider if available, otherwise first
-    let default_provider_idx = providers
-        .iter()
-        .position(|p| p.id == "self")
-        .unwrap_or(0);
+    let default_provider_idx = providers.iter().position(|p| p.id == "self").unwrap_or(0);
 
     let provider_idx = Select::with_theme(theme)
         .with_prompt("Select a provider")

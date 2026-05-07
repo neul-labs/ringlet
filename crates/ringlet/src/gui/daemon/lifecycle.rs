@@ -2,7 +2,6 @@
 ///
 /// Most lifecycle management is handled directly in `commands/daemon.rs`.
 /// This module provides helper functions for daemon discovery and status checks.
-
 use std::path::PathBuf;
 
 /// Check if a daemon is currently running by reading the PID file.

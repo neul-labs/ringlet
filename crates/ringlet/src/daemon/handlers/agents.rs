@@ -1,7 +1,7 @@
 //! Agent-related request handlers.
 
 use crate::daemon::server::ServerState;
-use ringlet_core::{rpc::error_codes, Response};
+use ringlet_core::{Response, rpc::error_codes};
 use std::collections::HashMap;
 
 /// List all agents.
@@ -40,12 +40,11 @@ async fn get_profile_counts(state: &ServerState) -> HashMap<String, usize> {
     if let Ok(entries) = std::fs::read_dir(&profiles_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.extension().is_some_and(|e| e == "json") {
-                if let Ok(content) = std::fs::read_to_string(&path) {
-                    if let Ok(profile) = serde_json::from_str::<ringlet_core::Profile>(&content) {
-                        *counts.entry(profile.agent_id).or_insert(0) += 1;
-                    }
-                }
+            if path.extension().is_some_and(|e| e == "json")
+                && let Ok(content) = std::fs::read_to_string(&path)
+                && let Ok(profile) = serde_json::from_str::<ringlet_core::Profile>(&content)
+            {
+                *counts.entry(profile.agent_id).or_insert(0) += 1;
             }
         }
     }

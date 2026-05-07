@@ -1,8 +1,8 @@
 //! Alias-related request handlers.
 
 use crate::daemon::server::ServerState;
-use ringlet_core::rpc::error_codes;
 use ringlet_core::Response;
+use ringlet_core::rpc::error_codes;
 use std::path::PathBuf;
 use tracing::info;
 
@@ -10,8 +10,8 @@ use tracing::info;
 /// Returns the path to the installed shim on success, or an error message.
 pub fn install_alias_sync(alias: &str) -> Result<PathBuf, String> {
     // Determine target directory
-    let target_dir = default_bin_dir()
-        .ok_or_else(|| "Could not determine bin directory".to_string())?;
+    let target_dir =
+        default_bin_dir().ok_or_else(|| "Could not determine bin directory".to_string())?;
 
     // Ensure target directory exists
     std::fs::create_dir_all(&target_dir)
@@ -38,17 +38,12 @@ pub fn install_alias_sync(alias: &str) -> Result<PathBuf, String> {
 /// Uninstall an alias shim script (sync version for internal use).
 /// Returns the path that was removed, if found.
 pub fn uninstall_alias_sync(alias: &str) -> Option<PathBuf> {
-    let locations = vec![
-        default_bin_dir(),
-        Some(PathBuf::from("/usr/local/bin")),
-    ];
+    let locations = vec![default_bin_dir(), Some(PathBuf::from("/usr/local/bin"))];
 
     for loc in locations.into_iter().flatten() {
         let shim_path = loc.join(alias);
-        if shim_path.exists() {
-            if std::fs::remove_file(&shim_path).is_ok() {
-                return Some(shim_path);
-            }
+        if shim_path.exists() && std::fs::remove_file(&shim_path).is_ok() {
+            return Some(shim_path);
         }
     }
     None
@@ -57,7 +52,7 @@ pub fn uninstall_alias_sync(alias: &str) -> Option<PathBuf> {
 /// Install an alias shim script.
 pub async fn install(alias: &str, bin_dir: Option<&PathBuf>, state: &ServerState) -> Response {
     // Verify profile exists
-    match state.profile_manager.get(alias) {
+    match state.profile_store.get(alias) {
         Ok(Some(_)) => {}
         Ok(None) => {
             return Response::error(
@@ -76,7 +71,7 @@ pub async fn install(alias: &str, bin_dir: Option<&PathBuf>, state: &ServerState
     // Determine target directory
     let target_dir = bin_dir
         .cloned()
-        .or_else(|| default_bin_dir())
+        .or_else(default_bin_dir)
         .unwrap_or_else(|| PathBuf::from("."));
 
     // Ensure target directory exists
@@ -102,7 +97,8 @@ pub async fn install(alias: &str, bin_dir: Option<&PathBuf>, state: &ServerState
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        if let Err(e) = std::fs::set_permissions(&shim_path, std::fs::Permissions::from_mode(0o755)) {
+        if let Err(e) = std::fs::set_permissions(&shim_path, std::fs::Permissions::from_mode(0o755))
+        {
             return Response::error(
                 error_codes::INTERNAL_ERROR,
                 format!("Failed to set permissions: {}", e),
@@ -119,12 +115,9 @@ pub async fn install(alias: &str, bin_dir: Option<&PathBuf>, state: &ServerState
 }
 
 /// Uninstall an alias shim script.
-pub async fn uninstall(alias: &str, state: &ServerState) -> Response {
+pub async fn uninstall(alias: &str, _state: &ServerState) -> Response {
     // Try common locations
-    let locations = vec![
-        default_bin_dir(),
-        Some(PathBuf::from("/usr/local/bin")),
-    ];
+    let locations = vec![default_bin_dir(), Some(PathBuf::from("/usr/local/bin"))];
 
     let mut found = false;
     for loc in locations.into_iter().flatten() {

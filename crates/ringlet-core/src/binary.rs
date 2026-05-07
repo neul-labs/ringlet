@@ -120,13 +120,9 @@ impl BinaryPaths {
             candidates.push(home.join(".cargo/bin/ultrallm"));
         }
 
-        for candidate in candidates {
-            if candidate.exists() && candidate.is_file() {
-                return Some(candidate);
-            }
-        }
-
-        None
+        candidates
+            .into_iter()
+            .find(|candidate| candidate.exists() && candidate.is_file())
     }
 
     /// List installed ultrallm versions from cache.
@@ -139,11 +135,7 @@ impl BinaryPaths {
                 if name.starts_with("ultrallm-") {
                     // Extract version from filename
                     if let Some(rest) = name.strip_prefix("ultrallm-") {
-                        let version = rest
-                            .split('-')
-                            .next()
-                            .unwrap_or("unknown")
-                            .to_string();
+                        let version = rest.split('-').next().unwrap_or("unknown").to_string();
                         if !versions.contains(&version) {
                             versions.push(version);
                         }

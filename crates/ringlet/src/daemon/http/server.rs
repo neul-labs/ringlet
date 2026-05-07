@@ -1,12 +1,12 @@
 //! HTTP server setup using Axum.
 
-use crate::daemon::http::{assets, auth, routes, terminal_ws, websocket, AuthState};
+use crate::daemon::http::{AuthState, assets, auth, routes, terminal_ws, websocket};
 use crate::daemon::server::ServerState;
-use axum::{middleware, routing::get, Router};
+use axum::{Router, middleware, routing::get};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
+use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing::{error, info};
@@ -19,7 +19,9 @@ pub async fn run_http_server(
     shutdown_rx: tokio::sync::oneshot::Receiver<()>,
 ) {
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
-    let auth_state = AuthState { token: Arc::new(token) };
+    let auth_state = AuthState {
+        token: Arc::new(token),
+    };
 
     // Rate limiting configuration: 10 requests per second with burst of 50
     let governor_config = Arc::new(
@@ -36,9 +38,15 @@ pub async fn run_http_server(
         .nest("/api", routes::api_routes())
         // WebSocket endpoints
         .route("/ws", get(websocket::ws_handler))
-        .route("/ws/terminal/{session_id}", get(terminal_ws::terminal_ws_handler))
+        .route(
+            "/ws/terminal/{session_id}",
+            get(terminal_ws::terminal_ws_handler),
+        )
         .layer(GovernorLayer::new(governor_config))
-        .layer(middleware::from_fn_with_state(auth_state, auth::auth_middleware))
+        .layer(middleware::from_fn_with_state(
+            auth_state,
+            auth::auth_middleware,
+        ))
         .with_state(state.clone());
 
     // Public routes (static assets, SPA)

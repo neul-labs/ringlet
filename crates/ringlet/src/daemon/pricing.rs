@@ -6,7 +6,7 @@
 //! - Only applies to "self" provider profiles
 
 use anyhow::{Context, Result};
-use ringlet_core::{RingletPaths, CostBreakdown, LiteLLMModelPricing, TokenUsage};
+use ringlet_core::{CostBreakdown, LiteLLMModelPricing, RingletPaths, TokenUsage};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -78,8 +78,7 @@ impl PricingLoader {
 
         // Save to cache file
         let cache_path = self.paths.litellm_pricing_cache();
-        std::fs::write(&cache_path, &content)
-            .context("Failed to write pricing cache")?;
+        std::fs::write(&cache_path, &content).context("Failed to write pricing cache")?;
 
         debug!("LiteLLM pricing data saved to {:?}", cache_path);
 
@@ -101,8 +100,8 @@ impl PricingLoader {
             ));
         }
 
-        let content = std::fs::read_to_string(&cache_path)
-            .context("Failed to read pricing cache")?;
+        let content =
+            std::fs::read_to_string(&cache_path).context("Failed to read pricing cache")?;
 
         let raw: HashMap<String, RawLiteLLMPricing> =
             serde_json::from_str(&content).context("Failed to parse pricing cache")?;
@@ -113,10 +112,10 @@ impl PricingLoader {
     /// Ensure pricing data is loaded into memory.
     fn ensure_loaded(&self) -> Result<()> {
         // Check if already loaded
-        if let Ok(cache) = self.cache.read() {
-            if cache.is_some() {
-                return Ok(());
-            }
+        if let Ok(cache) = self.cache.read()
+            && cache.is_some()
+        {
+            return Ok(());
         }
 
         // Load from file
@@ -137,19 +136,19 @@ impl PricingLoader {
             return None;
         }
 
-        if let Ok(cache) = self.cache.read() {
-            if let Some(data) = cache.as_ref() {
-                // Try exact match first
-                if let Some(pricing) = data.get(model) {
-                    return Some(pricing.clone());
-                }
+        if let Ok(cache) = self.cache.read()
+            && let Some(data) = cache.as_ref()
+        {
+            // Try exact match first
+            if let Some(pricing) = data.get(model) {
+                return Some(pricing.clone());
+            }
 
-                // Try with common prefixes/variations
-                // e.g., "claude-3-5-sonnet-20241022" might be stored as "claude-3-5-sonnet"
-                for (key, pricing) in data.iter() {
-                    if model.starts_with(key) || key.starts_with(model) {
-                        return Some(pricing.clone());
-                    }
+            // Try with common prefixes/variations
+            // e.g., "claude-3-5-sonnet-20241022" might be stored as "claude-3-5-sonnet"
+            for (key, pricing) in data.iter() {
+                if model.starts_with(key) || key.starts_with(model) {
+                    return Some(pricing.clone());
                 }
             }
         }
@@ -184,7 +183,7 @@ impl PricingLoader {
 
     /// Get the number of models in the pricing cache.
     pub fn model_count(&self) -> usize {
-        if let Err(_) = self.ensure_loaded() {
+        if self.ensure_loaded().is_err() {
             return 0;
         }
 

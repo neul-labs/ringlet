@@ -176,10 +176,7 @@ impl ProviderManifest {
 
     /// Convert to runtime info.
     pub fn to_info(&self) -> ProviderInfo {
-        let default_endpoint = self
-            .default_endpoint()
-            .unwrap_or("default")
-            .to_string();
+        let default_endpoint = self.default_endpoint().unwrap_or("default").to_string();
 
         let endpoints = self
             .endpoints

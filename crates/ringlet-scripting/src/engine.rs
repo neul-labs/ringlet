@@ -1,8 +1,8 @@
 //! Rhai engine setup and execution.
 
 use crate::functions;
-use anyhow::{anyhow, Result};
-use rhai::{Dynamic, Engine, Map, Scope, AST};
+use anyhow::{Result, anyhow};
+use rhai::{AST, Dynamic, Engine, Map, Scope};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -28,7 +28,9 @@ pub struct ProfileContext {
     pub home: PathBuf,
     pub model: String,
     pub endpoint: String,
+    /// Legacy simple hook names retained for user override script compatibility.
     pub hooks: Vec<String>,
+    /// Legacy MCP server names retained for user override script compatibility.
     pub mcp_servers: Vec<String>,
     /// Full hooks configuration as JSON (for Claude Code hooks).
     pub hooks_config: Option<serde_json::Value>,
@@ -70,10 +72,6 @@ pub struct ScriptOutput {
     pub env: HashMap<String, String>,
     /// Additional command-line arguments to pass to the agent.
     pub args: Vec<String>,
-    /// Optional hooks configuration.
-    pub hooks: Option<serde_json::Value>,
-    /// Optional MCP servers configuration.
-    pub mcp_servers: Option<serde_json::Value>,
 }
 
 /// Rhai script engine.
@@ -224,84 +222,39 @@ fn dynamic_to_output(result: Dynamic) -> Result<ScriptOutput> {
         .ok_or_else(|| anyhow!("Script must return an object"))?;
 
     // Extract files
-    if let Some(files_dynamic) = map.get("files") {
-        if let Some(files_map) = files_dynamic.clone().try_cast::<Map>() {
-            for (key, value) in files_map {
-                if let Some(content) = value.clone().try_cast::<String>() {
-                    output.files.insert(key.to_string(), content);
-                }
+    if let Some(files_dynamic) = map.get("files")
+        && let Some(files_map) = files_dynamic.clone().try_cast::<Map>()
+    {
+        for (key, value) in files_map {
+            if let Some(content) = value.clone().try_cast::<String>() {
+                output.files.insert(key.to_string(), content);
             }
         }
     }
 
     // Extract env
-    if let Some(env_dynamic) = map.get("env") {
-        if let Some(env_map) = env_dynamic.clone().try_cast::<Map>() {
-            for (key, value) in env_map {
-                if let Some(val) = value.clone().try_cast::<String>() {
-                    output.env.insert(key.to_string(), val);
-                }
+    if let Some(env_dynamic) = map.get("env")
+        && let Some(env_map) = env_dynamic.clone().try_cast::<Map>()
+    {
+        for (key, value) in env_map {
+            if let Some(val) = value.clone().try_cast::<String>() {
+                output.env.insert(key.to_string(), val);
             }
         }
     }
 
     // Extract args
-    if let Some(args_dynamic) = map.get("args") {
-        if let Some(args_arr) = args_dynamic.clone().try_cast::<rhai::Array>() {
-            for arg in args_arr {
-                if let Some(arg_str) = arg.clone().try_cast::<String>() {
-                    output.args.push(arg_str);
-                }
+    if let Some(args_dynamic) = map.get("args")
+        && let Some(args_arr) = args_dynamic.clone().try_cast::<rhai::Array>()
+    {
+        for arg in args_arr {
+            if let Some(arg_str) = arg.clone().try_cast::<String>() {
+                output.args.push(arg_str);
             }
         }
     }
 
-    // Extract hooks (as JSON)
-    if let Some(hooks_dynamic) = map.get("hooks") {
-        output.hooks = Some(dynamic_to_json(hooks_dynamic.clone())?);
-    }
-
-    // Extract mcp_servers (as JSON)
-    if let Some(mcp_dynamic) = map.get("mcp_servers") {
-        output.mcp_servers = Some(dynamic_to_json(mcp_dynamic.clone())?);
-    }
-
     Ok(output)
-}
-
-/// Convert Rhai Dynamic to serde_json::Value.
-fn dynamic_to_json(value: Dynamic) -> Result<serde_json::Value> {
-    if value.is::<()>() {
-        Ok(serde_json::Value::Null)
-    } else if value.is::<bool>() {
-        Ok(serde_json::Value::Bool(value.cast::<bool>()))
-    } else if value.is::<i64>() {
-        Ok(serde_json::Value::Number(value.cast::<i64>().into()))
-    } else if value.is::<f64>() {
-        let f = value.cast::<f64>();
-        Ok(serde_json::Number::from_f64(f)
-            .map(serde_json::Value::Number)
-            .unwrap_or(serde_json::Value::Null))
-    } else if value.is::<String>() {
-        Ok(serde_json::Value::String(value.cast::<String>()))
-    } else if value.is::<rhai::Array>() {
-        let arr = value.cast::<rhai::Array>();
-        let mut json_arr = Vec::with_capacity(arr.len());
-        for item in arr {
-            json_arr.push(dynamic_to_json(item)?);
-        }
-        Ok(serde_json::Value::Array(json_arr))
-    } else if value.is::<Map>() {
-        let map = value.cast::<Map>();
-        let mut json_obj = serde_json::Map::new();
-        for (k, v) in map {
-            json_obj.insert(k.to_string(), dynamic_to_json(v)?);
-        }
-        Ok(serde_json::Value::Object(json_obj))
-    } else {
-        // Try to convert to string as fallback
-        Ok(serde_json::Value::String(value.to_string()))
-    }
 }
 
 /// Convert serde_json::Value to Rhai Dynamic.
@@ -382,7 +335,10 @@ mod tests {
 
         let output = engine.run(script, &context).unwrap();
 
-        assert_eq!(output.files.get("test.txt"), Some(&"Hello, myprofile".to_string()));
+        assert_eq!(
+            output.files.get("test.txt"),
+            Some(&"Hello, myprofile".to_string())
+        );
         assert_eq!(output.env.get("TEST_VAR"), Some(&"test_value".to_string()));
     }
 

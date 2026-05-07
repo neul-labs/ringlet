@@ -1,24 +1,30 @@
 //! IPC server using nng (nanomsg next generation).
 
 use crate::daemon::agent_registry::AgentRegistry;
+use crate::daemon::agent_usage::UsageSnapshot;
 use crate::daemon::events::EventBroadcaster;
 use crate::daemon::execution::ExecutionAdapter;
 use crate::daemon::handlers;
 use crate::daemon::profile_manager::ProfileManager;
+use crate::daemon::profile_store::ProfileStore;
 use crate::daemon::provider_registry::ProviderRegistry;
 use crate::daemon::proxy_manager::ProxyManager;
 use crate::daemon::registry_client::RegistryClient;
+use crate::daemon::secret_store::SecretStore;
 use crate::daemon::telemetry::TelemetryCollector;
 use crate::daemon::terminal::TerminalSessionManager;
 use crate::daemon::usage_watcher::UsageWatcher;
+use crate::daemon::workspace_service::WorkspaceService;
 use anyhow::{Context, Result};
-use ringlet_core::{RingletPaths, Event, Request, Response};
 use nng::options::Options;
 use nng::{Protocol, Socket};
+use ringlet_core::{Event, Request, Response, RingletPaths};
+use std::collections::HashMap;
 use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::{oneshot, Mutex};
+use tokio::sync::{Mutex, oneshot};
 use tracing::{debug, error, info, warn};
 
 /// Server state shared across request handlers.
@@ -27,28 +33,47 @@ pub struct ServerState {
     pub last_activity: Mutex<Instant>,
     pub agent_registry: Mutex<AgentRegistry>,
     pub provider_registry: ProviderRegistry,
+    pub profile_store: ProfileStore,
+    pub secret_store: SecretStore,
     pub profile_manager: ProfileManager,
     pub execution_adapter: ExecutionAdapter,
     pub registry_client: RegistryClient,
     pub telemetry: TelemetryCollector,
     pub proxy_manager: ProxyManager,
+    pub workspace_service: WorkspaceService,
     /// Terminal session manager for remote terminal access.
     pub terminal_sessions: TerminalSessionManager,
     /// Shutdown signal sender (for HTTP API to request shutdown).
     pub shutdown_tx: Mutex<Option<oneshot::Sender<()>>>,
     /// Event broadcaster for WebSocket clients.
     pub events: EventBroadcaster,
+    /// Pending CLI-attached profile runs prepared by the daemon.
+    pub pending_prepared_runs: Mutex<HashMap<String, PendingPreparedRun>>,
+}
+
+/// Telemetry context held between `ProfilesPrepare` and CLI completion.
+pub struct PendingPreparedRun {
+    pub session_id: String,
+    pub profile: String,
+    pub agent_id: String,
+    pub provider_id: String,
+    pub model: String,
+    pub profile_home: PathBuf,
+    pub usage_baseline: Option<UsageSnapshot>,
 }
 
 impl ServerState {
     pub fn new(paths: RingletPaths, shutdown_tx: oneshot::Sender<()>) -> Result<Self> {
         let agent_registry = AgentRegistry::new(&paths)?;
         let provider_registry = ProviderRegistry::new(&paths)?;
+        let profile_store = ProfileStore::new(paths.clone());
+        let secret_store = SecretStore::new();
         let profile_manager = ProfileManager::new(paths.clone());
         let execution_adapter = ExecutionAdapter::new(paths.clone());
         let registry_client = RegistryClient::new(paths.clone());
         let telemetry = TelemetryCollector::new(paths.clone());
         let proxy_manager = ProxyManager::new(paths.clone());
+        let workspace_service = WorkspaceService::new();
         let terminal_sessions = TerminalSessionManager::new();
         let events = EventBroadcaster::default();
 
@@ -63,14 +88,18 @@ impl ServerState {
             last_activity: Mutex::new(Instant::now()),
             agent_registry: Mutex::new(agent_registry),
             provider_registry,
+            profile_store,
+            secret_store,
             profile_manager,
             execution_adapter,
             registry_client,
             telemetry,
             proxy_manager,
+            workspace_service,
             terminal_sessions,
             shutdown_tx: Mutex::new(Some(shutdown_tx)),
             events,
+            pending_prepared_runs: Mutex::new(HashMap::new()),
         })
     }
 
@@ -92,23 +121,22 @@ impl ServerState {
 pub async fn run(
     socket_path: &Path,
     idle_timeout: Option<Duration>,
-    paths: &RingletPaths,
+    _paths: &RingletPaths,
     state: Arc<ServerState>,
     mut shutdown_rx: oneshot::Receiver<()>,
 ) -> Result<()> {
     // Remove stale socket file if it exists
     if socket_path.exists() {
-        std::fs::remove_file(socket_path)
-            .context("Failed to remove stale socket file")?;
+        std::fs::remove_file(socket_path).context("Failed to remove stale socket file")?;
     }
 
     // Create rep (reply) socket
-    let socket = Socket::new(Protocol::Rep0)
-        .context("Failed to create nng socket")?;
+    let socket = Socket::new(Protocol::Rep0).context("Failed to create nng socket")?;
 
     // Build IPC URL
     let url = format!("ipc://{}", socket_path.display());
-    socket.listen(&url)
+    socket
+        .listen(&url)
         .context(format!("Failed to listen on {}", url))?;
 
     info!("IPC server listening on {}", url);
@@ -208,6 +236,8 @@ fn recv_with_timeout(socket: &Socket, timeout: Duration) -> Result<Option<nng::M
 fn send_response(socket: &Socket, response: &Response) -> Result<()> {
     let json = serde_json::to_vec(response)?;
     let msg = nng::Message::from(&json[..]);
-    socket.send(msg).map_err(|(_, e)| anyhow::anyhow!("Send failed: {}", e))?;
+    socket
+        .send(msg)
+        .map_err(|(_, e)| anyhow::anyhow!("Send failed: {}", e))?;
     Ok(())
 }

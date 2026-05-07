@@ -4,23 +4,18 @@ use crate::daemon::handlers;
 use crate::daemon::http::error::{ApiResponse, HttpError};
 use crate::daemon::server::ServerState;
 use axum::{
-    extract::{Path, Query, State},
     Json,
+    extract::{Path, Query, State},
 };
+use ringlet_core::http_api::{ListProfilesQuery, RunRequest, RunResponse};
 use ringlet_core::{ProfileCreateRequest, ProfileInfo, Response};
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
-
-#[derive(Debug, Deserialize)]
-pub struct ListQuery {
-    pub agent: Option<String>,
-}
 
 /// GET /api/profiles - List all profiles.
 pub async fn list(
     State(state): State<Arc<ServerState>>,
-    Query(query): Query<ListQuery>,
+    Query(query): Query<ListProfilesQuery>,
 ) -> Result<Json<ApiResponse<Vec<ProfileInfo>>>, HttpError> {
     let response = handlers::profiles::list(query.agent.as_deref(), &state).await;
 
@@ -73,12 +68,6 @@ pub async fn delete(
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct RunRequest {
-    #[serde(default)]
-    pub args: Vec<String>,
-}
-
 /// POST /api/profiles/:alias/run - Run a profile.
 pub async fn run(
     State(state): State<Arc<ServerState>>,
@@ -88,20 +77,17 @@ pub async fn run(
     let response = handlers::profiles::run(&alias, &request.args, &state).await;
 
     match response {
-        Response::RunStarted { pid } => Ok(Json(ApiResponse::success(RunResponse::Started { pid }))),
+        Response::RunStarted { pid } => {
+            Ok(Json(ApiResponse::success(RunResponse::Started { pid })))
+        }
         Response::RunCompleted { exit_code } => {
-            Ok(Json(ApiResponse::success(RunResponse::Completed { exit_code })))
+            Ok(Json(ApiResponse::success(RunResponse::Completed {
+                exit_code,
+            })))
         }
         Response::Error { code, message } => Err(HttpError::new(code, message)),
         _ => Err(HttpError::internal("Unexpected response type")),
     }
-}
-
-#[derive(Debug, serde::Serialize)]
-#[serde(tag = "status", rename_all = "snake_case")]
-pub enum RunResponse {
-    Started { pid: u32 },
-    Completed { exit_code: i32 },
 }
 
 /// GET /api/profiles/:alias/env - Get profile environment variables.

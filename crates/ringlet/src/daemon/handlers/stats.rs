@@ -1,9 +1,9 @@
 //! Stats-related request handlers.
 
 use crate::daemon::server::ServerState;
-use ringlet_core::rpc::{error_codes, AgentStats, ProfileStats, ProviderStats, StatsResponse};
 use ringlet_core::Response;
-use std::collections::HashMap;
+use ringlet_core::rpc::{AgentStats, ProfileStats, ProviderStats, StatsResponse, error_codes};
+use std::collections::{HashMap, HashSet};
 
 /// Get usage statistics.
 pub async fn get_stats(
@@ -11,22 +11,38 @@ pub async fn get_stats(
     provider_id: Option<&str>,
     state: &ServerState,
 ) -> Response {
-    match state
-        .telemetry
-        .get_stats(agent_id, provider_id)
-    {
-        Ok(aggregates) => {
-            // Convert to response types
+    match state.telemetry.load_all_sessions() {
+        Ok(sessions) => {
+            let filtered_sessions: Vec<_> = sessions
+                .into_iter()
+                .filter(|session| {
+                    agent_id.is_none_or(|aid| session.agent_id == aid)
+                        && provider_id.is_none_or(|pid| session.provider_id == pid)
+                })
+                .collect();
+            let aggregates = crate::daemon::telemetry::TelemetryCollector::aggregate_sessions(
+                &filtered_sessions,
+            );
+
+            let mut agent_profiles: HashMap<String, HashSet<String>> = HashMap::new();
+            for session in &filtered_sessions {
+                agent_profiles
+                    .entry(session.agent_id.clone())
+                    .or_default()
+                    .insert(session.profile.clone());
+            }
+
             let by_agent: HashMap<String, AgentStats> = aggregates
                 .by_agent
                 .into_iter()
                 .map(|(k, v)| {
+                    let profiles = agent_profiles.get(&k).map_or(0, HashSet::len);
                     (
                         k,
                         AgentStats {
                             sessions: v.sessions,
                             runtime_secs: v.runtime_secs,
-                            profiles: 0, // TODO: count profiles
+                            profiles,
                         },
                     )
                 })

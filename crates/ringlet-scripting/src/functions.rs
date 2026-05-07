@@ -95,7 +95,9 @@ fn dynamic_to_json(value: &Dynamic) -> Result<serde_json::Value, Box<EvalAltResu
     } else if value.is::<bool>() {
         Ok(serde_json::Value::Bool(value.clone().cast::<bool>()))
     } else if value.is::<i64>() {
-        Ok(serde_json::Value::Number(value.clone().cast::<i64>().into()))
+        Ok(serde_json::Value::Number(
+            value.clone().cast::<i64>().into(),
+        ))
     } else if value.is::<f64>() {
         let f = value.clone().cast::<f64>();
         Ok(serde_json::Number::from_f64(f)

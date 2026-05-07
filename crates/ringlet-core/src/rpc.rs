@@ -16,32 +16,69 @@ use std::path::PathBuf;
 pub enum Request {
     // Agent commands
     AgentsList,
-    AgentsInspect { id: String },
+    AgentsInspect {
+        id: String,
+    },
 
     // Provider commands
     ProvidersList,
-    ProvidersInspect { id: String },
+    ProvidersInspect {
+        id: String,
+    },
 
     // Profile commands
     ProfilesCreate(ProfileCreateRequest),
-    ProfilesList { agent_id: Option<String> },
-    ProfilesInspect { alias: String },
-    ProfilesRun { alias: String, args: Vec<String> },
-    ProfilesPrepare { alias: String, args: Vec<String> },
-    ProfilesDelete { alias: String },
-    ProfilesEnv { alias: String },
+    ProfilesList {
+        agent_id: Option<String>,
+    },
+    ProfilesInspect {
+        alias: String,
+    },
+    ProfilesRun {
+        alias: String,
+        args: Vec<String>,
+    },
+    ProfilesPrepare {
+        alias: String,
+        args: Vec<String>,
+    },
+    ProfilesComplete {
+        run_id: String,
+        started_at: chrono::DateTime<chrono::Utc>,
+        ended_at: chrono::DateTime<chrono::Utc>,
+        exit_code: i32,
+    },
+    ProfilesDelete {
+        alias: String,
+    },
+    ProfilesEnv {
+        alias: String,
+    },
 
     // Alias commands
-    AliasesInstall { alias: String, bin_dir: Option<PathBuf> },
-    AliasesUninstall { alias: String },
+    AliasesInstall {
+        alias: String,
+        bin_dir: Option<PathBuf>,
+    },
+    AliasesUninstall {
+        alias: String,
+    },
 
     // Registry commands
-    RegistrySync { force: bool, offline: bool },
-    RegistryPin { ref_: String },
+    RegistrySync {
+        force: bool,
+        offline: bool,
+    },
+    RegistryPin {
+        ref_: String,
+    },
     RegistryInspect,
 
     // Stats commands
-    Stats { agent_id: Option<String>, provider_id: Option<String> },
+    Stats {
+        agent_id: Option<String>,
+        provider_id: Option<String>,
+    },
 
     // Usage commands
     Usage {
@@ -54,7 +91,10 @@ pub enum Request {
     },
 
     // Env setup commands
-    EnvSetup { alias: String, task: String },
+    EnvSetup {
+        alias: String,
+        task: String,
+    },
 
     // Hooks commands
     HooksAdd {
@@ -63,31 +103,72 @@ pub enum Request {
         matcher: String,
         command: String,
     },
-    HooksList { alias: String },
+    HooksList {
+        alias: String,
+    },
     HooksRemove {
         alias: String,
         event: String,
         index: usize,
     },
-    HooksImport { alias: String, config: HooksConfig },
-    HooksExport { alias: String },
+    HooksImport {
+        alias: String,
+        config: HooksConfig,
+    },
+    HooksExport {
+        alias: String,
+    },
 
     // Proxy commands
-    ProxyEnable { alias: String },
-    ProxyDisable { alias: String },
-    ProxyStart { alias: String },
-    ProxyStop { alias: String },
+    ProxyEnable {
+        alias: String,
+    },
+    ProxyDisable {
+        alias: String,
+    },
+    ProxyStart {
+        alias: String,
+    },
+    ProxyStop {
+        alias: String,
+    },
     ProxyStopAll,
-    ProxyRestart { alias: String },
-    ProxyStatus { alias: Option<String> },
-    ProxyRouteAdd { alias: String, rule: RoutingRule },
-    ProxyRouteRemove { alias: String, rule_name: String },
-    ProxyRouteList { alias: String },
-    ProxyAliasSet { alias: String, from_model: String, to_target: String },
-    ProxyAliasRemove { alias: String, from_model: String },
-    ProxyAliasList { alias: String },
-    ProxyConfig { alias: String },
-    ProxyLogs { alias: String, lines: Option<usize> },
+    ProxyRestart {
+        alias: String,
+    },
+    ProxyStatus {
+        alias: Option<String>,
+    },
+    ProxyRouteAdd {
+        alias: String,
+        rule: RoutingRule,
+    },
+    ProxyRouteRemove {
+        alias: String,
+        rule_name: String,
+    },
+    ProxyRouteList {
+        alias: String,
+    },
+    ProxyAliasSet {
+        alias: String,
+        from_model: String,
+        to_target: String,
+    },
+    ProxyAliasRemove {
+        alias: String,
+        from_model: String,
+    },
+    ProxyAliasList {
+        alias: String,
+    },
+    ProxyConfig {
+        alias: String,
+    },
+    ProxyLogs {
+        alias: String,
+        lines: Option<usize>,
+    },
 
     // Daemon commands
     Ping,
@@ -147,7 +228,7 @@ pub enum Response {
     Stats(StatsResponse),
 
     /// Token/cost usage statistics.
-    Usage(UsageStatsResponse),
+    Usage(Box<UsageStatsResponse>),
 
     /// Generic success message.
     Success { message: String },
@@ -182,6 +263,10 @@ pub struct ExecutionContext {
 
     /// Profile alias (for telemetry).
     pub alias: String,
+
+    /// Daemon-owned run identifier for CLI-attached profile execution.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub run_id: Option<String>,
 }
 
 /// Registry sync status.

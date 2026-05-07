@@ -1,10 +1,10 @@
 //! Proxy manager - spawns and manages ultrallm proxy processes per profile.
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use chrono::Utc;
 use ringlet_core::{
-    BinaryPaths, RingletPaths, ProfileProxyConfig, ProxyInstanceInfo, ProxyStatus,
-    RoutingStrategy, TokenUsage,
+    BinaryPaths, ProfileProxyConfig, ProxyInstanceInfo, ProxyStatus, RingletPaths, RoutingStrategy,
+    TokenUsage,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -111,12 +111,14 @@ impl PortAllocator {
         }
 
         // Try preferred port
-        if let Some(port) = preferred {
-            if port >= self.base_port && port <= self.max_port && !self.allocated.contains(&port) {
-                self.allocated.insert(port);
-                self.assignments.insert(alias.to_string(), port);
-                return Ok(port);
-            }
+        if let Some(port) = preferred
+            && port >= self.base_port
+            && port <= self.max_port
+            && !self.allocated.contains(&port)
+        {
+            self.allocated.insert(port);
+            self.assignments.insert(alias.to_string(), port);
+            return Ok(port);
         }
 
         // Find next available port
@@ -128,7 +130,11 @@ impl PortAllocator {
             }
         }
 
-        Err(anyhow!("No available ports in range {}-{}", self.base_port, self.max_port))
+        Err(anyhow!(
+            "No available ports in range {}-{}",
+            self.base_port,
+            self.max_port
+        ))
     }
 
     /// Release a port.
@@ -173,19 +179,21 @@ impl ProxyManager {
     pub async fn start(
         &self,
         alias: &str,
-        profile_home: &PathBuf,
+        profile_home: &std::path::Path,
         config: &ProfileProxyConfig,
     ) -> Result<u16> {
-        let binary_path = self.binary_path.as_ref()
+        let binary_path = self
+            .binary_path
+            .as_ref()
             .ok_or_else(|| anyhow!("ultrallm binary not available"))?;
 
         // Check if already running
         {
             let instances = self.instances.read().await;
-            if let Some(instance) = instances.get(alias) {
-                if matches!(instance.status, ProxyStatus::Running) {
-                    return Ok(instance.port);
-                }
+            if let Some(instance) = instances.get(alias)
+                && matches!(instance.status, ProxyStatus::Running)
+            {
+                return Ok(instance.port);
             }
         }
 
@@ -197,12 +205,10 @@ impl ProxyManager {
 
         // Create .ultrallm directory in profile home
         let ultrallm_dir = profile_home.join(".ultrallm");
-        std::fs::create_dir_all(&ultrallm_dir)
-            .context("Failed to create .ultrallm directory")?;
+        std::fs::create_dir_all(&ultrallm_dir).context("Failed to create .ultrallm directory")?;
 
         let logs_dir = ultrallm_dir.join("logs");
-        std::fs::create_dir_all(&logs_dir)
-            .context("Failed to create logs directory")?;
+        std::fs::create_dir_all(&logs_dir).context("Failed to create logs directory")?;
 
         // Generate config file
         let config_path = ultrallm_dir.join("config.yaml");
@@ -210,8 +216,7 @@ impl ProxyManager {
 
         // Open log file
         let log_path = logs_dir.join("proxy.log");
-        let log_file = File::create(&log_path)
-            .context("Failed to create log file")?;
+        let log_file = File::create(&log_path).context("Failed to create log file")?;
 
         // Spawn ultrallm process
         info!("Starting proxy for profile '{}' on port {}", alias, port);
@@ -238,7 +243,10 @@ impl ProxyManager {
             restart_count: 0,
         };
 
-        self.instances.write().await.insert(alias.to_string(), instance);
+        self.instances
+            .write()
+            .await
+            .insert(alias.to_string(), instance);
 
         // Wait a moment for the proxy to start
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
@@ -321,7 +329,8 @@ impl ProxyManager {
     /// Get status of all proxies.
     pub async fn status(&self) -> Vec<ProxyInstanceInfo> {
         let instances = self.instances.read().await;
-        instances.values()
+        instances
+            .values()
             .map(|i| ProxyInstanceInfo {
                 alias: i.alias.clone(),
                 port: i.port,
@@ -360,13 +369,10 @@ impl ProxyManager {
 
     /// Check if a proxy is healthy.
     async fn check_health(&self, port: u16) -> bool {
-        let url = format!("http://127.0.0.1:{}/health", port);
-
         // Use a simple TCP connection check since we don't have reqwest
-        match tokio::net::TcpStream::connect(format!("127.0.0.1:{}", port)).await {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+        tokio::net::TcpStream::connect(format!("127.0.0.1:{}", port))
+            .await
+            .is_ok()
     }
 
     /// Generate ultrallm config from ProfileProxyConfig.
@@ -379,11 +385,14 @@ impl ProxyManager {
         let mut yaml = String::new();
 
         // Server section
-        yaml.push_str(&format!(r#"server:
+        yaml.push_str(&format!(
+            r#"server:
   host: "127.0.0.1"
   port: {}
 
-"#, port));
+"#,
+            port
+        ));
 
         // Model list - generate from routing rules
         yaml.push_str("model_list:\n");
@@ -395,47 +404,58 @@ impl ProxyManager {
         }
 
         // Add model aliases
-        for (_, target) in &config.model_aliases {
+        for target in config.model_aliases.values() {
             targets.insert(target.to_string_format());
         }
 
         // Generate model entries
         for target in &targets {
             if let Some((provider, model)) = target.split_once('/') {
-                yaml.push_str(&format!(r#"  - model_name: "{}"
+                yaml.push_str(&format!(
+                    r#"  - model_name: "{}"
     litellm_params:
       model: "{}/{}"
       api_key: "${{{{ {}_API_KEY }}}}"
-"#, target, provider, model, provider.to_uppercase()));
+"#,
+                    target,
+                    provider,
+                    model,
+                    provider.to_uppercase()
+                ));
             }
         }
 
         // Router settings
-        yaml.push_str(&format!(r#"
+        yaml.push_str(&format!(
+            r#"
 router_settings:
   routing_strategy: "{}"
-"#, match config.routing.strategy {
-            RoutingStrategy::Simple => "simple",
-            RoutingStrategy::Weighted => "weighted",
-            RoutingStrategy::LowestCost => "lowest-cost",
-            RoutingStrategy::Adaptive => "adaptive",
-            RoutingStrategy::Conditional => "conditional",
-        }));
+"#,
+            match config.routing.strategy {
+                RoutingStrategy::Simple => "simple",
+                RoutingStrategy::Weighted => "weighted",
+                RoutingStrategy::LowestCost => "lowest-cost",
+                RoutingStrategy::Adaptive => "adaptive",
+                RoutingStrategy::Conditional => "conditional",
+            }
+        ));
 
         // Add rules if conditional routing
         if !config.routing.rules.is_empty() {
             yaml.push_str("  rules:\n");
             for rule in &config.routing.rules {
-                yaml.push_str(&format!(r#"    - name: "{}"
+                yaml.push_str(&format!(
+                    r#"    - name: "{}"
       model: "{}"
       priority: {}
-"#, rule.name, rule.target, rule.priority));
+"#,
+                    rule.name, rule.target, rule.priority
+                ));
             }
         }
 
         // Write config file
-        let mut file = File::create(path)
-            .context("Failed to create config file")?;
+        let mut file = File::create(path).context("Failed to create config file")?;
         file.write_all(yaml.as_bytes())
             .context("Failed to write config file")?;
 
@@ -446,15 +466,20 @@ router_settings:
     /// Read proxy logs for a profile.
     pub async fn read_logs(&self, alias: &str, lines: Option<usize>) -> Result<String> {
         let instances = self.instances.read().await;
-        let instance = instances.get(alias)
+        let instance = instances
+            .get(alias)
             .ok_or_else(|| anyhow!("Proxy not found for profile '{}'", alias))?;
 
-        let content = std::fs::read_to_string(&instance.log_path)
-            .context("Failed to read log file")?;
+        let content =
+            std::fs::read_to_string(&instance.log_path).context("Failed to read log file")?;
 
         if let Some(n) = lines {
             let all_lines: Vec<&str> = content.lines().collect();
-            let start = if all_lines.len() > n { all_lines.len() - n } else { 0 };
+            let start = if all_lines.len() > n {
+                all_lines.len() - n
+            } else {
+                0
+            };
             Ok(all_lines[start..].join("\n"))
         } else {
             Ok(content)
@@ -466,7 +491,8 @@ router_settings:
     /// Queries the proxy's `/spend/analytics` endpoint for usage data.
     pub async fn get_proxy_usage(&self, alias: &str) -> Result<ProxyUsageStats> {
         let instances = self.instances.read().await;
-        let instance = instances.get(alias)
+        let instance = instances
+            .get(alias)
             .ok_or_else(|| anyhow!("Proxy not found for profile '{}'", alias))?;
 
         if !matches!(instance.status, ProxyStatus::Running) {
@@ -489,7 +515,8 @@ router_settings:
 
             // Parse the response - ultrallm may return different formats
             // Try to parse as our expected format, or transform from ultrallm format
-            let body = response.into_string()
+            let body = response
+                .into_string()
                 .context("Failed to read proxy response")?;
 
             // Try parsing as our ProxyUsageStats format first
@@ -505,7 +532,9 @@ router_settings:
             // Return empty stats if we can't parse
             warn!("Could not parse proxy analytics response: {}", body);
             Ok(ProxyUsageStats::default())
-        }).await.context("Task join error")??;
+        })
+        .await
+        .context("Task join error")??;
 
         Ok(stats)
     }
@@ -516,7 +545,8 @@ router_settings:
     pub async fn get_all_proxy_usage(&self) -> HashMap<String, ProxyUsageStats> {
         let aliases: Vec<(String, u16)> = {
             let instances = self.instances.read().await;
-            instances.values()
+            instances
+                .values()
                 .filter(|i| matches!(i.status, ProxyStatus::Running))
                 .map(|i| (i.alias.clone(), i.port))
                 .collect()
@@ -576,16 +606,19 @@ impl From<UltrallmSpendAnalytics> for ProxyUsageStats {
 
         if let Some(models) = ultrallm.by_model {
             for (model, stats) in models {
-                by_model.insert(model, ProxyModelStats {
-                    requests: stats.requests.unwrap_or(0),
-                    tokens: TokenUsage {
-                        input_tokens: stats.input_tokens.unwrap_or(0),
-                        output_tokens: stats.output_tokens.unwrap_or(0),
-                        cache_creation_input_tokens: 0,
-                        cache_read_input_tokens: 0,
+                by_model.insert(
+                    model,
+                    ProxyModelStats {
+                        requests: stats.requests.unwrap_or(0),
+                        tokens: TokenUsage {
+                            input_tokens: stats.input_tokens.unwrap_or(0),
+                            output_tokens: stats.output_tokens.unwrap_or(0),
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
+                        cost_usd: stats.spend.unwrap_or(0.0),
                     },
-                    cost_usd: stats.spend.unwrap_or(0.0),
-                });
+                );
             }
         }
 

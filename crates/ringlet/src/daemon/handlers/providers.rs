@@ -1,7 +1,7 @@
 //! Provider-related request handlers.
 
 use crate::daemon::server::ServerState;
-use ringlet_core::{rpc::error_codes, Response};
+use ringlet_core::{Response, rpc::error_codes};
 
 /// List all providers.
 pub async fn list(state: &ServerState) -> Response {

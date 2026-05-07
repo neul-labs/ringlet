@@ -33,7 +33,5 @@ wire_api = "chat"
         ".codex/config.toml": config
     },
     env: env,
-    args: [],
-    hooks: (),
-    mcp_servers: ()
+    args: []
 }

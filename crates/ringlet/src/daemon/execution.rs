@@ -1,25 +1,26 @@
-//! Execution adapter - runs agents with profile configuration.
+//! Execution services for profile runs.
 //!
-//! This module handles:
-//! - Running Rhai scripts to generate config files
-//! - Setting up profile HOME directory
-//! - Writing generated config files
-//! - Spawning agent processes with correct environment
-//! - Tracking processes for telemetry
+//! `ExecutionAdapter` remains the handler-facing entrypoint, but the work is
+//! split between a planner that renders config/env and a launcher that spawns
+//! the final process from a prepared execution context.
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use ringlet_core::rpc::ExecutionContext;
-use ringlet_core::{AgentManifest, RingletPaths, Profile, ProviderManifest};
-use ringlet_scripting::{scripts, AgentContext, PrefsContext, ProfileContext, ProviderContext, ScriptContext, ScriptEngine, ScriptOutput};
+use ringlet_core::{AgentManifest, Profile, ProviderManifest, RingletPaths};
+use ringlet_scripting::{
+    AgentContext, PrefsContext, ProfileContext, ProviderContext, ScriptContext, ScriptEngine,
+    ScriptOutput, scripts,
+};
 use std::collections::HashMap;
 use std::process::{Child, Command, Stdio};
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 use crate::daemon::registry_client::RegistryLock;
 
 /// Execution adapter for running agent profiles.
 pub struct ExecutionAdapter {
-    paths: RingletPaths,
+    planner: ExecutionPlanner,
+    launcher: ProcessLauncher,
 }
 
 /// Result of running a profile.
@@ -30,36 +31,31 @@ pub struct RunResult {
     pub child: Child,
 }
 
+/// Builds an execution context from profile, agent, and provider inputs.
+struct ExecutionPlanner {
+    renderer: ConfigRenderer,
+}
+
+/// Renders script-driven config files and environment variables.
+struct ConfigRenderer {
+    paths: RingletPaths,
+}
+
+/// Launches processes from prepared execution contexts.
+struct ProcessLauncher;
+
+struct RenderedExecution {
+    env: HashMap<String, String>,
+    script_output: ScriptOutput,
+}
+
 impl ExecutionAdapter {
     /// Create a new execution adapter.
     pub fn new(paths: RingletPaths) -> Self {
-        Self { paths }
-    }
-
-    /// Prepare and run a profile.
-    pub fn run(
-        &self,
-        profile: &Profile,
-        agent: &AgentManifest,
-        provider: &ProviderManifest,
-        api_key: &str,
-        args: &[String],
-        proxy_url: Option<&str>,
-    ) -> Result<RunResult> {
-        // 1. Build script context
-        let context = build_script_context(profile, agent, provider, proxy_url)?;
-
-        // 2. Find and run the Rhai script
-        let script_output = self.run_script(&agent.profile.script, &context)?;
-
-        // 3. Write generated config files (with API key placeholder replacement)
-        self.write_config_files(profile, &script_output, api_key)?;
-
-        // 4. Build environment variables
-        let env = self.build_environment(profile, provider, api_key, &script_output)?;
-
-        // 5. Spawn the agent process
-        self.spawn_agent(agent, profile, &env, &script_output.args, args)
+        Self {
+            planner: ExecutionPlanner::new(paths),
+            launcher: ProcessLauncher,
+        }
     }
 
     /// Prepare execution context for CLI-side spawning.
@@ -73,32 +69,48 @@ impl ExecutionAdapter {
         args: &[String],
         proxy_url: Option<&str>,
     ) -> Result<ExecutionContext> {
-        // 1. Build script context
-        let context = build_script_context(profile, agent, provider, proxy_url)?;
+        self.planner
+            .prepare(profile, agent, provider, api_key, args, proxy_url)
+    }
 
-        // 2. Find and run the Rhai script
-        let script_output = self.run_script(&agent.profile.script, &context)?;
+    /// Spawn a process from a prepared execution context.
+    pub fn spawn_prepared(&self, context: &ExecutionContext) -> Result<RunResult> {
+        self.launcher.spawn_prepared(context)
+    }
+}
 
-        // 3. Write generated config files (with API key placeholder replacement)
-        self.write_config_files(profile, &script_output, api_key)?;
+impl ExecutionPlanner {
+    fn new(paths: RingletPaths) -> Self {
+        Self {
+            renderer: ConfigRenderer::new(paths),
+        }
+    }
 
-        // 4. Build environment variables
-        let mut env = self.build_environment(profile, provider, api_key, &script_output)?;
+    fn prepare(
+        &self,
+        profile: &Profile,
+        agent: &AgentManifest,
+        provider: &ProviderManifest,
+        api_key: &str,
+        args: &[String],
+        proxy_url: Option<&str>,
+    ) -> Result<ExecutionContext> {
+        let rendered = self
+            .renderer
+            .render(profile, agent, provider, api_key, proxy_url)?;
 
-        // Add essential system env vars
+        let mut env = rendered.env;
         for key in &["PATH", "TERM", "LANG", "LC_ALL", "USER", "SHELL"] {
             if let Ok(val) = std::env::var(key) {
                 env.insert(key.to_string(), val);
             }
         }
 
-        // 5. Build combined args
         let mut combined_args = Vec::new();
         combined_args.extend(profile.args.clone());
-        combined_args.extend(script_output.args.clone());
+        combined_args.extend(rendered.script_output.args);
         combined_args.extend(args.to_vec());
 
-        // 6. Determine working directory
         let working_dir = profile
             .working_dir
             .clone()
@@ -110,37 +122,52 @@ impl ExecutionAdapter {
             env,
             args: combined_args,
             alias: profile.alias.clone(),
+            run_id: None,
         })
+    }
+}
+
+impl ConfigRenderer {
+    fn new(paths: RingletPaths) -> Self {
+        Self { paths }
+    }
+
+    fn render(
+        &self,
+        profile: &Profile,
+        agent: &AgentManifest,
+        provider: &ProviderManifest,
+        api_key: &str,
+        proxy_url: Option<&str>,
+    ) -> Result<RenderedExecution> {
+        let context = build_script_context(profile, agent, provider, proxy_url)?;
+        let script_output = self.run_script(&agent.profile.script, &context)?;
+        self.write_config_files(profile, &script_output, api_key)?;
+        let env = self.build_environment(profile, api_key, &script_output);
+
+        Ok(RenderedExecution { env, script_output })
     }
 
     /// Run the configuration script.
     fn run_script(&self, script_name: &str, context: &ScriptContext) -> Result<ScriptOutput> {
-        // Try to find user override script first
         let user_script_path = self.paths.scripts_dir().join(script_name);
         let script = if user_script_path.exists() {
             debug!("Using user override script: {:?}", user_script_path);
-            std::fs::read_to_string(&user_script_path)
-                .context("Failed to read user script")?
-        }
-        // Try registry cache second
-        else if let Some(registry_script) = self.load_registry_script(script_name)? {
+            std::fs::read_to_string(&user_script_path).context("Failed to read user script")?
+        } else if let Some(registry_script) = self.load_registry_script(script_name)? {
             debug!("Using registry script: {}", script_name);
             registry_script
-        }
-        // Fall back to built-in scripts
-        else if let Some(builtin) = scripts::get(script_name) {
+        } else if let Some(builtin) = scripts::get(script_name) {
             debug!("Using built-in script: {}", script_name);
             builtin.to_string()
         } else {
             return Err(anyhow!("Script not found: {}", script_name));
         };
 
-        // Create engine on-demand (not Send+Sync safe to store)
         let engine = ScriptEngine::new();
         engine.run(&script, context)
     }
 
-    /// Load registry lock file.
     fn load_registry_lock(&self) -> Result<RegistryLock> {
         let lock_path = self.paths.registry_lock();
         if lock_path.exists() {
@@ -151,11 +178,12 @@ impl ExecutionAdapter {
         }
     }
 
-    /// Load script from registry cache.
     fn load_registry_script(&self, script_name: &str) -> Result<Option<String>> {
         let lock = self.load_registry_lock()?;
         let commit = lock.commit.as_deref().unwrap_or("latest");
-        let script_path = self.paths.registry_commits_dir()
+        let script_path = self
+            .paths
+            .registry_commits_dir()
             .join(commit)
             .join("scripts")
             .join(script_name);
@@ -167,30 +195,28 @@ impl ExecutionAdapter {
         }
     }
 
-    /// Write generated config files to profile home.
-    fn write_config_files(&self, profile: &Profile, output: &ScriptOutput, api_key: &str) -> Result<()> {
+    fn write_config_files(
+        &self,
+        profile: &Profile,
+        output: &ScriptOutput,
+        api_key: &str,
+    ) -> Result<()> {
         let home = &profile.metadata.home;
 
         for (relative_path, content) in &output.files {
             let full_path = home.join(relative_path);
 
-            // Create parent directories if needed
             if let Some(parent) = full_path.parent() {
                 std::fs::create_dir_all(parent)
                     .context(format!("Failed to create directory: {:?}", parent))?;
             }
 
-            // Replace ${API_KEY} placeholder in file content
             let resolved_content = content.replace("${API_KEY}", api_key);
-
-            // Check if file contains sensitive data (API key was substituted)
             let contains_sensitive_data = content.contains("${API_KEY}") && !api_key.is_empty();
 
-            // Write file
             std::fs::write(&full_path, &resolved_content)
                 .context(format!("Failed to write file: {:?}", full_path))?;
 
-            // Set restrictive permissions on files containing API keys (Unix only)
             #[cfg(unix)]
             if contains_sensitive_data {
                 use std::os::unix::fs::PermissionsExt;
@@ -205,91 +231,55 @@ impl ExecutionAdapter {
         Ok(())
     }
 
-    /// Build environment variables for the agent process.
     fn build_environment(
         &self,
         profile: &Profile,
-        provider: &ProviderManifest,
         api_key: &str,
         script_output: &ScriptOutput,
-    ) -> Result<HashMap<String, String>> {
+    ) -> HashMap<String, String> {
         let mut env = HashMap::new();
 
-        // Start with profile's stored env vars (excluding internal ones)
         for (key, value) in &profile.env {
             if !key.starts_with("_RINGLET_") {
                 env.insert(key.clone(), value.clone());
             }
         }
 
-        // Override HOME to profile home
         env.insert(
             "HOME".to_string(),
             profile.metadata.home.to_string_lossy().to_string(),
         );
 
-        // Add provider auth env var with actual API key (skip for self-auth)
-        if !provider.auth.env_key.is_empty() {
-            env.insert(provider.auth.env_key.clone(), api_key.to_string());
-        }
-
-        // Add script-generated env vars (replacing ${API_KEY} placeholder)
         for (key, value) in &script_output.env {
             let resolved = value.replace("${API_KEY}", api_key);
             env.insert(key.clone(), resolved);
         }
 
-        Ok(env)
+        env
     }
+}
 
-    /// Spawn the agent process.
-    fn spawn_agent(
-        &self,
-        agent: &AgentManifest,
-        profile: &Profile,
-        env: &HashMap<String, String>,
-        script_args: &[String],
-        user_args: &[String],
-    ) -> Result<RunResult> {
-        let working_dir = profile
-            .working_dir
-            .clone()
-            .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-
+impl ProcessLauncher {
+    fn spawn_prepared(&self, context: &ExecutionContext) -> Result<RunResult> {
         info!(
-            "Spawning agent '{}' with profile '{}' in {:?}",
-            agent.binary, profile.alias, working_dir
+            "Spawning prepared command '{}' for profile '{}' in {:?}",
+            context.binary, context.alias, context.working_dir
         );
 
-        let mut cmd = Command::new(&agent.binary);
-        cmd.current_dir(&working_dir);
+        let mut cmd = Command::new(&context.binary);
+        cmd.current_dir(&context.working_dir);
         cmd.stdin(Stdio::inherit());
         cmd.stdout(Stdio::inherit());
         cmd.stderr(Stdio::inherit());
-
-        // Clear environment and set only what we need
         cmd.env_clear();
-
-        // Preserve essential system env vars
-        for key in &["PATH", "TERM", "LANG", "LC_ALL", "USER", "SHELL"] {
-            if let Ok(val) = std::env::var(key) {
-                cmd.env(key, val);
-            }
-        }
-
-        // Add profile env vars
-        for (key, value) in env {
-            cmd.env(key, value);
-        }
-
-        // Add args: profile args, script-generated args, then user args
-        cmd.args(&profile.args);
-        cmd.args(script_args);
-        cmd.args(user_args);
+        cmd.envs(&context.env);
+        cmd.args(&context.args);
 
         debug!("Command: {:?}", cmd);
 
-        let child = cmd.spawn().context(format!("Failed to spawn: {}", agent.binary))?;
+        let child = cmd
+            .spawn()
+            .context(format!("Failed to spawn: {}", context.binary))?;
 
         let pid = child.id();
         info!("Agent started with PID {}", pid);
@@ -310,7 +300,11 @@ fn build_script_context(
     let mut endpoint = provider
         .endpoints
         .get(endpoint_id)
-        .or_else(|| provider.default_endpoint().and_then(|e| provider.endpoints.get(e)))
+        .or_else(|| {
+            provider
+                .default_endpoint()
+                .and_then(|e| provider.endpoints.get(e))
+        })
         .ok_or_else(|| anyhow!("Endpoint not found: {}", endpoint_id))?
         .clone();
 

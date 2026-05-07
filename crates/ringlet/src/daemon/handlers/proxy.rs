@@ -2,9 +2,9 @@
 
 use crate::daemon::server::ServerState;
 use ringlet_core::{
+    Event, Response,
     proxy::{ModelTarget, ProfileProxyConfig, RoutingRule},
     rpc::error_codes,
-    Event, Response,
 };
 use std::collections::HashMap;
 use tracing::info;
@@ -12,13 +12,13 @@ use tracing::info;
 /// Enable proxy for a profile.
 pub async fn enable(alias: &str, state: &ServerState) -> Response {
     // Load profile
-    let profile = match state.profile_manager.get(alias) {
+    let profile = match state.profile_store.get(alias) {
         Ok(Some(p)) => p,
         Ok(None) => {
             return Response::error(
                 error_codes::PROFILE_NOT_FOUND,
                 format!("Profile not found: {}", alias),
-            )
+            );
         }
         Err(e) => return Response::error(error_codes::INTERNAL_ERROR, e.to_string()),
     };
@@ -33,7 +33,7 @@ pub async fn enable(alias: &str, state: &ServerState) -> Response {
     updated.metadata.proxy_config = Some(proxy_config);
 
     // Save
-    if let Err(e) = state.profile_manager.update(&updated) {
+    if let Err(e) = state.profile_store.update(&updated) {
         return Response::error(error_codes::INTERNAL_ERROR, e.to_string());
     }
 
@@ -44,13 +44,13 @@ pub async fn enable(alias: &str, state: &ServerState) -> Response {
 /// Disable proxy for a profile.
 pub async fn disable(alias: &str, state: &ServerState) -> Response {
     // Load profile
-    let profile = match state.profile_manager.get(alias) {
+    let profile = match state.profile_store.get(alias) {
         Ok(Some(p)) => p,
         Ok(None) => {
             return Response::error(
                 error_codes::PROFILE_NOT_FOUND,
                 format!("Profile not found: {}", alias),
-            )
+            );
         }
         Err(e) => return Response::error(error_codes::INTERNAL_ERROR, e.to_string()),
     };
@@ -62,7 +62,7 @@ pub async fn disable(alias: &str, state: &ServerState) -> Response {
     }
 
     // Save
-    if let Err(e) = state.profile_manager.update(&updated) {
+    if let Err(e) = state.profile_store.update(&updated) {
         return Response::error(error_codes::INTERNAL_ERROR, e.to_string());
     }
 
@@ -81,13 +81,13 @@ pub async fn start(alias: &str, state: &ServerState) -> Response {
     }
 
     // Load profile
-    let profile = match state.profile_manager.get(alias) {
+    let profile = match state.profile_store.get(alias) {
         Ok(Some(p)) => p,
         Ok(None) => {
             return Response::error(
                 error_codes::PROFILE_NOT_FOUND,
                 format!("Profile not found: {}", alias),
-            )
+            );
         }
         Err(e) => return Response::error(error_codes::INTERNAL_ERROR, e.to_string()),
     };
@@ -98,30 +98,40 @@ pub async fn start(alias: &str, state: &ServerState) -> Response {
         Some(_) => {
             return Response::error(
                 error_codes::PROXY_NOT_ENABLED,
-                format!("Proxy not enabled for profile '{}'. Run 'ringlet proxy enable {}' first.", alias, alias),
-            )
+                format!(
+                    "Proxy not enabled for profile '{}'. Run 'ringlet proxy enable {}' first.",
+                    alias, alias
+                ),
+            );
         }
         None => {
             return Response::error(
                 error_codes::PROXY_NOT_ENABLED,
-                format!("Proxy not configured for profile '{}'. Run 'ringlet proxy enable {}' first.", alias, alias),
-            )
+                format!(
+                    "Proxy not configured for profile '{}'. Run 'ringlet proxy enable {}' first.",
+                    alias, alias
+                ),
+            );
         }
     };
 
     // Get profile home
-    let profile_home = match state.profile_manager.get_home(alias) {
+    let profile_home = match state.profile_store.get_home(alias) {
         Ok(home) => home,
         Err(e) => {
             return Response::error(
                 error_codes::INTERNAL_ERROR,
                 format!("Failed to get profile home: {}", e),
-            )
+            );
         }
     };
 
     // Start proxy
-    match state.proxy_manager.start(alias, &profile_home, &proxy_config).await {
+    match state
+        .proxy_manager
+        .start(alias, &profile_home, &proxy_config)
+        .await
+    {
         Ok(port) => {
             info!("Started proxy for profile '{}' on port {}", alias, port);
 
@@ -131,7 +141,10 @@ pub async fn start(alias: &str, state: &ServerState) -> Response {
                 port,
             });
 
-            Response::success(format!("Proxy started for profile '{}' on port {}", alias, port))
+            Response::success(format!(
+                "Proxy started for profile '{}' on port {}",
+                alias, port
+            ))
         }
         Err(e) => Response::error(error_codes::PROXY_START_FAILED, e.to_string()),
     }
@@ -152,6 +165,12 @@ pub async fn stop(alias: &str, state: &ServerState) -> Response {
         }
         Err(e) => Response::error(error_codes::INTERNAL_ERROR, e.to_string()),
     }
+}
+
+/// Restart proxy for a profile.
+pub async fn restart(alias: &str, state: &ServerState) -> Response {
+    let _ = stop(alias, state).await;
+    start(alias, state).await
 }
 
 /// Stop all proxies.
@@ -180,13 +199,13 @@ pub async fn status(alias: Option<&str>, state: &ServerState) -> Response {
 /// Get proxy configuration for a profile.
 pub async fn config(alias: &str, state: &ServerState) -> Response {
     // Load profile
-    let profile = match state.profile_manager.get(alias) {
+    let profile = match state.profile_store.get(alias) {
         Ok(Some(p)) => p,
         Ok(None) => {
             return Response::error(
                 error_codes::PROFILE_NOT_FOUND,
                 format!("Profile not found: {}", alias),
-            )
+            );
         }
         Err(e) => return Response::error(error_codes::INTERNAL_ERROR, e.to_string()),
     };
@@ -210,13 +229,13 @@ pub async fn logs(alias: &str, lines: Option<usize>, state: &ServerState) -> Res
 /// Add a routing rule to a profile.
 pub async fn route_add(alias: &str, rule: &RoutingRule, state: &ServerState) -> Response {
     // Load profile
-    let profile = match state.profile_manager.get(alias) {
+    let profile = match state.profile_store.get(alias) {
         Ok(Some(p)) => p,
         Ok(None) => {
             return Response::error(
                 error_codes::PROFILE_NOT_FOUND,
                 format!("Profile not found: {}", alias),
-            )
+            );
         }
         Err(e) => return Response::error(error_codes::INTERNAL_ERROR, e.to_string()),
     };
@@ -229,10 +248,18 @@ pub async fn route_add(alias: &str, rule: &RoutingRule, state: &ServerState) -> 
         .unwrap_or_else(ProfileProxyConfig::default);
 
     // Check for duplicate rule name
-    if proxy_config.routing.rules.iter().any(|r| r.name == rule.name) {
+    if proxy_config
+        .routing
+        .rules
+        .iter()
+        .any(|r| r.name == rule.name)
+    {
         return Response::error(
             error_codes::INTERNAL_ERROR,
-            format!("Rule '{}' already exists. Remove it first or use a different name.", rule.name),
+            format!(
+                "Rule '{}' already exists. Remove it first or use a different name.",
+                rule.name
+            ),
         );
     }
 
@@ -246,14 +273,11 @@ pub async fn route_add(alias: &str, rule: &RoutingRule, state: &ServerState) -> 
     updated.metadata.proxy_config = Some(proxy_config);
 
     // Save
-    if let Err(e) = state.profile_manager.update(&updated) {
+    if let Err(e) = state.profile_store.update(&updated) {
         return Response::error(error_codes::INTERNAL_ERROR, e.to_string());
     }
 
-    info!(
-        "Added routing rule '{}' to profile '{}'",
-        rule.name, alias
-    );
+    info!("Added routing rule '{}' to profile '{}'", rule.name, alias);
     Response::success(format!(
         "Routing rule '{}' added to profile '{}'",
         rule.name, alias
@@ -263,13 +287,13 @@ pub async fn route_add(alias: &str, rule: &RoutingRule, state: &ServerState) -> 
 /// List routing rules for a profile.
 pub async fn route_list(alias: &str, state: &ServerState) -> Response {
     // Load profile
-    let profile = match state.profile_manager.get(alias) {
+    let profile = match state.profile_store.get(alias) {
         Ok(Some(p)) => p,
         Ok(None) => {
             return Response::error(
                 error_codes::PROFILE_NOT_FOUND,
                 format!("Profile not found: {}", alias),
-            )
+            );
         }
         Err(e) => return Response::error(error_codes::INTERNAL_ERROR, e.to_string()),
     };
@@ -286,13 +310,13 @@ pub async fn route_list(alias: &str, state: &ServerState) -> Response {
 /// Remove a routing rule from a profile.
 pub async fn route_remove(alias: &str, rule_name: &str, state: &ServerState) -> Response {
     // Load profile
-    let profile = match state.profile_manager.get(alias) {
+    let profile = match state.profile_store.get(alias) {
         Ok(Some(p)) => p,
         Ok(None) => {
             return Response::error(
                 error_codes::PROFILE_NOT_FOUND,
                 format!("Profile not found: {}", alias),
-            )
+            );
         }
         Err(e) => return Response::error(error_codes::INTERNAL_ERROR, e.to_string()),
     };
@@ -305,7 +329,7 @@ pub async fn route_remove(alias: &str, rule_name: &str, state: &ServerState) -> 
             return Response::error(
                 error_codes::ROUTE_NOT_FOUND,
                 format!("No proxy configuration for profile '{}'", alias),
-            )
+            );
         }
     };
 
@@ -323,11 +347,14 @@ pub async fn route_remove(alias: &str, rule_name: &str, state: &ServerState) -> 
     updated.metadata.proxy_config = Some(proxy_config);
 
     // Save
-    if let Err(e) = state.profile_manager.update(&updated) {
+    if let Err(e) = state.profile_store.update(&updated) {
         return Response::error(error_codes::INTERNAL_ERROR, e.to_string());
     }
 
-    info!("Removed routing rule '{}' from profile '{}'", rule_name, alias);
+    info!(
+        "Removed routing rule '{}' from profile '{}'",
+        rule_name, alias
+    );
     Response::success(format!(
         "Routing rule '{}' removed from profile '{}'",
         rule_name, alias
@@ -347,19 +374,22 @@ pub async fn alias_set(
         None => {
             return Response::error(
                 error_codes::INTERNAL_ERROR,
-                format!("Invalid target format '{}'. Expected 'provider/model'.", to_target),
-            )
+                format!(
+                    "Invalid target format '{}'. Expected 'provider/model'.",
+                    to_target
+                ),
+            );
         }
     };
 
     // Load profile
-    let profile = match state.profile_manager.get(alias) {
+    let profile = match state.profile_store.get(alias) {
         Ok(Some(p)) => p,
         Ok(None) => {
             return Response::error(
                 error_codes::PROFILE_NOT_FOUND,
                 format!("Profile not found: {}", alias),
-            )
+            );
         }
         Err(e) => return Response::error(error_codes::INTERNAL_ERROR, e.to_string()),
     };
@@ -379,7 +409,7 @@ pub async fn alias_set(
     updated.metadata.proxy_config = Some(proxy_config);
 
     // Save
-    if let Err(e) = state.profile_manager.update(&updated) {
+    if let Err(e) = state.profile_store.update(&updated) {
         return Response::error(error_codes::INTERNAL_ERROR, e.to_string());
     }
 
@@ -396,13 +426,13 @@ pub async fn alias_set(
 /// List model aliases for a profile.
 pub async fn alias_list(alias: &str, state: &ServerState) -> Response {
     // Load profile
-    let profile = match state.profile_manager.get(alias) {
+    let profile = match state.profile_store.get(alias) {
         Ok(Some(p)) => p,
         Ok(None) => {
             return Response::error(
                 error_codes::PROFILE_NOT_FOUND,
                 format!("Profile not found: {}", alias),
-            )
+            );
         }
         Err(e) => return Response::error(error_codes::INTERNAL_ERROR, e.to_string()),
     };
@@ -424,13 +454,13 @@ pub async fn alias_list(alias: &str, state: &ServerState) -> Response {
 /// Remove a model alias from a profile.
 pub async fn alias_remove(alias: &str, from_model: &str, state: &ServerState) -> Response {
     // Load profile
-    let profile = match state.profile_manager.get(alias) {
+    let profile = match state.profile_store.get(alias) {
         Ok(Some(p)) => p,
         Ok(None) => {
             return Response::error(
                 error_codes::PROFILE_NOT_FOUND,
                 format!("Profile not found: {}", alias),
-            )
+            );
         }
         Err(e) => return Response::error(error_codes::INTERNAL_ERROR, e.to_string()),
     };
@@ -443,7 +473,7 @@ pub async fn alias_remove(alias: &str, from_model: &str, state: &ServerState) ->
             return Response::error(
                 error_codes::ALIAS_NOT_FOUND,
                 format!("No proxy configuration for profile '{}'", alias),
-            )
+            );
         }
     };
 
@@ -458,7 +488,7 @@ pub async fn alias_remove(alias: &str, from_model: &str, state: &ServerState) ->
     updated.metadata.proxy_config = Some(proxy_config);
 
     // Save
-    if let Err(e) = state.profile_manager.update(&updated) {
+    if let Err(e) = state.profile_store.update(&updated) {
         return Response::error(error_codes::INTERNAL_ERROR, e.to_string());
     }
 

@@ -3,15 +3,15 @@
 use crate::daemon::server::ServerState;
 use axum::{
     extract::{
-        ws::{Message, WebSocket},
         State, WebSocketUpgrade,
+        ws::{Message, WebSocket},
     },
-    http::{header, HeaderMap, StatusCode},
-    response::{IntoResponse, Response},
+    http::{HeaderMap, StatusCode, header},
+    response::Response,
 };
 use chrono::Utc;
-use ringlet_core::{ClientMessage, Event, ServerMessage, VERSION};
 use futures_util::{SinkExt, StreamExt};
+use ringlet_core::{ClientMessage, Event, ServerMessage, VERSION};
 use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::sync::broadcast;
@@ -26,7 +26,9 @@ fn validate_origin(headers: &HeaderMap) -> bool {
     match headers.get(header::ORIGIN) {
         Some(origin) => {
             if let Ok(origin_str) = origin.to_str() {
-                ALLOWED_ORIGINS.iter().any(|allowed| origin_str.starts_with(allowed))
+                ALLOWED_ORIGINS
+                    .iter()
+                    .any(|allowed| origin_str.starts_with(allowed))
             } else {
                 false
             }
@@ -68,10 +70,10 @@ async fn handle_socket(socket: WebSocket, state: Arc<ServerState>) {
             timestamp: Utc::now(),
         },
     };
-    if let Ok(json) = serde_json::to_string(&connected_msg) {
-        if sender.send(Message::Text(json.into())).await.is_err() {
-            return;
-        }
+    if let Ok(json) = serde_json::to_string(&connected_msg)
+        && sender.send(Message::Text(json.into())).await.is_err()
+    {
+        return;
     }
 
     info!("WebSocket client connected");
@@ -88,11 +90,10 @@ async fn handle_socket(socket: WebSocket, state: Arc<ServerState>) {
                         timestamp: Utc::now().timestamp(),
                     },
                 };
-                if let Ok(json) = serde_json::to_string(&msg) {
-                    if sender.send(Message::Text(json.into())).await.is_err() {
+                if let Ok(json) = serde_json::to_string(&msg)
+                    && sender.send(Message::Text(json.into())).await.is_err() {
                         break;
                     }
-                }
             }
 
             // Handle incoming messages from client
@@ -161,11 +162,10 @@ async fn handle_socket(socket: WebSocket, state: Arc<ServerState>) {
 
                         if should_send {
                             let msg = ServerMessage::Event { event };
-                            if let Ok(json) = serde_json::to_string(&msg) {
-                                if sender.send(Message::Text(json.into())).await.is_err() {
+                            if let Ok(json) = serde_json::to_string(&msg)
+                                && sender.send(Message::Text(json.into())).await.is_err() {
                                     break;
                                 }
-                            }
                         }
                     }
                     Err(broadcast::error::RecvError::Lagged(n)) => {

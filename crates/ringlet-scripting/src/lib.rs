@@ -18,15 +18,14 @@
 //! Scripts should return an object with:
 //! - `files`: Map of relative paths to file contents
 //! - `env`: Map of environment variables to set
-//! - `hooks`: Optional hooks configuration
-//! - `mcp_servers`: Optional MCP servers configuration
+//! - `args`: Optional extra command-line arguments
 
 mod engine;
 mod functions;
 
 pub use engine::{
-    AgentContext, PrefsContext, ProfileContext, ProviderContext,
-    ScriptContext, ScriptEngine, ScriptOutput,
+    AgentContext, PrefsContext, ProfileContext, ProviderContext, ScriptContext, ScriptEngine,
+    ScriptOutput,
 };
 
 /// Built-in scripts for each agent.

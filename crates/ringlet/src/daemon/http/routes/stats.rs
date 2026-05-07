@@ -4,8 +4,8 @@ use crate::daemon::handlers;
 use crate::daemon::http::error::{ApiResponse, HttpError};
 use crate::daemon::server::ServerState;
 use axum::{
-    extract::{Query, State},
     Json,
+    extract::{Query, State},
 };
 use ringlet_core::{Response, StatsResponse};
 use serde::Deserialize;

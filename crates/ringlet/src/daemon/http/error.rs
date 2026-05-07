@@ -1,12 +1,12 @@
 //! HTTP error handling and response conversion.
 
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response as AxumResponse},
-    Json,
 };
-use ringlet_core::rpc::error_codes;
 use ringlet_core::Response;
+use ringlet_core::rpc::error_codes;
 use serde::Serialize;
 
 /// Standard API response wrapper.
@@ -63,8 +63,9 @@ impl ApiError {
             | error_codes::ROUTE_NOT_FOUND
             | error_codes::ALIAS_NOT_FOUND => StatusCode::NOT_FOUND,
 
-            error_codes::PROFILE_EXISTS
-            | error_codes::PROXY_ALREADY_RUNNING => StatusCode::CONFLICT,
+            error_codes::PROFILE_EXISTS | error_codes::PROXY_ALREADY_RUNNING => {
+                StatusCode::CONFLICT
+            }
 
             error_codes::AGENT_NOT_INSTALLED
             | error_codes::INCOMPATIBLE_PROVIDER
