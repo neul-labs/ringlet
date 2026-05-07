@@ -11,6 +11,9 @@ jobs:
   publish-platforms:
     name: Publish Platform Packages
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     strategy:
       max-parallel: 1
       matrix:
@@ -60,14 +63,15 @@ jobs:
       - name: Publish platform package
         run: |
           cd "packaging/npm/platforms/ringlet-${{ matrix.platform }}"
-          npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          npm publish --provenance --access public
 
   publish-main:
     name: Publish Main Package
     needs: publish-platforms
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -93,6 +97,4 @@ jobs:
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
           "
 
-          npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          npm publish --provenance --access public

@@ -152,6 +152,9 @@ jobs:
     needs: [check-version, create-release]
     uses: ./.github/workflows/publish-cargo.yml
     secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
     with:
       version: ${{ needs.check-version.outputs.version }}
 
@@ -160,6 +163,9 @@ jobs:
     needs: [check-version, create-release]
     uses: ./.github/workflows/publish-npm.yml
     secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
     with:
       version: ${{ needs.check-version.outputs.version }}
 
@@ -176,6 +182,9 @@ jobs:
     needs: [check-version, create-release]
     uses: ./.github/workflows/publish-pypi.yml
     secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
     with:
       version: ${{ needs.check-version.outputs.version }}
 
