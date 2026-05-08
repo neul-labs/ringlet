@@ -193,6 +193,8 @@ jobs:
     needs: [check-version, create-release]
     uses: ./.github/workflows/publish-rubygems.yml
     secrets: inherit
+    permissions:
+      id-token: write
     with:
       version: ${{ needs.check-version.outputs.version }}
 

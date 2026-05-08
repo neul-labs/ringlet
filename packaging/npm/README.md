@@ -1,27 +1,30 @@
 # ringlet-cli
 
-[![PyPI version](https://img.shields.io/pypi/v/ringlet-cli)](https://pypi.org/project/ringlet-cli/)
+[![npm version](https://img.shields.io/npm/v/ringlet-cli)](https://www.npmjs.com/package/ringlet-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/neul-labs/ringlet/blob/main/LICENSE)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Node.js 16+](https://img.shields.io/badge/node-%3E%3D16-brightgreen.svg)](https://nodejs.org/)
 
 > **One CLI to orchestrate all your coding agents.**
 
 Ringlet is a cross-platform orchestrator for CLI-based coding agents. It unifies Claude Code, Codex, Grok, Droid, OpenCode, and more behind a single profile manager with usage tracking, provider abstraction, and intelligent request routing.
 
-## Why Ringlet?
-
-If you work across multiple AI coding agents, you know the pain:
-- Different configuration files scattered everywhere
-- No visibility into token usage or costs across agents
-- Switching providers means reconfiguring everything
-- No unified way to manage profiles per project
-
-Ringlet solves this with a single daemon that manages profiles, tracks usage, and coordinates agent execution.
-
 ## Installation
 
 ```bash
-pip install ringlet-cli
+npm install -g ringlet-cli
+```
+
+Or with your preferred package manager:
+
+```bash
+# pnpm
+pnpm add -g ringlet-cli
+
+# yarn
+yarn global add ringlet-cli
+
+# bun
+bun add -g ringlet-cli
 ```
 
 ## Quick Start
@@ -45,13 +48,16 @@ ringlet usage
 
 ## Features
 
-- **Profile Management** — Create isolated profiles per project with custom environment variables, working directories, and provider settings
+- **Profile Management** — Isolated profiles per project with custom environment variables, working directories, and provider settings
 - **Agent Discovery** — Auto-detects installed agents (Claude Code, Grok, Codex, Droid, OpenCode)
-- **Provider Abstraction** — Switch between Anthropic, OpenAI, OpenRouter, MiniMax, and custom backends without reconfiguring agents
+- **Provider Abstraction** — Switch between Anthropic, OpenAI, OpenRouter, MiniMax, and custom backends
 - **Usage Tracking** — Real-time token and cost analytics across all profiles and agents
 - **Proxy Integration** — Intelligent request routing with LiteLLM-compatible proxy layer
 - **Remote Terminal** — WebSocket-based terminal sessions with sandboxing support
-- **Hooks System** — Event-driven hooks for custom integrations
+
+## Why Ringlet?
+
+If you work across multiple AI coding agents, you know the pain of scattered configuration files, no cost visibility, and reconfiguring everything when switching providers. Ringlet solves this with a single daemon that manages profiles, tracks usage, and coordinates agent execution.
 
 ## Supported Agents
 
