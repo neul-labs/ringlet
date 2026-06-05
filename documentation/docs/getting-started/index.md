@@ -20,7 +20,7 @@ Before installing Ringlet, ensure you have:
 
 - **An AI coding agent** installed (Claude Code, Codex CLI, etc.)
 - **An API key** from your provider (Anthropic, OpenAI, etc.)
-- **Linux or macOS** (Windows support coming soon)
+- **Linux, macOS, or Windows** (Windows via WSL or native build)
 
 ---
 

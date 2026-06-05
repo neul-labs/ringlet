@@ -808,41 +808,27 @@ ringlet daemon stop
 
 ---
 
-## scripts
+## env
 
-Manage Rhai configuration scripts.
+Run profile environment setup tasks (used by aliases/wrappers to populate per-profile state).
 
-### scripts test
-
-Test a configuration script.
+### env setup
 
 ```bash
-ringlet scripts test <SCRIPT> [OPTIONS]
+ringlet env setup <ALIAS> <TASK>
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--provider <ID>` | Provider to use |
-| `--alias <ALIAS>` | Profile alias for context |
+| Argument | Description |
+|----------|-------------|
+| `ALIAS` | Profile alias |
+| `TASK` | Setup task name (script-defined) |
 
 ---
 
-## export / import
+## stats
 
-Backup and restore ringlet configuration.
-
-### export
-
-Export configuration.
+View aggregate token/cost stats (legacy; prefer `ringlet usage`).
 
 ```bash
-ringlet export > backup.json
-```
-
-### import
-
-Import configuration.
-
-```bash
-ringlet import backup.json
+ringlet stats [--agent <ID>] [--provider <ID>]
 ```
