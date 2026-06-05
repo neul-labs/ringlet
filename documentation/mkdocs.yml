@@ -1,6 +1,6 @@
 site_name: Ringlet Documentation
 site_description: CLI orchestrator for coding agents - manage multiple AI coding assistants with isolated profiles
-site_url: https://ringlet.docs.neullabs.com/
+site_url: https://docs.neullabs.com/ringlet/
 repo_url: https://github.com/neul-labs/ringlet
 repo_name: neul-labs/ringlet
 edit_uri: edit/main/documentation/docs/
