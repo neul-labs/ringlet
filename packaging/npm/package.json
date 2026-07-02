@@ -1,13 +1,14 @@
 {
   "name": "ringlet-cli",
   "version": "0.1.0",
-  "description": "CLI orchestrator for coding agents",
+  "description": "One CLI to rule all your coding agents.",
+  "author": "Neul Labs <contact@neullabs.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/neul-labs/ringlet.git"
   },
-  "homepage": "https://github.com/neul-labs/ringlet",
+  "homepage": "https://ringlet.neullabs.com",
   "bugs": {
     "url": "https://github.com/neul-labs/ringlet/issues"
   },

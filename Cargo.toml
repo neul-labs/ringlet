@@ -6,11 +6,11 @@ resolver = "2"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-authors = ["Dipankar Sarkar"]
+authors = ["Neul Labs <contact@neullabs.com>"]
 repository = "https://github.com/neul-labs/ringlet"
-homepage = "https://github.com/neul-labs/ringlet"
+homepage = "https://ringlet.neullabs.com"
 documentation = "https://docs.neullabs.com/ringlet"
-keywords = ["cli", "agent", "orchestrator", "coding"]
+keywords = ["cli", "agent", "orchestrator", "coding", "ai"]
 categories = ["command-line-utilities", "development-tools"]
 
 [workspace.dependencies]

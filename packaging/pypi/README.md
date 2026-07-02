@@ -8,6 +8,8 @@
 
 Ringlet is a cross-platform orchestrator for CLI-based coding agents. It unifies Claude Code, Codex, Grok, Droid, OpenCode, and more behind a single profile manager with usage tracking, provider abstraction, and intelligent request routing.
 
+**[Site](https://ringlet.neullabs.com) · [Docs](https://docs.neullabs.com/ringlet) · [Repository](https://github.com/neul-labs/ringlet)**
+
 ## Why Ringlet?
 
 If you work across multiple AI coding agents, you know the pain:
@@ -65,8 +67,21 @@ ringlet usage
 
 ## Documentation
 
-For full documentation, visit: https://github.com/neul-labs/ringlet
+For full documentation, visit: https://docs.neullabs.com/ringlet
 
 ## License
 
 MIT License — see [LICENSE](https://github.com/neul-labs/ringlet/blob/main/LICENSE)
+
+## Part of the Neul Labs toolchain
+
+Ringlet is part of the Neul Labs orchestration toolchain:
+
+| Project | Description |
+|---------|-------------|
+| [brat](https://github.com/neul-labs/brat) | Multi-agent harness for AI coding tools — crash-safe state, parallel execution. |
+| [fastworker](https://github.com/neul-labs/fastworker) | Background tasks in Python with zero infrastructure — no Redis, no RabbitMQ. |
+| [m9m](https://github.com/neul-labs/m9m) | The n8n alternative without the bugs — one Go binary. |
+| [conductor](https://github.com/neul-labs/conductor) | Multi-agent CLI orchestrator for AI coding agents. |
+
+Learn more at [neullabs.com](https://www.neullabs.com).

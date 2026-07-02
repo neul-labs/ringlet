@@ -5,11 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "ringlet-cli"
 version = "0.1.0"
-description = "CLI orchestrator for coding agents"
+description = "One CLI to rule all your coding agents."
 readme = "README.md"
 license = "MIT"
 authors = [
-    { name = "Dipankar Sarkar" }
+    { name = "Neul Labs", email = "contact@neullabs.com" }
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -22,11 +22,12 @@ classifiers = [
     "Programming Language :: Rust",
     "Topic :: Software Development :: Build Tools",
 ]
-keywords = ["cli", "agent", "orchestrator", "coding"]
+keywords = ["cli", "agent", "orchestrator", "coding", "ai"]
 requires-python = ">=3.8"
 
 [project.urls]
-Homepage = "https://github.com/neul-labs/ringlet"
+Homepage = "https://ringlet.neullabs.com"
+Documentation = "https://docs.neullabs.com/ringlet"
 Repository = "https://github.com/neul-labs/ringlet"
 Issues = "https://github.com/neul-labs/ringlet/issues"
 

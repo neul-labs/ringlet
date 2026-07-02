@@ -9,7 +9,7 @@ homepage.workspace = true
 documentation.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "CLI orchestrator for coding agents"
+description = "One CLI to rule all your coding agents."
 readme = "../../README.md"
 
 [[bin]]
