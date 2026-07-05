@@ -37,3 +37,7 @@ credentials/
 # Release artifacts
 /dist/
 scripts/release/state/
+
+# Python virtualenvs
+.venv/
+**/.venv/
